@@ -13,21 +13,10 @@ import netCDF4 as nc
 import datetime
 import geopandas as gpd
 
-PATH_ROOT = "C:/Users/Admin/PycharmProjects/FloodsML/Data/CAMELS/"
+PATH_ROOT = "C:/Users/Admin/PycharmProjects/FloodMLRan/Data/CAMELS/"
 
 
-def main():
-    station_id = "06452000"
-    station_id = "13340000"
-    station_id = "02315500"
-    station_id = "07226500"
-    station_id = "07068000"
-    station_id = "03164000"
-    station_id = "05585000"
-    station_id = "08164000"
-    station_id = "07292500"
-    station_id = "02231000"
-
+def read_single_basin(station_id):
     """
     read the bounds of the required station
     """
@@ -39,11 +28,10 @@ def main():
     bounds = basin.bounds
 
     # get the minimum and maximum longitude and latitude
-    min_lon = np.squeeze(np.floor(bounds['minx'].values * 10) / 10)
-    min_lat = np.squeeze(np.floor(bounds['miny'].values * 10) / 10)
-    max_lon = np.squeeze(np.ceil(bounds['maxx'].values * 10) / 10)
-    max_lat = np.squeeze(np.ceil(bounds['maxy'].values * 10) / 10)
-
+    min_lon = np.squeeze(np.floor((bounds['minx'].values * 10) / 10))
+    min_lat = np.squeeze(np.floor((bounds['miny'].values * 10) / 10))
+    max_lon = np.squeeze(np.ceil((bounds['maxx'].values * 10) / 10))
+    max_lat = np.squeeze(np.ceil((bounds['maxy'].values * 10) / 10))
 
     """
     read the discharge of the required station (output)
@@ -54,7 +42,6 @@ def main():
                                       df_dis['day'][i], df_dis['hour'][i],
                                       df_dis['minute'][i]) for i in range(0, len(df_dis))]
     print(df_dis)
-
 
     """
     read the precipitation of the required station (input)
@@ -74,10 +61,14 @@ def main():
         if year == year_start:
             lon = ds['longitude'][:]
             lat = ds['latitude'][:]
-            ind_lon_min = np.squeeze(np.argwhere(lon == min_lon))
-            ind_lon_max = np.squeeze(np.argwhere(lon == max_lon))
-            ind_lat_min = np.squeeze(np.argwhere(lat == min_lat))
-            ind_lat_max = np.squeeze(np.argwhere(lat == max_lat))
+            max_lon_array = lon.max()
+            min_lon_array = lon.min()
+            max_lat_array = lat.max()
+            min_lat_array = lat.min()
+            ind_lon_min = np.squeeze(np.argwhere(lon == max(min_lon, min_lon_array)))
+            ind_lon_max = np.squeeze(np.argwhere(lon == min(max_lon, max_lon_array)))
+            ind_lat_min = np.squeeze(np.argwhere(lat == max(min_lat, min_lat_array)))
+            ind_lat_max = np.squeeze(np.argwhere(lat == min(max_lat, max_lat_array)))
         # multiply by 1000 to convert from units of meter to mm
         tp = np.asarray(ds['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1]) * 1000
         times = [datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M") + datetime.timedelta(hours=int(ti[i]))
@@ -184,27 +175,30 @@ def main():
     lstpe = []
     for year in range(year_start, year_end + 1):
         print(year)
-        #  fn = f"{PATH_ROOT}ERA5L/tp_{station_id}_{year}.nc"
-        fn = f"{PATH_ROOT}CPC/precip.{year}.nc"
-        dsc = nc.Dataset(fn)
-        fn = f"{PATH_ROOT}ERA5L/tp_US_{2021}.nc"
-        dse = nc.Dataset(fn)
-        tie = dse['time'][:]
-        tic = dsc['time'][:]
-        if year == year_start:
-            lonc = dsc['lon'][:]
-            lonc[lonc > 180] = lonc[lonc > 180] - 360
-            latc = dsc['lat'][:]
-            indlonminc = np.squeeze(np.argwhere(lonc <= min_lon)[-1])
-            indlonmaxc = np.squeeze(np.argwhere(lonc[360:] >= max_lon)[0] + 360)
-            indlatminc = np.squeeze(np.argwhere(latc <= min_lat)[0])
-            indlatmaxc = np.squeeze(np.argwhere(latc >= max_lat)[-1])
-            lone = dse['longitude'][:]
-            late = dse['latitude'][:]
-            indlonmine = np.squeeze(np.argwhere(lone <= lonc[indlonminc])[-1])
-            indlonmaxe = np.squeeze(np.argwhere(lone >= lonc[indlonmaxc])[0])
-            indlatmine = np.squeeze(np.argwhere(late <= latc[indlatminc])[0])
-            indlatmaxe = np.squeeze(np.argwhere(late >= latc[indlatmaxc])[-1])
+        try:
+            #  fn = f"{PATH_ROOT}ERA5L/tp_{station_id}_{year}.nc"
+            fn = f"{PATH_ROOT}CPC/precip.{year}.nc"
+            dsc = nc.Dataset(fn)
+            fn = f"{PATH_ROOT}ERA5L/tp_US_{2021}.nc"
+            dse = nc.Dataset(fn)
+            tie = dse['time'][:]
+            tic = dsc['time'][:]
+            if year == year_start:
+                lonc = dsc['lon'][:]
+                lonc[lonc > 180] = lonc[lonc > 180] - 360
+                latc = dsc['lat'][:]
+                indlonminc = np.squeeze(np.argwhere(lonc <= min_lon)[-1])
+                indlonmaxc = np.squeeze(np.argwhere(lonc[360:] >= max_lon)[0] + 360)
+                indlatminc = np.squeeze(np.argwhere(latc <= min_lat)[0])
+                indlatmaxc = np.squeeze(np.argwhere(latc >= max_lat)[-1])
+                lone = dse['longitude'][:]
+                late = dse['latitude'][:]
+                indlonmine = np.squeeze(np.argwhere(lone <= lonc[indlonminc])[-1])
+                indlonmaxe = np.squeeze(np.argwhere(lone >= lonc[indlonmaxc])[0])
+                indlatmine = np.squeeze(np.argwhere(late <= latc[indlatminc])[0])
+                indlatmaxe = np.squeeze(np.argwhere(late >= latc[indlatmaxc])[-1])
+        except Exception as e:
+            print(e)
         tpc = np.asarray(dsc['precip'][:, indlatmaxc:indlatminc, indlonminc:indlonmaxc])
         tpe = np.asarray(dse['tp'][:, indlatmaxe:indlatmine, indlonmine:indlonmaxe]) * 1000  # from units of m to mm
 
@@ -316,6 +310,21 @@ def main():
     geom[5].intersection(pixel)
 
     basin['geometry'].crs
+
+
+def main():
+    basins_stations_list = ["06452000",
+                            "13340000",
+                            "02315500",
+                            "07226500",
+                            "07068000",
+                            "03164000",
+                            "05585000",
+                            "08164000",
+                            "07292500",
+                            "02231000"]
+    for basin_station_id in basins_stations_list:
+        read_single_basin(basin_station_id)
 
 
 if __name__ == "__main__":
