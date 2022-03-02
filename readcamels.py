@@ -38,6 +38,7 @@ def read_single_basin(station_id):
     """
     fn = PATH_ROOT + '/Streamflow/dis_' + station_id + '.csv'
     df_dis = pd.read_csv(fn)
+    # convert the columns of year, month, day, hour, minute to datetime
     df_dis.index = [datetime.datetime(df_dis['year'][i], df_dis['month'][i],
                                       df_dis['day'][i], df_dis['hour'][i],
                                       df_dis['minute'][i]) for i in range(0, len(df_dis))]
@@ -57,6 +58,8 @@ def read_single_basin(station_id):
         fn = f"{PATH_ROOT}ERA5L/tp_{station_id}_{year}.nc"
         # fn = f"{PATH_ROOT}/tp_US_{2021}.nc"
         ds = nc.Dataset(fn)
+        # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
+        # e.g. - [780168, 780169, 780170, ...]
         ti = ds['time'][:]
         if year == year_start:
             lon = ds['longitude'][:]
@@ -71,12 +74,14 @@ def read_single_basin(station_id):
             ind_lat_max = np.squeeze(np.argwhere(lat == min(max_lat, max_lat_array)))
         # multiply by 1000 to convert from units of meter to mm
         tp = np.asarray(ds['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1]) * 1000
+        # convert the time to datetime format and append it to the times array
         times = [datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M") + datetime.timedelta(hours=int(ti[i]))
                  for i in range(0, len(ti))]
         times = np.asarray(times)
         list_of_dates.append(times)
         list_of_total_precipitations.append(tp)
 
+    # concatenate the datetimes from all the years
     datetimes = np.concatenate(list_of_dates, axis=0)
     precip = np.concatenate(list_of_total_precipitations, axis=0)
 
@@ -265,19 +270,22 @@ def read_single_basin(station_id):
     list_of_total_precipitations = []
     for year in range(year_start, year_end + 1):
         print(year)
-        #  fn = f"{PATH_ROOT}ERA5L/tp_{station_id}_{year}.nc"
-        fn = f"{PATH_ROOT}CPC/precip.{year}.nc"
-        ds = nc.Dataset(fn)
-        ti = ds['time'][:]
-        if year == year_start:
-            lon = ds['lon'][:]
-            lon[lon > 180] = lon[lon > 180] - 360
-            lat = ds['lat'][:]
-            ind_lon_min = np.squeeze(np.argwhere(lon < min_lon)[-1])
-            ind_lon_max = np.squeeze(np.argwhere(lon > max_lon)[0])
-            ind_lat_min = np.squeeze(np.argwhere(lat < min_lat)[0])
-            ind_lat_max = np.squeeze(np.argwhere(lat > max_lat)[-1])
-            # compute
+        try:
+            #  fn = f"{PATH_ROOT}ERA5L/tp_{station_id}_{year}.nc"
+            fn = f"{PATH_ROOT}CPC/precip.{year}.nc"
+            ds = nc.Dataset(fn)
+            ti = ds['time'][:]
+            if year == year_start:
+                lon = ds['lon'][:]
+                lon[lon > 180] = lon[lon > 180] - 360
+                lat = ds['lat'][:]
+                ind_lon_min = np.squeeze(np.argwhere(lon < min_lon)[-1])
+                ind_lon_max = np.squeeze(np.argwhere(lon > max_lon)[0])
+                ind_lat_min = np.squeeze(np.argwhere(lat < min_lat)[0])
+                ind_lat_max = np.squeeze(np.argwhere(lat > max_lat)[-1])
+                # compute
+        except Exception as e:
+            print(e)
         tp = np.asarray(ds['precip'][:, ind_lat_max:ind_lat_min, ind_lon_min:ind_lon_max])
         times = [datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M") + datetime.timedelta(hours=int(ti[i]))
                  for i in range(0, len(ti))]
@@ -305,11 +313,11 @@ def read_single_basin(station_id):
     # geom.intersection(pixel)
     # geom.intersection(pixel)
     # basin['geometry'].crs
-    geom.geometry
+    # geom.geometry
 
-    geom[5].intersection(pixel)
+    # geom.iloc[5].intersection(pixel)
 
-    basin['geometry'].crs
+    # basin['geometry'].crs
 
 
 def main():

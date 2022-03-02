@@ -4,7 +4,8 @@
 
 #SBATCH -n 1
 #SBATCH --time=3:0:0
-#SBATCH --mem=4G
+#SBATCH --mem=40G
+#SBATCH --gres gpu
 #SBATCH -J jupyter
 
 ## Get host IP
@@ -20,7 +21,14 @@ echo -e "ssh -J $USER@bava.cs.huji.ac.il -L $jupyter_port:$host_ip:$jupyter_port
 echo -e "After creating the tunnel copy and paste the URL that Jupyter Notebook created\n"
 
 # Uncomment and enter path of code
-cd /sci/labs/efratmorin/ranga/CNN_LSTM_v3.ipynb
+cd /sci/labs/efratmorin/ranga/
+
+# virtual_env location
+virtual_env=/sci/labs/efratmorin/ranga/FloodsMLEnv/bin/activate
+
+source $virtual_env
+
+# module load cuda/11.2 
 
 # Start Jupyter
 jupyter-notebook --no-browser --ip=0.0.0.0 --port=$jupyter_port
