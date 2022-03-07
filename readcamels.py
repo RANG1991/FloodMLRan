@@ -102,7 +102,8 @@ def read_single_basin(station_id):
     dis = df_dis['flow'].values
     datetimesdis = df_dis.index.to_pydatetime()
 
-    # downsample the datetime data into 1D (1 day) bins and take the mean of the values falling into the same bin
+    # downsample the datetime data into 1D (1 day) bins and take the mean
+    # of the values falling into the same bin
     df1 = df_dis.resample('1D').mean()
     datetimesdis24 = df1.index.to_pydatetime()
     dis24 = np.stack(df1['flow'].values)
