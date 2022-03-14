@@ -27,6 +27,9 @@ def main():
     list_train = list_basins_ids_unique[:math.floor(len_list_basins * 0.7)]
     list_val = list_basins_ids_unique[math.floor(len_list_basins * 0.7):math.floor(len_list_basins * 0.85)]
     list_test = list_basins_ids_unique[math.floor(len_list_basins * 0.85):]
+    list_train = sorted(list_train)
+    list_test = sorted(list_test)
+    list_val = sorted(list_val)
     create_basins_ids_file("./train_basins.txt", list_train)
     create_basins_ids_file("./val_basins.txt", list_test)
     create_basins_ids_file("./test_basins.txt", list_val)

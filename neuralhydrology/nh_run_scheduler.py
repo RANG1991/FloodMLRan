@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#! /sci/labs/efratmorin/lab_share/FloodsMLEnv/bin/python
 import argparse
 import random
 import subprocess
@@ -6,12 +6,10 @@ import sys
 import time
 from pathlib import Path
 from typing import List
-
 import numpy as np
 
 
 def _get_args() -> dict:
-
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=["train", "evaluate", "finetune"])
     parser.add_argument('--directory', type=str, required=True)
@@ -92,7 +90,7 @@ def schedule_runs(mode: str, directory: Path, gpu_ids: List[int], runs_per_gpu: 
                 run_command = f"python {script_path} {mode} --config-file {process} --gpu {gpu_id}"
             else:
                 run_command = f"python {script_path} evaluate --run-dir {process} --gpu {gpu_id}"
-            print(f"Starting run {counter+1}/{len(processes)}: {run_command}")
+            print(f"Starting run {counter + 1}/{len(processes)}: {run_command}")
             running_processes[(run_command, node_id)] = subprocess.Popen(run_command,
                                                                          stdout=subprocess.DEVNULL,
                                                                          shell=True)
