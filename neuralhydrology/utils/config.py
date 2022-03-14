@@ -37,7 +37,8 @@ class Config(object):
     ]
     _metadata_keys = ['package_version', 'commit_hash']
 
-    def __init__(self, yml_path_or_dict: Union[Path, dict], dev_mode: bool = False):
+    def __init__(self, yml_path_or_dict: Union[Path, dict], dev_mode: bool = True):
+        # raise ValueError("the config file is in: {}".format(yml_path_or_dict))
         if isinstance(yml_path_or_dict, Path):
             self._cfg = Config._read_and_parse_config(yml_path=yml_path_or_dict)
         elif isinstance(yml_path_or_dict, dict):
@@ -133,7 +134,8 @@ class Config(object):
     def _get_value_verbose(self, key: str) -> Union[float, int, str, list, dict, Path, pd.Timestamp]:
         """Use this function internally to return attributes of the config that are mandatory"""
         if key not in self._cfg.keys():
-            raise ValueError(f"{key} is not specified in the config (.yml).")
+            raise ValueError(f"{key} is not specified in the config (.yml)."
+			                 "The keys are: {}".format(self._cfg.keys()))
         elif self._cfg[key] is None:
             raise ValueError(f"{key} is mandatory but 'None' in the config.")
         else:
