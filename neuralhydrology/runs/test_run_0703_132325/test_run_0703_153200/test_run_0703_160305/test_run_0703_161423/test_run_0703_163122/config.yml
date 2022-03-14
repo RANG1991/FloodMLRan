@@ -1,0 +1,53 @@
+batch_size: 256
+cache_validation_data: true
+clip_gradient_norm: 1
+commit_hash: 577aa32
+data_dir: test/test_data/camels_us
+dataset: camels_us
+device: cuda:0
+dynamic_inputs:
+- prcp(mm/day)
+- tmax(C)
+epochs: 1
+experiment_name: test_run
+forcings: daymet
+head: regression
+hidden_size: 16
+img_log_dir: /sci/labs/efratmorin/lab_share/FloodsML/neuralhydrology/runs/test_run_0703_132325/test_run_0703_153200/test_run_0703_160305/test_run_0703_161423/test_run_0703_163122/img_log
+initial_forget_bias: 3
+learning_rate:
+  0: 0.001
+  10: 0.0005
+  20: 0.0001
+log_interval: 5
+log_n_figures: 2
+log_tensorboard: true
+loss: NSE
+metrics: []
+model: cudalstm
+num_workers: 0
+number_of_basins: 1
+optimizer: Adam
+output_activation: linear
+output_dropout: 0.4
+package_version: 1.2.2
+predict_last_n: 1
+run_dir: /sci/labs/efratmorin/lab_share/FloodsML/neuralhydrology/runs/test_run_0703_132325/test_run_0703_153200/test_run_0703_160305/test_run_0703_161423/test_run_0703_163122
+save_validation_results: false
+save_weights_every: 1
+seed: 111
+seq_length: 30
+target_variables:
+- QObs(mm/d)
+test_basin_file: test/test_data/1_basin_test_set.txt
+test_end_date: 31/12/2003
+test_start_date: 01/01/2003
+train_basin_file: test/test_data/1_basin_test_set.txt
+train_dir: /sci/labs/efratmorin/lab_share/FloodsML/neuralhydrology/runs/test_run_0703_132325/test_run_0703_153200/test_run_0703_160305/test_run_0703_161423/test_run_0703_163122/train_data
+train_end_date: 31/12/2001
+train_start_date: 01/01/2000
+validate_every: 1
+validate_n_random_basins: 4
+validation_basin_file: test/test_data/1_basin_test_set.txt
+validation_end_date: 31/12/2003
+validation_start_date: 01/01/2003

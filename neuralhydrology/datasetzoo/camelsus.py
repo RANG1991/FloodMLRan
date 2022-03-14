@@ -135,10 +135,10 @@ def load_camels_us_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
     df['huc'] = df['huc_02'].apply(lambda x: str(x).zfill(2))
     df = df.drop('huc_02', axis=1)
 
-    if basins:
-        if any(b not in df.index for b in basins):
-            raise ValueError('Some basins are missing static attributes.')
-        df = df.loc[basins]
+    #if basins:
+    #    if any(b not in df.index for b in basins):
+    #        raise ValueError('Some basins are missing static attributes.')
+    #    df = df.loc[basins]
 
     return df
 
