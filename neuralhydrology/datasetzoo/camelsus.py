@@ -10,7 +10,7 @@ from neuralhydrology.utils.config import Config
 
 
 class CamelsUS(BaseDataset):
-    """Data set class for the CAMELS US data set by [#]_ and [#]_.
+    """data set class for the CAMELS US data set by [#]_ and [#]_.
     
     Parameters
     ----------

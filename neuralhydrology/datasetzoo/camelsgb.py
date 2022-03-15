@@ -9,7 +9,7 @@ from neuralhydrology.utils.config import Config
 
 
 class CamelsGB(BaseDataset):
-    """Data set class for the CAMELS GB dataset by [#]_.
+    """data set class for the CAMELS GB dataset by [#]_.
     
     Parameters
     ----------
@@ -40,7 +40,7 @@ class CamelsGB(BaseDataset):
     ----------
     .. [#] Coxon, G., Addor, N., Bloomfield, J. P., Freer, J., Fry, M., Hannaford, J., Howden, N. J. K., Lane, R., 
         Lewis, M., Robinson, E. L., Wagener, T., and Woods, R.: CAMELS-GB: Hydrometeorological time series and landscape 
-        attributes for 671 catchments in Great Britain, Earth Syst. Sci. Data Discuss., 
+        attributes for 671 catchments in Great Britain, Earth Syst. Sci. data Discuss.,
         https://doi.org/10.5194/essd-2020-49, in review, 2020. 
     """
 
@@ -96,7 +96,7 @@ def load_camels_gb_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
     ----------
     .. [#] Coxon, G., Addor, N., Bloomfield, J. P., Freer, J., Fry, M., Hannaford, J., Howden, N. J. K., Lane, R., 
         Lewis, M., Robinson, E. L., Wagener, T., and Woods, R.: CAMELS-GB: Hydrometeorological time series and landscape 
-        attributes for 671 catchments in Great Britain, Earth Syst. Sci. Data Discuss., 
+        attributes for 671 catchments in Great Britain, Earth Syst. Sci. data Discuss.,
         https://doi.org/10.5194/essd-2020-49,  in review, 2020. 
     """
     attributes_path = data_dir / 'attributes'

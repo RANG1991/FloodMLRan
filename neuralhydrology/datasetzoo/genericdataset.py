@@ -11,7 +11,7 @@ from neuralhydrology.utils.config import Config
 
 
 class GenericDataset(BaseDataset):
-    """Data set class for the generic dataset that reads data for any region based on common file layout conventions.
+    """data set class for the generic dataset that reads data for any region based on common file layout conventions.
 
     To use this dataset, the data_dir must contain a folder 'time_series' and (if static attributes are used) a folder
     'attributes'. The folder 'time_series' contains one netcdf file (.nc or .nc4) per basin, named '<basin_id>.nc/nc4'.

@@ -41,13 +41,13 @@ RUN_LOCALLY = True
 
 root_dir = str(Path(os.getcwd()).parent)
 PATH_ROOT = root_dir + "/"  # Change only here the path
-PATH_DATA_FILE = PATH_ROOT if not RUN_LOCALLY else Path(PATH_ROOT + "/" + "Data/raw_data_fixed_17532_3_22_38").__str__()
-PATH_LABEL = PATH_ROOT + "Data/CWC/"
-PATH_LOC = PATH_ROOT + "Data/LatLon/{0}_lat_lon"
-PATH_DATA_CLEAN = PATH_ROOT + "Data/IMD_Lat_Lon_reduced/"
+PATH_DATA_FILE = PATH_ROOT if not RUN_LOCALLY else Path(PATH_ROOT + "/" + "data/raw_data_fixed_17532_3_22_38").__str__()
+PATH_LABEL = PATH_ROOT + "data/CWC/"
+PATH_LOC = PATH_ROOT + "data/LatLon/{0}_lat_lon"
+PATH_DATA_CLEAN = PATH_ROOT + "data/IMD_Lat_Lon_reduced/"
 PATH_MODEL = PATH_ROOT + "cnn_lstm/"
 DISCH_FORMAT = "CWC_discharge_{0}_clean"
-PATH_CATCHMENTS = PATH_ROOT + "Data/catchments.csv"
+PATH_CATCHMENTS = PATH_ROOT + "data/catchments.csv"
 FILE_FORMAT = "data_{0}_{1}"
 
 LAT_MIN = 17.375
@@ -101,7 +101,7 @@ idx_features = [use_perc, use_t_max, use_t_min]
 # basin_list = ['Mancherial', 'Perur' ,'Pathagudem','Polavaram', 'Tekra']
 basin_list = ['Tekra', 'Perur']
 ###############
-# Data set up #
+# data set up #
 ###############
 INCLUDE_STATIC = True
 
@@ -295,7 +295,7 @@ class IMDGodavari(Dataset):
         start_date, end_date = self.dates
         idx_s = get_index_by_date(start_date)[0]
         idx_e = get_index_by_date(end_date)[0]
-        # Data is reduced to the dates and features sub space.
+        # data is reduced to the dates and features sub space.
         # the features are the channels (3 features - precipitation,
         # minimum temperature, maximum temperature)
         data = copy.deepcopy(all_data[idx_s:idx_e + 1, idx_features, :, :])
@@ -347,13 +347,13 @@ class IMDGodavari(Dataset):
         if len(self.months) > 0:
             x, y = self.get_monthly_data(x, y, start_date, end_date)
         print(['3: ', x.shape, y.shape], 'Monthly pick')
-        print("Data set for {0} for basins: {1}".format(self.period, self.basin_list))
+        print("data set for {0} for basins: {1}".format(self.period, self.basin_list))
         print("Number of attributes should be: {0}".format(self.num_attributes))
         print("Number of features should be: num_features + num_attributes= {0}".format(
             self.num_features + self.num_attributes))
         print("Number of sample should be: (time_span - sequence_len + 1 -lead) x num_basins= {0}".format(
             (time_span - self.seq_length + 1 - self.lead) * len(self.basin_list)))
-        print("Data size for LSTM should be: (num_samples, sequence_len, num_features) = {0}".format(x.shape))
+        print("data size for LSTM should be: (num_samples, sequence_len, num_features) = {0}".format(x.shape))
         # convert arrays to torch tensors
         x = torch.from_numpy(x.astype(np.float32))
         y = torch.from_numpy(y.astype(np.float32))
@@ -1019,7 +1019,7 @@ def main():
         for j, lon_j in enumerate(LON_GRID):
             x = get_geo_raw_data(lat_i, lon_j, start_date, end_date)
             data[:, :, i, j] = x
-    out_path = PATH_ROOT + 'Data/'
+    out_path = PATH_ROOT + 'data/'
     data.tofile(out_path + "raw_data_fixed" + '_'.join([str(_) for _ in data.shape]))
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from neuralhydrology.utils.config import Config
 
 
 class CamelsCL(BaseDataset):
-    """Data set class for the CAMELS CL dataset by [#]_.
+    """data set class for the CAMELS CL dataset by [#]_.
 
     Parameters
     ----------

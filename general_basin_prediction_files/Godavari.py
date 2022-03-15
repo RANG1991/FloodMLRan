@@ -150,7 +150,7 @@ class IMDGodavari(Dataset):
                                           indices_to_include_months[-1] + self.seq_length + self.lead)
         self.x = self.x[indices_to_include_months, :, :, :]
         self.time_span = self.x.shape[0]
-        print("Data set for {0} for basins: {1}".format(self.period, self.basin_list))
+        print("data set for {0} for basins: {1}".format(self.period, self.basin_list))
         print("Number of attributes should be: {0}".format(self.num_attributes))
         print("Number of features should be: num_features + num_attributes= {0}".format(
             self.num_features + self.num_attributes))

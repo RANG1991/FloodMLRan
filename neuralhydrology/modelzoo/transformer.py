@@ -174,7 +174,7 @@ class _PositionalEncoding(nn.Module):
         ----------
         x : torch.Tensor
             Dimension is ``[sequence length, batch size, embedding output dimension]``.
-            Data that is to be the input to a transformer encoder after including positional encoding.
+            data that is to be the input to a transformer encoder after including positional encoding.
             Typically this will be output from an embedding layer.
 
         Returns

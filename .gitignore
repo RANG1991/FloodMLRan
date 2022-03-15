@@ -11,5 +11,5 @@ LabReport/*.pdf
 .idea/**
 .ipynb_checkpoints/**
 ./*.ipynb
-Data/*
+data/*
 **/__pycache__/**

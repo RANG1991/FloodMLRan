@@ -18,10 +18,10 @@ class Preprocessor:
             self.root_folder = parent_dir + os.sep
         else:
             self.root_folder = root_folder
-        self.path_data_file = self.root_folder + str(Path("/" + "Data/raw_data_fixed_17532_3_22_38"))
+        self.path_data_file = self.root_folder + str(Path("/" + "data/raw_data_fixed_17532_3_22_38"))
         self.dims_json_file_path = self.root_folder + "./dims_json.json"
-        self.path_label = self.root_folder + "Data/CWC/"
-        self.path_loc = self.root_folder + "Data/LatLon/{0}_lat_lon"
+        self.path_label = self.root_folder + "data/CWC/"
+        self.path_loc = self.root_folder + "data/LatLon/{0}_lat_lon"
         self.path_data_clean = self.root_folder + "data/imd_lat_lon_reduced/"
         self.path_model = self.root_folder + "cnn_lstm/"
         self.discharge_format = self.path_label + "CWC_discharge_{0}_clean"

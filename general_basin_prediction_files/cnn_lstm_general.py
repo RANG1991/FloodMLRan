@@ -23,14 +23,14 @@ import seaborn as sns
 root_dir = str(Path(os.getcwd()).parent)
 RUN_LOCALLY = True
 PATH_ROOT = root_dir + "/"  # Change only here the path
-PATH_DATA_FILE = root_dir + str(Path("/" + "Data/raw_data_fixed_17532_3_22_38"))
+PATH_DATA_FILE = root_dir + str(Path("/" + "data/raw_data_fixed_17532_3_22_38"))
 DIMS_JSON_FILE_PATH = root_dir + "./dims_json.json"
-PATH_LABEL = PATH_ROOT + "Data/CWC/"
-PATH_LOC = PATH_ROOT + "Data/LatLon/{0}_lat_lon"
-PATH_DATA_CLEAN = PATH_ROOT + "Data/IMD_Lat_Lon_reduced/"
+PATH_LABEL = PATH_ROOT + "data/CWC/"
+PATH_LOC = PATH_ROOT + "data/LatLon/{0}_lat_lon"
+PATH_DATA_CLEAN = PATH_ROOT + "data/IMD_Lat_Lon_reduced/"
 PATH_MODEL = PATH_ROOT + "cnn_lstm/"
 DISCHARGE_FORMAT = "CWC_discharge_{0}_clean"
-PATH_CATCHMENTS = PATH_ROOT + "Data/catchments.csv"
+PATH_CATCHMENTS = PATH_ROOT + "data/catchments.csv"
 FILE_FORMAT = "data_{0}_{1}"
 
 # Lat - width, Lon - height
@@ -254,7 +254,7 @@ def main():
         PATH_DATA_FILE, DIMS_JSON_FILE_PATH)
 
     ##############
-    # Data set up#
+    # data set up#
     ##############
     catchment_dict = preprocessor.create_catchment_dict(PATH_CATCHMENTS)
     include_static = True
@@ -520,7 +520,7 @@ def main():
         for j, lon_j in enumerate(LON_GRID):
             x = get_geo_raw_data(lat_i, lon_j, start_date, end_date)
             data[:, :, i, j] = x
-    out_path = PATH_ROOT + 'Data/'
+    out_path = PATH_ROOT + 'data/'
     data.tofile(out_path + "raw_data_fixed" + '_'.join([str(_) for _ in data.shape]))
 
 
@@ -657,5 +657,5 @@ if __name__ == '__main__':
 #     for j, lon_j in enumerate(LON_GRID):
 #         x = get_geo_raw_data(lat_i, lon_j, start_date, end_date)
 #         data[:, :, i, j] = x
-# out_path = PATH_ROOT + 'Data/'
+# out_path = PATH_ROOT + 'data/'
 # data.tofile(out_path + "raw_data_fixed" + '_'.join([str(_) for _ in data.shape]))

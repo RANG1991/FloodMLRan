@@ -286,6 +286,7 @@ class BaseTrainer(object):
                     # make sure we add near-zero noise to originally near-zero targets
                     data[key] += (data[key] + self._target_mean / self._target_std) * noise.to(self.device)
 
+            LOGGER.info(f"Predictions: {predictions}, Data: {data}")
             loss = self.loss_obj(predictions, data)
 
             # early stop training if loss is NaN

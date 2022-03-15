@@ -57,7 +57,7 @@ log_n_figures: 2
 save_weights_every: 1
 save_validation_results: False
 
-# --- Data configurations --------------------------------------------------------------------------
+# --- data configurations --------------------------------------------------------------------------
 dataset: # will be filled by conftest
 data_dir: ./test/test_data
 forcings: # will be filled by conftest

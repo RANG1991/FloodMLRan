@@ -12,14 +12,14 @@ from matplotlib import pyplot as plt
 root_dir = str(Path(os.getcwd()).parent)
 RUN_LOCALLY = True
 PATH_ROOT = root_dir + "/"  # Change only here the path
-PATH_DATA_FILE = root_dir + str(Path("/" + "Data/raw_data_fixed_17532_3_22_38"))
+PATH_DATA_FILE = root_dir + str(Path("/" + "data/raw_data_fixed_17532_3_22_38"))
 DIMS_JSON_FILE_PATH = root_dir + "./dims_json.json"
-PATH_LABEL = PATH_ROOT + "Data/CWC/"
-PATH_LOC = PATH_ROOT + "Data/LatLon/{0}_lat_lon"
-PATH_DATA_CLEAN = PATH_ROOT + "Data/IMD_Lat_Lon_reduced/"
+PATH_LABEL = PATH_ROOT + "data/CWC/"
+PATH_LOC = PATH_ROOT + "data/LatLon/{0}_lat_lon"
+PATH_DATA_CLEAN = PATH_ROOT + "data/IMD_Lat_Lon_reduced/"
 PATH_MODEL = PATH_ROOT + "cnn_lstm/"
 DISCHARGE_FORMAT = "CWC_discharge_{0}_clean"
-PATH_CATCHMENTS = PATH_ROOT + "Data/catchments.csv"
+PATH_CATCHMENTS = PATH_ROOT + "data/catchments.csv"
 FILE_FORMAT = "data_{0}_{1}"
 INCLUDE_STATIC = True
 
