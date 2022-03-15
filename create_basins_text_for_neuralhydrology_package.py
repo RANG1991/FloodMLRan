@@ -32,7 +32,7 @@ def create_train_test_val_from_all_basins():
     list_val = sorted(list_val)
     create_basins_ids_file("data/CAMELS/train_basins_local_computer_Ran.txt", list_train)
     create_basins_ids_file("data/CAMELS/val_basins_local_computer_Ran.txt", list_test)
-    create_basins_ids_file("data/CAMELS/test_basins_local_comp_Ran.txt", list_val)
+    create_basins_ids_file("data/CAMELS/test_basins_local_computer_Ran.txt", list_val)
 
 
 def create_train_test_val_from_531_basins_file():
@@ -52,7 +52,7 @@ def create_train_test_val_from_531_basins_file():
             list_val = sorted(list_val)
             create_basins_ids_file("data/CAMELS/train_basins_local_computer_Ran.txt", list_train)
             create_basins_ids_file("data/CAMELS/val_basins_local_computer_Ran.txt", list_test)
-            create_basins_ids_file("data/CAMELS/test_basins_local_comp_Ran.txt", list_val)
+            create_basins_ids_file("data/CAMELS/test_basins_local_computer_Ran.txt", list_val)
 
 
 def main():

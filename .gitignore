@@ -14,3 +14,4 @@ LabReport/*.pdf
 data/*
 **/__pycache__/**
 output.log
+neuralhydrology/runs/**
