@@ -90,7 +90,7 @@ def continue_run(run_dir: Path, config_file: Path = None, gpu: int = None):
 
     """
     # load config from base run and overwrite all elements with an optional new config
-    base_config = Config(run_dir / "config.yml")
+    base_config = Config(run_dir / "config_local_cpu.yml")
 
     if config_file is not None:
         base_config.update_config(config_file)
@@ -126,7 +126,7 @@ def finetune(config_file: Path = None, gpu: int = None):
         raise ValueError("For finetuning, at least one model part has to be specified by 'finetune_modules'.")
 
     # extract base run dir, load base run config and combine with the finetune arguments
-    config = Config(temp_config.base_run_dir / "config.yml")
+    config = Config(temp_config.base_run_dir / "config_local_cpu.yml")
     config.update_config({'run_dir': None, 'experiment_name': None})
     config.update_config(config_file)
     config.is_finetuning = True
@@ -158,7 +158,7 @@ def eval_run(run_dir: Path, period: str, epoch: int = None, gpu: int = None):
         GPU id to use. Will override config argument 'device'. A value less than zero indicates CPU.
 
     """
-    config = Config(run_dir / "config.yml")
+    config = Config(run_dir / "config_local_cpu.yml")
 
     # check if a GPU has been specified as command line argument. If yes, overwrite config
     if gpu is not None and gpu >= 0:

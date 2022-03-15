@@ -13,3 +13,4 @@ LabReport/*.pdf
 ./*.ipynb
 data/*
 **/__pycache__/**
+output.log
