@@ -9,6 +9,10 @@ import torch.nn.functional as F
 # 3. number of filters (also called channels as this is the number of output channels - each
 # filter is producing *one* channel)
 class CNN(nn.Module):
+    """
+    It's important to note that one convolution operation on a single part of the image
+    only generates a single number!!! (single scalar)
+    """
     def __init__(self, num_channels: int, output_size_cnn, image_input_size):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
@@ -17,20 +21,20 @@ class CNN(nn.Module):
         self.filter_size_pool = 2
         self.stride_size_conv = 1
         self.stride_size_pool = 2
-        # The operation list to how many times (how many filters) we are doing this operation
+        # The operation list - the operation type to how many times we
+        # are doing this operation (how much filter applications)
         self.op_list = [("conv", 16), ("pool", 1), ("conv", 32), ("pool", 1)]
         dims_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.op_list)
-        # doing convolution with 3 by 3 filter matrix
+        # declaring convolution with 3 by 3 filter matrix
         # the input is: 1 or 2 or 3 channels (depending on the number of channels) -
         # this is the number of channel of the input image
         # the output is: 16 channels (the number of filters we apply)
         self.conv1 = nn.Conv2d(self.initial_num_channels, 16, 3)
-        # doing max pooling to the output matrix of the previous stage
+        # declaring max pooling to the output matrix of the previous stage
         # (getting the max of the pool of 2 by 2 matrix going
         # over the large matrix from previous stage)
         self.pool = nn.MaxPool2d(2, 2)
-        # doing convolution with 3 by 3 filter matrix -
-        # (this is the number of channel of the input image)
+        # declaring convolution with 3 by 3 filter matrix
         # the input is: 16 channels
         # the output is: 32 channels (the number of filters we apply)
         self.conv2 = nn.Conv2d(16, 32, 3)

@@ -31,7 +31,8 @@ class CNNLSTM(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Forward pass through the Network.
-        param x: Tensor of shape [batch size, seq length, num features] containing the input data for the LSTM network
+        param x: Tensor of shape [batch size, seq length, num features]
+        containing the input data for the LSTM network
         return: Tensor containing the network predictions
         """
         # x is of size:
