@@ -38,7 +38,6 @@ class CNN(nn.Module):
         # the input is: 16 channels
         # the output is: 32 channels (the number of filters we apply)
         self.conv2 = nn.Conv2d(16, 32, 3)
-        # pay attention to the convolution (1024)! (comment of Ronen, Efrat calculated this)
         size_for_fc = dims_fc[0] * dims_fc[1] * 32
         self.size_for_fc = int(size_for_fc)
         self.fc1 = nn.Linear(self.size_for_fc, 120)
