@@ -1,7 +1,7 @@
 from matplotlib import pyplot
 import re
 
-DECIMAL_POINT_PATTERN = "\d*[.,]?\d*"
+DECIMAL_POINT_PATTERN = r"\d*[.,]?\d*"
 
 
 def get_validation_and_training_scores_from_logs(logs_filename):
