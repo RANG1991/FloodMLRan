@@ -75,6 +75,8 @@ class BaseTrainer(object):
         self._set_random_seeds()
         self._set_device()
 
+        self.loss_list = []
+
     def _get_dataset(self) -> BaseDataset:
         return get_dataset(cfg=self.cfg, period="train", is_train=True, scaler=self._scaler)
 
@@ -286,13 +288,15 @@ class BaseTrainer(object):
                     # make sure we add near-zero noise to originally near-zero targets
                     data[key] += (data[key] + self._target_mean / self._target_std) * noise.to(self.device)
 
-            LOGGER.info(f"Predictions: {predictions}, Data: {data}")
-            loss = self.loss_obj(predictions, data)
-
+            # LOGGER.info(f"Predictions: {predictions}, Data: {data}")
+            loss_current_epoch = self.loss_obj(predictions, data)
+            self.loss_list.append([torch.max(loss_current_epoch), torch.min(loss_current_epoch)])
             # early stop training if loss is NaN
-            if torch.isnan(loss):
+            if torch.isnan(loss_current_epoch):
                 nan_count += 1
                 if nan_count > self._allow_subsequent_nan_losses:
+                    for i in range(min(len(self.loss_list), 10)):
+                        LOGGER.info(self.loss_list[i][0], self.loss_list[i][1])
                     raise RuntimeError(f"Loss was NaN for {nan_count} times in a row. Stopped training.")
                 LOGGER.warning(f"Loss is Nan; ignoring step. (#{nan_count}/{self._allow_subsequent_nan_losses})")
             else:
@@ -302,7 +306,7 @@ class BaseTrainer(object):
                 self.optimizer.zero_grad()
 
                 # get gradients
-                loss.backward()
+                loss_current_epoch.backward()
 
                 if self.cfg.clip_gradient_norm is not None:
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.clip_gradient_norm)
@@ -310,9 +314,9 @@ class BaseTrainer(object):
                 # update weights
                 self.optimizer.step()
 
-            pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
+            pbar.set_postfix_str(f"Loss: {loss_current_epoch.item():.4f}")
 
-            self.experiment_logger.log_step(loss=loss.item())
+            self.experiment_logger.log_step(loss=loss_current_epoch.item())
 
     def _set_random_seeds(self):
         if self.cfg.seed is None:

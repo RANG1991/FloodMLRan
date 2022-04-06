@@ -63,6 +63,7 @@ class CudaLSTM(BaseModel):
                 - `h_n`: hidden state at the last time step of the sequence of shape [batch size, 1, hidden size].
                 - `c_n`: cell state at the last time step of the sequence of shape [batch size, 1, hidden size].
         """
+        # the x_d in data dictionary is of size [batch_size, seq_length, number_of_features]
         # possibly pass dynamic and static inputs through embedding layers, then concatenate them
         x_d = self.embedding_net(data)
         lstm_output, (h_n, c_n) = self.lstm(input=x_d)
