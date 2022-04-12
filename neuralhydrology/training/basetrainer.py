@@ -212,12 +212,15 @@ class BaseTrainer(object):
                 self._save_weights_and_optimizer(epoch)
 
             if (self.validator is not None) and (epoch % self.cfg.validate_every == 0):
-                self.validator.evaluate(epoch=epoch,
-                                        save_results=self.cfg.save_validation_results,
-                                        metrics=self.cfg.metrics,
-                                        model=self.model,
-                                        experiment_logger=self.experiment_logger.valid())
-
+                results = self.validator.evaluate(epoch=epoch,
+                                                  save_results=self.cfg.save_validation_results,
+                                                  metrics=self.cfg.metrics,
+                                                  model=self.model,
+                                                  experiment_logger=self.experiment_logger.valid())
+                for basin_id in results.keys():
+                    if "1D" in results[basin_id].keys() and "NSE" in results[basin_id]["1D"].keys():
+                        LOGGER.info("The NSE loss for basin with ID: {} is: {}".format(basin_id,
+                                                                                       results[basin_id]["1D"]["NSE"]))
                 valid_metrics = self.experiment_logger.summarise()
                 print_msg = f"Epoch {epoch} average validation loss: {valid_metrics['avg_loss']:.5f}"
                 if self.cfg.metrics:
