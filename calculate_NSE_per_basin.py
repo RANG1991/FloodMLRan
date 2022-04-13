@@ -27,11 +27,13 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss):
     nse_losses_np = np.array(nse_losses)
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     # evaluate the histogram
-    values, base = np.histogram(nse_losses_np, bins=1000)
+    values, base = np.histogram(nse_losses_np, bins=100)
     # evaluate the cumulative
     cumulative = np.cumsum(values)
+    cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     # plot the cumulative function
     plt.plot(base[:-1], cumulative, c='blue')
+    plt.grid()
     plt.show()
 
 
