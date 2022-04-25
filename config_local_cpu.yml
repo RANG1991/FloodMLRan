@@ -121,7 +121,7 @@ data_dir: C:/Users/Admin/PycharmProjects/FloodMLRan/data/CAMELS_US
 # Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
 # can be either a list of forcings or a single forcing product
 forcings:
-  - nldas
+  - maurer
 
 dynamic_inputs:
   - PRCP(mm/day)

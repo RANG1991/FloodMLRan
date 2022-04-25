@@ -7,6 +7,9 @@ import xarray
 
 from neuralhydrology.datasetzoo.basedataset import BaseDataset
 from neuralhydrology.utils.config import Config
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 
 class CamelsUS(BaseDataset):
