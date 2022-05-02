@@ -13,7 +13,7 @@ import netCDF4 as nc
 import datetime
 import geopandas as gpd
 
-PATH_ROOT = "/data/CAMELS/"
+PATH_ROOT = "./data/CAMELS_US/"
 
 
 def read_single_basin(station_id):
