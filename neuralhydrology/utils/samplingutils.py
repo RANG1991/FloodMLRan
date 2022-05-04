@@ -104,7 +104,7 @@ def _sample_gaussian_mixtures(ids: List[int], m_sub: torch.Tensor, s_sub: torch.
                               p_sub: torch.Tensor) -> torch.Tensor:
     # unbound sampling:
     categorical = Categorical(p_sub)
-    pis = categorical.sample().data
+    pis = categorical.sample().X_data
     mask_gmm = torch.zeros(p_sub.shape, dtype=torch.bool) \
         .to(device=p_sub.device) \
         .scatter_(2, pis.unsqueeze(2), True)

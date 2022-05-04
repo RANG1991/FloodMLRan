@@ -3,7 +3,7 @@ import torch
 
 class LSTM_ERA5(torch.nn.Module):
 
-    def __init__(self, input_dim, hidden_dim, sequence_length):
+    def __init__(self, input_dim, hidden_dim, sequence_length=270):
         super(LSTM_ERA5, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim

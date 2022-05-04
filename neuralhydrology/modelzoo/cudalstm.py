@@ -45,7 +45,7 @@ class CudaLSTM(BaseModel):
     def _reset_parameters(self):
         """Special initialization of certain model weights."""
         if self.cfg.initial_forget_bias is not None:
-            self.lstm.bias_hh_l0.data[self.cfg.hidden_size:2 * self.cfg.hidden_size] = self.cfg.initial_forget_bias
+            self.lstm.bias_hh_l0.X_data[self.cfg.hidden_size:2 * self.cfg.hidden_size] = self.cfg.initial_forget_bias
 
     def forward(self, data: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Perform a forward pass on the CudaLSTM model.

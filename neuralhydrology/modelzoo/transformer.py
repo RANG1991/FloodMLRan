@@ -91,10 +91,10 @@ class Transformer(BaseModel):
         # this initialization strategy was tested empirically but may not be the universally best strategy in all cases.
         initrange = 0.1
         for layer in self.encoder.layers:
-            layer.linear1.weight.data.uniform_(-initrange, initrange)
-            layer.linear1.bias.data.zero_()
-            layer.linear2.weight.data.uniform_(-initrange, initrange)
-            layer.linear2.bias.data.zero_()
+            layer.linear1.weight.X_data.uniform_(-initrange, initrange)
+            layer.linear1.bias.X_data.zero_()
+            layer.linear2.weight.X_data.uniform_(-initrange, initrange)
+            layer.linear2.bias.X_data.zero_()
 
     def forward(self, data: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Perform a forward pass on a transformer model without decoder.

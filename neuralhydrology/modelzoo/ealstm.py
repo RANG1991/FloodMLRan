@@ -87,8 +87,8 @@ class EALSTM(BaseModel):
             raise ValueError('Need x_s or x_one_hot in forward pass.')
 
         # TODO: move hidden and cell state initialization to init and only reset states in forward pass to zero.
-        h_t = x_d.data.new(x_d.shape[1], self._hidden_size).zero_()
-        c_t = x_d.data.new(x_d.shape[1], self._hidden_size).zero_()
+        h_t = x_d.X_data.new(x_d.shape[1], self._hidden_size).zero_()
+        c_t = x_d.X_data.new(x_d.shape[1], self._hidden_size).zero_()
 
         # empty lists to temporally store all intermediate hidden/cell states
         h_n, c_n = [], []

@@ -148,7 +148,7 @@ class MTSLSTM(BaseModel):
         if self.cfg.initial_forget_bias is not None:
             for freq in self._frequencies:
                 hidden_size = self._hidden_size[freq]
-                self.lstms[freq].bias_hh_l0.data[hidden_size:2 * hidden_size] = self.cfg.initial_forget_bias
+                self.lstms[freq].bias_hh_l0.X_data[hidden_size:2 * hidden_size] = self.cfg.initial_forget_bias
 
     def _prepare_inputs(self, data: Dict[str, torch.Tensor], freq: str) -> torch.Tensor:
         """Concat all different inputs to the time series input"""
