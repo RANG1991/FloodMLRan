@@ -1,5 +1,5 @@
-from general_basin_prediction_files.Godavari import IMDGodavari as new_G
-from general_basin_prediction_files.cnn_lstm_v3 import IMDGodavari as old_G
+from RanCode.Godavari import IMDGodavari as new_G
+from RanCode.cnn_lstm_v3 import IMDGodavari as old_G
 from pathlib import Path
 import numpy as np
 import torch

@@ -13,40 +13,37 @@ import netCDF4 as nc
 import datetime
 import geopandas as gpd
 
-PATH_ROOT = "./data/CAMELS_US/"
+PATH_ROOT = "../data/CAMELS_US/"
 
 
 def read_single_basin(station_id):
     """
     read the bounds of the required station
     """
-    # Set filepath
+    # set filepath
     fn = PATH_ROOT + "/HCDN_nhru_final_671.shp"
-    # Read the precipitation data file using gpd.read_file()
+    # read the basins' boundaries file using gpd.read_file()
     basin_data = gpd.read_file(fn)
+    # get the boundaries of the required basin using its station ID basin
     basin = basin_data[basin_data['hru_id'] == int(station_id)]
     bounds = basin.bounds
 
-    # get the minimum and maximum longitude and latitude
+    # get the minimum and maximum longitude and latitude (square boundaries)
     min_lon = np.squeeze(np.floor((bounds['minx'].values * 10) / 10))
     min_lat = np.squeeze(np.floor((bounds['miny'].values * 10) / 10))
     max_lon = np.squeeze(np.ceil((bounds['maxx'].values * 10) / 10))
     max_lat = np.squeeze(np.ceil((bounds['maxy'].values * 10) / 10))
 
-    """
-    read the discharge of the required station (output)
-    """
+    # read the discharge of the required station
     fn = PATH_ROOT + '/Streamflow/dis_' + station_id + '.csv'
     df_dis = pd.read_csv(fn)
-    # convert the columns of year, month, day, hour, minute to datetime
+    # convert the columns of year, month, day, hour, minute to datetime and put it as the dataframe index
     df_dis.index = [datetime.datetime(df_dis['year'][i], df_dis['month'][i],
                                       df_dis['day'][i], df_dis['hour'][i],
                                       df_dis['minute'][i]) for i in range(0, len(df_dis))]
     print(df_dis)
 
-    """
-    read the precipitation of the required station (input)
-    """
+    # read the precipitation of the required station
     # ERA5
     year_start = df_dis['year'].min() - 1
     year_end = df_dis['year'].max()
@@ -72,7 +69,7 @@ def read_single_basin(station_id):
             ind_lon_max = np.squeeze(np.argwhere(lon == min(max_lon, max_lon_array)))
             ind_lat_min = np.squeeze(np.argwhere(lat == max(min_lat, min_lat_array)))
             ind_lat_max = np.squeeze(np.argwhere(lat == min(max_lat, max_lat_array)))
-        # multiply by 1000 to convert from units of meter to mm
+        # multiply by 1000 to convert from meter to mm
         tp = np.asarray(ds['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1]) * 1000
         # convert the time to datetime format and append it to the times array
         times = [datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M") + datetime.timedelta(hours=int(ti[i]))
@@ -83,18 +80,20 @@ def read_single_basin(station_id):
 
     # concatenate the datetimes from all the years
     datetimes = np.concatenate(list_of_dates, axis=0)
+
+    # concatenate the percipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations, axis=0)
 
     print([station_id, lat[ind_lat_min], lat[ind_lat_max], lon[ind_lon_min],
            lon[ind_lon_max], precip.shape])
 
-    # correct precip time from numpy time to datetime
     df = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df.index.to_pydatetime()
 
     ls = [[precip[i, :, :]] for i in range(0, len(datetimes))]
     df = pd.DataFrame(data=ls, index=datetimes, columns=['precip'])
-    # downsample the datetime data into 1D (1 day) bins and sum the values falling into the same bin
+
+    # down sample the datetime data into 1D (1 day) bins and sum the values falling into the same bin
     df1 = df.resample('1D').sum()
     datetimes24 = df1.index.to_pydatetime()
     precip24 = np.stack(df1['precip'].values)

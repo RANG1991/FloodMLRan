@@ -31,7 +31,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
 
 
 def main():
-    training_data = Dataset_ERA5("./data/df_train.csv")
+    training_data = Dataset_ERA5("../data/df_train.csv")
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=20, input_dim=1).to(device)

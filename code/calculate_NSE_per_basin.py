@@ -38,7 +38,7 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss):
 
 
 def main():
-    with open("./nse_per_basin.txt", "w") as f:
+    with open("nse_per_basin.txt", "w") as f:
         d = create_dict_basin_id_to_NSE("./output.log")
         dict_basins_id_to_mean_nse_loss = {}
         for basin_id, nse_losses_list in d.items():

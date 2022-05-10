@@ -9,11 +9,11 @@ from neuralhydrology.nh_run import start_run, eval_run
 def main():
     # by default, we assume that you have at least one CUDA-capable NVIDIA GPU
     if torch.cuda.is_available():
-        start_run(config_file=Path("../config_local_cpu.yml"))
+        start_run(config_file=Path("../general_basin_prediction_files/config_local_cpu.yml"))
 
     # fall back to CPU-only mode
     else:
-        start_run(config_file=Path("../config_local_cpu.yml"), gpu=-1)
+        start_run(config_file=Path("../general_basin_prediction_files/config_local_cpu.yml"), gpu=-1)
 
 
 if __name__ == "__main__":
