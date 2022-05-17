@@ -143,13 +143,14 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
 
     # down sample the datetime data into 1D (1 day) bins and sum the values falling into the same bin
     df_percip_one_day = df_percip.resample('1D').sum()
-    print(df_percip_one_day)
-    df_percip_one_day = df_percip_one_day.reset_index().rename_axis('date', axis=2)
+    df_percip_one_day = df_percip_one_day.reset_index()
+    df_percip_one_day = df_percip_one_day.rename(columns={"index": "date"})
     print(df_percip_one_day)
     df_percip_one_day = df_percip_one_day[["date", "precip"]]
     # downsample the datetime data into 1D (1 day) bins and take the mean of the values falling into the same bin
     df_dis_one_day = df_dis.resample('1D').mean()
-    df_dis_one_day = df_dis_one_day.reset_index().rename_axis('date', axis="columns")
+    df_dis_one_day = df_dis_one_day.reset_index()
+    df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
     print(df_dis_one_day)
     df_dis_one_day = df_dis_one_day[["date", "flow"]]
     df_joined = df_percip_one_day.join(df_dis_one_day, on="date")
