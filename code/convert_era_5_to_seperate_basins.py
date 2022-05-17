@@ -28,13 +28,12 @@ def check_if_discharge_file_exists(station_id, ERA5_discharge_data_folder_name):
 
 def check_if_all_percip_files_exist(station_id, output_folder_name):
     shape_file = output_folder_name + '/shape_' + station_id + '.csv'
-    time24_file = output_folder_name + '/time24_' + station_id + '.npy'
-    percip24_file = output_folder_name + '/precip24_' + station_id
-    timedis24_file = output_folder_name + '/timedis24_' + station_id + '.npy'
-    dis24_file = output_folder_name + '/dis24_' + station_id
+    percip24_file = output_folder_name + '/precip24_' + station_id + '.csv'
+    dis24_file = output_folder_name + '/dis24_' + station_id + '.csv'
+    data24 = output_folder_name + '/data24_' + station_id + '.csv'
     info_file = output_folder_name + '/info_' + station_id + '.txt'
     latlon_file = output_folder_name + '/latlon_' + station_id + '.csv'
-    list_files = [shape_file, time24_file, percip24_file, timedis24_file, dis24_file, info_file, latlon_file]
+    list_files = [shape_file, percip24_file, dis24_file, data24, info_file, latlon_file]
     all_files_exist = all(Path(file_name).exists() for file_name in list_files)
     return all_files_exist
 
@@ -136,7 +135,7 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
     datetimes = np.concatenate(list_of_dates, axis=0)
     # concatenate the percipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations, axis=0)
-    percip_sum_lat_lon = np.sum(precip, axis=(1,2))
+    percip_sum_lat_lon = np.sum(precip, axis=(1, 2))
     df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df_percip_times.index.to_pydatetime()
     ls = [[percip_sum_lat_lon[i]] for i in range(0, len(datetimes))]
@@ -144,9 +143,15 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
 
     # down sample the datetime data into 1D (1 day) bins and sum the values falling into the same bin
     df_percip_one_day = df_percip.resample('1D').sum()
+    df_percip_one_day = df_percip_one_day.rename_axis('date', axis="columns")
+    print(df_percip_one_day.columns)
+    df_percip_one_day = df_percip_one_day[["date", "precip"]]
     # downsample the datetime data into 1D (1 day) bins and take the mean of the values falling into the same bin
     df_dis_one_day = df_dis.resample('1D').mean()
-    df_joined = df_percip_one_day.join(df_dis_one_day)
+    df_dis_one_day = df_dis_one_day.rename_axis('date', axis="columns")
+    print(df_dis_one_day.columns)
+    df_dis_one_day = df_dis_one_day[["date", "flow"]]
+    df_joined = df_percip_one_day.join(df_dis_one_day, on="date")
 
     df_percip_one_day.to_csv(output_folder_name + '/precip24_' + station_id + '.csv', float_format='%6.1f')
     df_dis_one_day.to_csv(output_folder_name + '/dis24_' + station_id + '.csv', float_format='%6.1f')
