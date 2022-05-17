@@ -153,7 +153,7 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
     df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
     print(df_dis_one_day)
     df_dis_one_day = df_dis_one_day[["date", "flow"]]
-    df_joined = df_percip_one_day.join(df_dis_one_day, on="date")
+    df_joined = df_percip_one_day.merge(df_dis_one_day, on="date")
 
     df_percip_one_day.to_csv(output_folder_name + '/precip24_' + station_id + '.csv', float_format='%6.1f')
     df_dis_one_day.to_csv(output_folder_name + '/dis24_' + station_id + '.csv', float_format='%6.1f')
