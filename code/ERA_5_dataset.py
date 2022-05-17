@@ -6,10 +6,10 @@ import pandas as pd
 
 class Dataset_ERA5(Dataset):
 
-    def __init__(self, examples_csv_file, is_training=True, sequence_length=270):
+    def __init__(self, X_data_file, is_training=True, sequence_length=270):
         self.is_training = is_training
         self.sequence_length = sequence_length
-        self.examples_csv_file = examples_csv_file
+        self.X_data_file = X_data_file
         self.X_data = np.array([])
         self.y_data = np.array([])
         self.preprocess_data()
@@ -21,8 +21,7 @@ class Dataset_ERA5(Dataset):
         return self.X_data[index: index + self.sequence_length, :]
 
     def preprocess_data(self):
-        data_df = pd.read_csv(self.examples_csv_file)
-        self.X_data = np.array(data_df["tp"].tolist()).reshape(-1, 1)
+        self.X_data = np.fromfile(self.X_data_file)
         self.X_data -= np.mean(self.X_data)
         self.X_data /= np.std(self.X_data)
         self.y_data = np.array([])
