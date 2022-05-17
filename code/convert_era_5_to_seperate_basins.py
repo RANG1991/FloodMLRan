@@ -7,19 +7,8 @@ Original file is located at
     https://colab.research.google.com/drive/1IohMD5fUbdoRmS0FjHefjU12HXz-i0oY
 """
 
-import xarray as xr
-from os.path import isfile, join
-from os import listdir
-# from google.colab import drive
-import torch
-import pandas as pd
-import numpy as np
 import netCDF4 as nc
-import datetime
-# !pip install geopandas
 import geopandas as gpd
-# !pip install climata
-from climata.usgs import DailyValueIO
 from climata.usgs import InstantValueIO
 import pandas as pd
 import numpy as np
@@ -145,48 +134,32 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
 
     # concatenate the datetimes from all the years
     datetimes = np.concatenate(list_of_dates, axis=0)
-
     # concatenate the percipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations, axis=0)
-
-    print([station_id, lat[ind_lat_min], lat[ind_lat_max], lon[ind_lon_min],
-           lon[ind_lon_max], precip.shape])
-
-    df = pd.DataFrame(data=datetimes, index=datetimes)
-    datetimes = df.index.to_pydatetime()
-
-    ls = [[precip[i, :, :]] for i in range(0, len(datetimes))]
-    df = pd.DataFrame(data=ls, index=datetimes, columns=['precip'])
+    percip_sum_lat_lon = np.sum(precip, axis=(1,2))
+    df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
+    datetimes = df_percip_times.index.to_pydatetime()
+    ls = [[percip_sum_lat_lon[i]] for i in range(0, len(datetimes))]
+    df_percip = pd.DataFrame(data=ls, index=datetimes, columns=['precip'])
 
     # down sample the datetime data into 1D (1 day) bins and sum the values falling into the same bin
-    df1 = df.resample('1D').sum()
-    datetimes24 = df1.index.to_pydatetime()
-    precip24 = np.stack(df1['precip'].values)
+    df_percip_one_day = df_percip.resample('1D').sum()
+    # downsample the datetime data into 1D (1 day) bins and take the mean of the values falling into the same bin
+    df_dis_one_day = df_dis.resample('1D').mean()
 
-    dis = df_dis['flow'].values
-    datetimesdis = df_dis.index.to_pydatetime()
-
-    # downsample the datetime data into 1D (1 day) bins and take the mean
-    # of the values falling into the same bin
-    df1 = df_dis.resample('1D').mean()
-    datetimesdis24 = df1.index.to_pydatetime()
-    dis24 = np.stack(df1['flow'].values)
+    df_percip_one_day.to_csv(output_folder_name + '/precip24_' + station_id + '.csv', float_format='%6.1f')
+    df_dis_one_day.to_csv(output_folder_name + '/dis24_' + station_id + '.csv', float_format='%6.1f')
 
     fn = output_folder_name + '/shape_' + station_id + '.csv'
-    pd.DataFrame(data=np.array([(precip24.shape[0],), (precip24.shape[1],), (precip24.shape[2],)]).T,
+    pd.DataFrame(data=np.array([(df_percip.shape[0],), (precip.shape[1],), (precip.shape[2],)]).T,
                  columns=['time', 'lat', 'lon'], index=[1]).to_csv(fn)
-    fn = output_folder_name + '/time24_' + station_id + '.npy'
-    np.save(fn, datetimes24)
-    fn = output_folder_name + '/precip24_' + station_id
-    precip24.tofile(fn)
-    fn = output_folder_name + '/timedis24_' + station_id + '.npy'
-    np.save(fn, datetimesdis24)
-    fn = output_folder_name + '/dis24_' + station_id
-    dis24.tofile(fn)
     fn = output_folder_name + '/info_' + station_id + '.txt'
     with open(fn, 'w') as f:
         print(precip.shape[0], precip.shape[1], precip.shape[2], lat[ind_lat_min], lat[ind_lat_max], lon[ind_lon_min],
               lon[ind_lon_max], file=f)
+
+    print([station_id, lat[ind_lat_min], lat[ind_lat_max], lon[ind_lon_min],
+           lon[ind_lon_max], precip.shape])
 
     lonb = lon[ind_lon_min:ind_lon_max]
     latb = lat[ind_lat_max:ind_lat_min]
@@ -199,7 +172,6 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
 
     fn = output_folder_name + '/latlon_' + station_id + '.csv'
     pd.DataFrame(data=lat_lon_lst, columns=['lat', 'lon']).to_csv(fn, index=False, float_format='%6.1f')
-
     fn = output_folder_name + '/info_' + station_id + '.txt'
     with open(fn, 'w') as f:
         print(precip.shape[0], precip.shape[1], precip.shape[2], lat[ind_lat_min], lat[ind_lat_max], lon[ind_lon_min],
