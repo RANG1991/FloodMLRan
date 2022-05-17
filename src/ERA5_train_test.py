@@ -1,3 +1,5 @@
+import os
+
 from torch.utils.data import DataLoader
 from ERA_5_dataset import Dataset_ERA5
 import tqdm
@@ -5,6 +7,9 @@ from tqdm import tqdm_notebook
 from ERA5_lstm import LSTM_ERA5
 import torch.optim
 import torch.nn as nn
+from os import listdir
+from os.path import isfile, join
+import pandas as pd
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
@@ -30,7 +35,20 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
 
 
+def read_basins_csv_files(folder_name, num_basins):
+    df = pd.DataFrame(columns=["date", "precip", "flow"])
+    data_csv_files = [f for f in listdir(folder_name) if isfile(join(folder_name, f))]
+    for i in range(min(num_basins, len(data_csv_files))):
+        data_file = data_csv_files[i]
+        if str(data_file).endswith(".csv"):
+            df_temp = pd.read_csv(folder_name + os.sep + data_file)
+            df = pd.concat([df, df_temp])
+    return df
+
+
 def main():
+    df_all_data = read_basins_csv_files("../data/ERA5/all_data_daily", 3)
+    df_all_data.to_csv("../data/df_train.csv")
     training_data = Dataset_ERA5("../data/df_train.csv")
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
