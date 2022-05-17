@@ -146,9 +146,11 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
     df_percip_one_day = df_percip.resample('1D').sum()
     # downsample the datetime data into 1D (1 day) bins and take the mean of the values falling into the same bin
     df_dis_one_day = df_dis.resample('1D').mean()
+    df_joined = df_percip_one_day.join(df_dis_one_day)
 
     df_percip_one_day.to_csv(output_folder_name + '/precip24_' + station_id + '.csv', float_format='%6.1f')
     df_dis_one_day.to_csv(output_folder_name + '/dis24_' + station_id + '.csv', float_format='%6.1f')
+    df_joined.to_csv(output_folder_name + '/data24_' + station_id + '.csv', float_format='%6.1f')
 
     fn = output_folder_name + '/shape_' + station_id + '.csv'
     pd.DataFrame(data=np.array([(df_percip.shape[0],), (precip.shape[1],), (precip.shape[2],)]).T,
