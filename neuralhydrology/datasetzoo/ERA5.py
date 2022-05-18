@@ -120,7 +120,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     if not forcing_path.is_dir():
         raise OSError(f"{forcing_path} does not exist")
 
-    file_path = list(forcing_path.glob(f'**/{basin}_*_24precip.txt'))
+    file_path = list(forcing_path.glob(f'**/data24_{basin}.csv'))
     if file_path:
         file_path = file_path[0]
     else:
@@ -128,7 +128,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
-        df["date"] = pd.to_datetime(df.date, format="%Y/%m/%d")
+        df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df.set_index("date")
         df = df[["date", "precip"]]
     return df
@@ -154,7 +154,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
     """
 
     discharge_path = data_dir / 'ERA5/all_ERA5_data'
-    file_path = list(discharge_path.glob(f'**/{basin}_*_24precip.txt'))
+    file_path = list(discharge_path.glob(f'**/data24_{basin}.csv'))
     if file_path:
         file_path = file_path[0]
     else:
@@ -162,7 +162,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
-        df["date"] = pd.to_datetime(df.date, format="%Y/%m/%d")
+        df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df.set_index("date")
         df = df[["date", "flow"]]
     return df.flow
