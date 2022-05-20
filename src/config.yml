@@ -39,7 +39,7 @@ metrics:
 
 # base model type [lstm, ealstm, cudalstm, embcudalstm, mtslstm]
 # (has to match the if statement in modelzoo/__init__.py)
-model: cudalstm
+model: ERA5
 transformer_positional_encoding_type: sum
 transformer_positional_dropout: 0.0
 transformer_nheads: 1
@@ -116,54 +116,24 @@ save_weights_every: 1
 dataset: camels_us
 
 # Path to data set root
-data_dir: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US
+data_dir: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US/
 
 # Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
 # can be either a list of forcings or a single forcing product
 forcings:
-  - nldas
+  - maurer
 
 dynamic_inputs:
-  - PRCP(mm/day)
-  - SRAD(W/m2)
-  - Tmax(C)
-  - Tmin(C)
-  - Vp(Pa)
+  - precip
 
 # which columns to use as target
 target_variables:
-  - QObs(mm/d)
+  - flow
 
 # clip negative predictions to zero for all variables listed below. Should be a list, even for single variables.
 clip_targets_to_zero:
-  - QObs(mm/d)
+  - flow
   
 # Which CAMELS attributes to use. Leave empty if none should be used
 static_attributes:
- - p_mean
- - pet_mean
- - aridity
- - frac_snow
- - high_prec_freq
- - high_prec_dur
- - low_prec_freq
- - low_prec_dur
- - elev_mean
- - slope_mean
- - area_gages2
- - frac_forest
- - lai_max
- - lai_diff
- - gvf_max
- - gvf_diff
- - soil_depth_pelletier
- - soil_depth_statsgo
- - soil_porosity
- - soil_conductivity
- - max_water_content
- - sand_frac
- - silt_frac
- - clay_frac
- - carbonate_rocks_frac
- - geol_permeability
  

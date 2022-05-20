@@ -97,24 +97,16 @@ class ERA5(BaseDataset):
 
 
 def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
-    """Load the forcing data for a basin of the CAMELS US data set.
+    """
 
     Parameters
     ----------
-    data_dir : Path
-        Path to the CAMELS US directory. This folder must contain a 'basin_mean_forcing' folder containing one
-        subdirectory for each forcing. The forcing directories have to contain 18 subdirectories (for the 18 HUCS) as in
-        the original CAMELS data set. In each HUC folder are the forcing files (.txt), starting with the 8-digit basin
-        id.
-    basin : str
-        8-digit USGS identifier of the basin.
-    forcings : str
-        Can be e.g. 'daymet' or 'nldas', etc. Must match the folder names in the 'basin_mean_forcing' directory.
+    data_dir
+    basin
 
     Returns
     -------
-    pd.DataFrame
-        Time-indexed DataFrame, containing the forcing data..
+
     """
     forcing_path = data_dir / 'ERA5/all_ERA5_data'
     if not forcing_path.is_dir():
@@ -135,24 +127,17 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
 
 
 def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
-    """Load the discharge data for a basin of the CAMELS US data set.
+    """
 
     Parameters
     ----------
-    discharge
-    data_dir : Path
-        Path to the CAMELS US directory. This folder must contain a 'usgs_streamflow' folder with 18
-        subdirectories (for the 18 HUCS) as in the original CAMELS data set. In each HUC folder are the discharge files
-        (.txt), starting with the 8-digit basin id.
-    basin : str
-        8-digit USGS identifier of the basin.
+    data_dir
+    basin
 
     Returns
     -------
-    pd.Series
-        Time-index pandas.Series of the discharge values (mm/day)
-    """
 
+    """
     discharge_path = data_dir / 'ERA5/all_ERA5_data'
     file_path = list(discharge_path.glob(f'**/data24_{basin}.csv'))
     if file_path:
