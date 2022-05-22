@@ -108,7 +108,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     -------
 
     """
-    forcing_path = data_dir / 'ERA5/ERA5_all_data'
+    forcing_path = data_dir / 'ERA5/ERA_5_all_data'
     if not forcing_path.is_dir():
         raise OSError(f"{forcing_path} does not exist")
 
@@ -138,7 +138,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
     -------
 
     """
-    discharge_path = data_dir / 'ERA5/ERA5_all_data'
+    discharge_path = data_dir / 'ERA5/ERA_5_all_data'
     file_path = list(discharge_path.glob(f'**/data24_{basin}.csv'))
     if file_path:
         file_path = file_path[0]
