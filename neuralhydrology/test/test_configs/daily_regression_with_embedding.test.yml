@@ -64,7 +64,7 @@ log_n_figures: 2
 save_weights_every: 1
 save_validation_results: False
 
-# --- data configurations --------------------------------------------------------------------------
+# --- Data configurations --------------------------------------------------------------------------
 dataset: camels_us
 data_dir: ./test/test_data/camels_us
 forcings: daymet

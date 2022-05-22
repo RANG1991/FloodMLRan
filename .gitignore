@@ -11,8 +11,8 @@ LabReport/*.pdf
 .idea/**
 .ipynb_checkpoints/**
 ./*.ipynb
-data/*
+**/data/**
 **/__pycache__/**
 output.log
-neuralhydrology/runs/**
+**/runs/**
 **/.tmp*/**
