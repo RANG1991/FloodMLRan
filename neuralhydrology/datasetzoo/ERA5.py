@@ -1,11 +1,13 @@
 from pathlib import Path
-from typing import Tuple, List, Dict, Union
-
+from typing import List, Dict, Union
+import logging
 import pandas as pd
 import xarray
 
 from neuralhydrology.datasetzoo.basedataset import BaseDataset
 from neuralhydrology.utils.config import Config
+
+logger = logging.Logger("ERA5")
 
 
 class ERA5(BaseDataset):
@@ -149,5 +151,6 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
         df = pd.read_csv(fp, sep=',')
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df.set_index("date", drop=False)
+        logger.info("the data frame is: {}".format(df))
         df = df[["date", "flow"]]
     return df.flow
