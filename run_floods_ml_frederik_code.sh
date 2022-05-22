@@ -9,7 +9,7 @@
 #SBATCH -J jupyter
 
 # Uncomment and enter path of code
-cd /sci/labs/efratmorin/ranga/
+cd /sci/labs/efratmorin/ranga/FloodMLRan
 
 # virtual_env location
 virtual_env=/sci/labs/efratmorin/ranga/FloodsMLEnv/bin/activate

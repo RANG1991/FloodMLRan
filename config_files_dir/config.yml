@@ -1,5 +1,7 @@
 # --- Experiment configurations --------------------------------------------------------------------
 
+run_dir: /sci/labs/efratmorin/ranga/FloodMLRan/
+
 # experiment name, used as folder name
 experiment_name: test_run
 

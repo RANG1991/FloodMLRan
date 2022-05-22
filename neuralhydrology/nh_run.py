@@ -64,7 +64,6 @@ def start_run(config_file: Path, gpu: int = None):
         GPU id to use. Will override config argument 'device'. A value smaller than zero indicates CPU.
 
     """
-
     config = Config(config_file)
 
     # check if a GPU has been specified as command line argument. If yes, overwrite config

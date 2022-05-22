@@ -1,4 +1,4 @@
-#! /sci/labs/efratmorin/lab_share/FloodsMLEnv/bin/python
+#! /sci/labs/efratmorin/ranga/FloodsMLEnv/bin/python
 import argparse
 import random
 import subprocess
