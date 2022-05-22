@@ -122,6 +122,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
+        df = df.reindex(columns=["date", "precip"])
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df.set_index("date", drop=False)
         df = df[["date", "precip"]]
@@ -149,6 +150,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
+        df = df.reindex(columns=["date", "flow"])
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df.set_index("date", drop=False)
         logger.info("the data frame is: {}".format(df))
