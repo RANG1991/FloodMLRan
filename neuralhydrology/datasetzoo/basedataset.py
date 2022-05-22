@@ -353,6 +353,7 @@ class BaseDataset(Dataset):
                     xr = xr.assign_coords({'basin': basin_str})
                     data_list.append(xr.astype(np.float32))
 
+            LOGGER.info("data_list is: {}".format(data_list))
             # create one large dataset that has two coordinates: datetime and basin
             xr = xarray.concat(data_list, dim="basin")
 
