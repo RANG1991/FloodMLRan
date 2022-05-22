@@ -273,7 +273,7 @@ class BaseDataset(Dataset):
                 LOGGER.info("Loading basin data into xarray data set.")
             for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
                 df = self._load_basin_data(basin)
-                
+
                 if df.empty:
                     continue
 
