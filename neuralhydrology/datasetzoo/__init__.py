@@ -67,7 +67,7 @@ def get_dataset(cfg: Config,
     elif cfg.dataset.lower() == "era5":
         Dataset = ERA5
     else:
-        raise NotImplementedError(f"No dataset class implemented for dataset {cfg.dataset}")
+        raise NotImplementedError(f"No dataset class implemented for dataset {cfg.dataset.lower()}")
 
     ds = Dataset(cfg=cfg,
                  is_train=is_train,
