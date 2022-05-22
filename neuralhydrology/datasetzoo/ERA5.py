@@ -87,7 +87,7 @@ class ERA5(BaseDataset):
         df_forcings = df_forcings.dropna()
         df_forcings = df_forcings[df_forcings["precip"] >= 0]
         df_discharge = df_discharge.dropna()
-        df_discharge = df_discharge[df_discharge > 0]
+        df_discharge = df_discharge[df_discharge >= 0]
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings["flow"] = df_discharge
@@ -134,7 +134,6 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
         df = pd.read_csv(fp, sep=',')
         df = df.reindex()
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
-        df = df.set_index("date", drop=False)
         df = df[["date", "precip"]]
     return df
 
@@ -163,5 +162,4 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
         df = pd.read_csv(fp, sep=',')
         df = df.reindex()
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
-        df = df.set_index("date", drop=False)
     return df.flow
