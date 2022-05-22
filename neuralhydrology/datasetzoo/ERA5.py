@@ -123,7 +123,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     if file_path:
         file_path = file_path[0]
     else:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=["date", "precip"])
         # raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
 
     with open(file_path, 'r') as fp:
@@ -152,7 +152,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
     if file_path:
         file_path = file_path[0]
     else:
-        return pd.Series()
+        return pd.Series(name="flow")
         # raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
 
     with open(file_path, 'r') as fp:
