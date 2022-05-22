@@ -82,7 +82,12 @@ class ERA5(BaseDataset):
         pd.DataFrame
             Time-indexed DataFrame, containing the time series data (e.g., forcings + discharge).
         """
-        return load_ERA5_forcings(data_dir=self.cfg.data_dir, basin=basin)
+        df_forcings = load_ERA5_forcings(data_dir=self.cfg.data_dir, basin=basin)
+        df_discharge = load_ERA5_discharge(data_dir=self.cfg.data_dir, basin=basin)
+        if df_forcings.empty or df_discharge.empty:
+            return pd.DataFrame()
+        df_forcings["flow"] = df_discharge
+        return df_forcings
 
     def _load_attributes(self) -> pd.DataFrame:
         """Load dataset attributes
@@ -118,7 +123,8 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     if file_path:
         file_path = file_path[0]
     else:
-        raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
+        return pd.DataFrame()
+        # raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
@@ -146,13 +152,12 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
     if file_path:
         file_path = file_path[0]
     else:
-        raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
+        return pd.Series()
+        # raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
         df = df.reindex(columns=["date", "flow"])
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df.set_index("date", drop=False)
-        logger.info("the data frame is: {}".format(df))
-        df = df[["date", "flow"]]
-    return df
+    return df.flow
