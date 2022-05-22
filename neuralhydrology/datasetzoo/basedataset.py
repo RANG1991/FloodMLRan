@@ -327,7 +327,7 @@ class BaseDataset(Dataset):
 
                 # create xarray data set for each period slice of the specific basin
                 for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
-                    LOGGER.info("in xarray creation. i is: {}".format(i))
+                    LOGGER.info("in xarray creation. start dates are: {}".format(start_dates))
                     # if the start date is not aligned with the frequency, the resulting datetime indices will be off
                     if not all(to_offset(freq).is_on_offset(start_date) for freq in self.frequencies):
                         misaligned = [freq for freq in self.frequencies if not to_offset(freq).is_on_offset(start_date)]
