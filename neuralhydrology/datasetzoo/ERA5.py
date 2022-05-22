@@ -91,7 +91,7 @@ class ERA5(BaseDataset):
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings["flow"] = df_discharge
-        df_forcings.set_index("date")
+        df_forcings = df_forcings.set_index("date")
         return df_forcings
 
     def _load_attributes(self) -> pd.DataFrame:
