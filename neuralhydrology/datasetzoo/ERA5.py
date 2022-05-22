@@ -87,7 +87,7 @@ class ERA5(BaseDataset):
         df_forcings = df_forcings.dropna()
         df_forcings = df_forcings[df_forcings["precip"] >= 0]
         df_discharge = df_discharge.dropna()
-        df_discharge = df_discharge[df_discharge["flow"] > 0]
+        df_discharge = df_discharge[df_discharge > 0]
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings["flow"] = df_discharge
