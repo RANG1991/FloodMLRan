@@ -273,6 +273,9 @@ class BaseDataset(Dataset):
                 LOGGER.info("Loading basin data into xarray data set.")
             for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
                 df = self._load_basin_data(basin)
+                
+                if df.empty:
+                    continue
 
                 # add columns from dataframes passed as additional data files
                 df = pd.concat([df, *[d[basin] for d in self.additional_features]], axis=1)
