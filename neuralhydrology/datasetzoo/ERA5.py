@@ -155,4 +155,4 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
         df = df.set_index("date", drop=False)
         logger.info("the data frame is: {}".format(df))
         df = df[["date", "flow"]]
-    return df.flow
+    return df
