@@ -87,10 +87,10 @@ class ERA5(BaseDataset):
         df_forcings = df_forcings.dropna(how='any')
         df_forcings = df_forcings[df_forcings["precip"] >= 0]
         df_discharge = df_discharge.dropna(how='any')
-        df_discharge = df_discharge[df_discharge >= 0]
+        df_discharge = df_discharge[df_discharge["flow"] >= 0]
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame(columns=["date", "precip", "flow"])
-        df_forcings["flow"] = df_discharge
+        df_forcings = df_forcings.merge(df_discharge, on="date")
         df_forcings = df_forcings.set_index("date")
         return df_forcings
 
@@ -138,7 +138,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     return df
 
 
-def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
+def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.DataFrame:
     """
 
     Parameters
@@ -155,10 +155,11 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.Series:
     if file_path:
         file_path = file_path[0]
     else:
-        return pd.Series(name="flow")
+        return pd.DataFrame(columns=["date", "flow"])
         # raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
-    return df.flow
+        df = df[["date", "flow"]]
+    return df
