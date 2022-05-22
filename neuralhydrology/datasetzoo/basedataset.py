@@ -285,6 +285,7 @@ class BaseDataset(Dataset):
 
                 # remove unnecessary columns
                 try:
+                    LOGGER.info("the data frame is: {}".format(df))
                     df = df[keep_cols]
                 except KeyError:
                     not_available_columns = [x for x in keep_cols if x not in df.columns]
