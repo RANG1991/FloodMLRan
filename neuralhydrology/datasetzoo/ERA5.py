@@ -91,8 +91,8 @@ class ERA5(BaseDataset):
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings = df_forcings.merge(df_discharge, on="date")
-        df_forcings = df_forcings.set_index("date")
         df_forcings["date"] = pd.to_datetime(df_forcings["date"], infer_datetime_format=True)
+        df_forcings = df_forcings.set_index("date")
         return df_forcings
 
     def _load_attributes(self) -> pd.DataFrame:
