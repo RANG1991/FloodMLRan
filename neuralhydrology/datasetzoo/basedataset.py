@@ -303,7 +303,7 @@ class BaseDataset(Dataset):
                 start_dates = self.dates[basin]["start_dates"]
                 end_dates = [date + pd.Timedelta(days=1, seconds=-1) for date in self.dates[basin]["end_dates"]]
 
-                print(df.index)
+                LOGGER.info(df.index)
                 native_frequency = utils.infer_frequency(df.index)
                 if not self.frequencies:
                     self.frequencies = [native_frequency]  # use df's native resolution by default
