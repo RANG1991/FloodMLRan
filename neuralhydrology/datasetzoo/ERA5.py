@@ -92,6 +92,7 @@ class ERA5(BaseDataset):
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings = df_forcings.merge(df_discharge, on="date")
         df_forcings = df_forcings.set_index("date")
+        df_forcings["date"] = pd.to_datetime(df_forcings["date"], infer_datetime_format=True)
         return df_forcings
 
     def _load_attributes(self) -> pd.DataFrame:
