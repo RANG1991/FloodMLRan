@@ -356,7 +356,7 @@ class BaseDataset(Dataset):
                     xr = xr.assign_coords({'basin': basin_str})
                     data_list.append(xr.astype(np.float32))
 
-                LOGGER.info("the start date is: {} the end date is: {}".format(start_dates, end_dates))
+                # LOGGER.info("the start date is: {} the end date is: {}".format(start_dates, end_dates))
             # create one large dataset that has two coordinates: datetime and basin
             xr = xarray.concat(data_list, dim="basin")
 
