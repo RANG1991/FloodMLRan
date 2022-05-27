@@ -9,10 +9,10 @@ validation_basin_file: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US/tr
 test_basin_file: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US/train_basins_local.txt
 
 # training, validation and test time periods (format = 'dd/mm/yyyy')
-train_start_date: "01/10/1999"
-train_end_date: "30/09/2008"
-validation_start_date: "01/10/1980"
-validation_end_date: "30/09/1989"
+train_start_date: "01/10/2009"
+train_end_date: "30/09/2019"
+validation_start_date: "01/10/2009"
+validation_end_date: "30/09/1999"
 test_start_date: "01/10/1989"
 test_end_date: "30/09/1999"
 
