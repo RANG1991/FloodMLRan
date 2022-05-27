@@ -8,7 +8,7 @@ experiment_name: train_run
 # files to specify training, validation and test basins (relative to code root or absolute path)
 train_basin_file: C:\Users\galun\PyCharmProjects\FloodMLRan/data/CAMELS_US/train_basins_local.txt
 validation_basin_file: C:\Users\galun\PyCharmProjects\FloodMLRan/data/CAMELS_US/train_basins_local.txt
-test_basin_file: C:\Users\galun\PyCharmProjects\FloodMLRan/data/CAMELS_US/train_basins_local.txt
+test_basin_file: C:\Users\galun\PyCharmProjects\FloodMLRan/CAMELS_US/train_basins_local.txt
 
 # training, validation and test time periods (format = 'dd/mm/yyyy')
 train_start_date: "01/10/2009"
@@ -26,7 +26,7 @@ device: cuda:0
 allow_subsequent_nan_losses: 10
 
 # specify after how many epochs to perform validation
-validate_every: 1
+validate_every: 3
 
 # specify how many random basins to use for validation
 validate_n_random_basins: 1
@@ -61,7 +61,7 @@ output_activation: linear
 hidden_size: 256
 
 # Initial bias value of the forget gate
-# initial_forget_bias: 3
+initial_forget_bias:
 
 # Dropout applied to the output of the LSTM
 output_dropout: 0.4
@@ -76,7 +76,9 @@ loss: MSE
 
 # specify learning rates to use starting at specific epochs (0 is the initial learning rate)
 learning_rate:
-  0: 1e-3
+  0: 1e-2
+  30: 5e-3
+  40: 1e-3
 
 # Mini-batch size
 batch_size: 256
@@ -117,6 +119,11 @@ dataset: ERA5
 
 # Path to data set root
 data_dir: C:\Users\galun\PyCharmProjects\FloodMLRan/data/
+
+# Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
+# can be either a list of forcings or a single forcing product
+forcings:
+  - maurer
 
 dynamic_inputs:
   - precip

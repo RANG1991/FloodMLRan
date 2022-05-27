@@ -4,7 +4,7 @@ import numpy as np
 
 def main():
     input_str = ""
-    num_equations = 3
+    num_equations = 2
     num_iter = 10
     for i in range(num_iter):
         input_str += str(num_equations) + "\r\n"
