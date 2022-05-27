@@ -61,7 +61,7 @@ output_activation: linear
 hidden_size: 256
 
 # Initial bias value of the forget gate
-initial_forget_bias: 3
+initial_forget_bias:
 
 # Dropout applied to the output of the LSTM
 output_dropout: 0.4

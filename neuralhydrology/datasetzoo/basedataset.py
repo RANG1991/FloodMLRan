@@ -358,7 +358,6 @@ class BaseDataset(Dataset):
 
                 LOGGER.info("the start date is: {} the end date is: {}".format(start_dates, end_dates))
             # create one large dataset that has two coordinates: datetime and basin
-            LOGGER.info(basin_str)
             xr = xarray.concat(data_list, dim="basin")
 
             if self.is_train and self.cfg.save_train_data:
