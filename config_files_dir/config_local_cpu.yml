@@ -26,7 +26,7 @@ device: cuda:0
 allow_subsequent_nan_losses: 10
 
 # specify after how many epochs to perform validation
-validate_every: 3
+validate_every: 1
 
 # specify how many random basins to use for validation
 validate_n_random_basins: 1

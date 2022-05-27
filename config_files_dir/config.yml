@@ -29,7 +29,7 @@ allow_subsequent_nan_losses: 10
 validate_every: 3
 
 # specify how many random basins to use for validation
-validate_n_random_basins: 1
+validate_n_random_basins: 100
 
 # specify which metrics to calculate during validation (see neuralhydrology.evaluation.metrics)
 # this can either be a list or a dictionary. If a dictionary is used, the inner keys must match the name of the
