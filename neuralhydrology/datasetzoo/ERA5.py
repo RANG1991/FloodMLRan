@@ -86,9 +86,9 @@ class ERA5(BaseDataset):
         df_forcings = load_ERA5_forcings(data_dir=self.cfg.data_dir, basin=basin)
         df_discharge = load_ERA5_discharge(data_dir=self.cfg.data_dir, basin=basin)
         df_forcings = df_forcings.fillna(np.nan)
-        df_forcings.loc[df_forcings["precip"] < 0, df_forcings["precip"]] = np.nan
+        df_forcings.loc[df_forcings["precip"] < 0, "precip"] = np.nan
         df_discharge = df_discharge.fillna(np.nan)
-        df_discharge.loc[df_discharge["flow"] < 0, df_discharge["flow"]] = np.nan
+        df_discharge.loc[df_discharge["flow"] < 0, "flow"] = np.nan
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings = df_forcings.merge(df_discharge, on="date")
