@@ -92,8 +92,6 @@ class ERA5(BaseDataset):
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings = df_forcings.merge(df_discharge, on="date")
         df_forcings = df_forcings.set_index("date")
-        idx = pd.date_range(df_forcings.index[0], df_forcings.index[-1])
-        df_forcings = df_forcings.reindex(idx, fill_value=0)
         return df_forcings
 
     def _load_attributes(self) -> pd.DataFrame:
