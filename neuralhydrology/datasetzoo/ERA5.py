@@ -84,16 +84,16 @@ class ERA5(BaseDataset):
         """
         df_forcings = load_ERA5_forcings(data_dir=self.cfg.data_dir, basin=basin)
         df_discharge = load_ERA5_discharge(data_dir=self.cfg.data_dir, basin=basin)
-        df_forcings = df_forcings.dropna(how='any')
-        df_forcings = df_forcings[df_forcings["precip"] >= 0]
-        df_discharge = df_discharge.dropna(how='any')
-        df_discharge = df_discharge[df_discharge["flow"] >= 0]
+        df_forcings = df_forcings.fillna(0)
+        df_forcings["precip"].clip(lower=0)
+        df_discharge = df_discharge.fillna(0)
+        df_discharge["flow"].clip(lower=0)
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame(columns=["date", "precip", "flow"])
         df_forcings = df_forcings.merge(df_discharge, on="date")
-        # df_forcings["date"] = pd.to_datetime(df_forcings["date"], infer_datetime_format=True)
-        # df_forcings = df_forcings.asfreq("D")
         df_forcings = df_forcings.set_index("date")
+        idx = pd.date_range(df_forcings.index[0], df_forcings.index[-1])
+        df_forcings = df_forcings.reindex(idx, fill_value=0)
         return df_forcings
 
     def _load_attributes(self) -> pd.DataFrame:
