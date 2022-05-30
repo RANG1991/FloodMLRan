@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from CNN import CNN
+from src.CNN import CNN
 
 
 class CNNLSTM(nn.Module):
