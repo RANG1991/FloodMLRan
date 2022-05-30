@@ -29,7 +29,7 @@ allow_subsequent_nan_losses: 10
 validate_every: 3
 
 # specify how many random basins to use for validation
-validate_n_random_basins: 100
+validate_n_random_basins: 5
 
 # specify which metrics to calculate during validation (see neuralhydrology.evaluation.metrics)
 # this can either be a list or a dictionary. If a dictionary is used, the inner keys must match the name of the
@@ -76,15 +76,15 @@ loss: MSE
 
 # specify learning rates to use starting at specific epochs (0 is the initial learning rate)
 learning_rate:
-  0: 1e-3
-  30: 5e-4
+  0: 5e-4
+  30: 1e-4
   40: 1e-5
 
 # Mini-batch size
 batch_size: 256
 
 # Number of training epochs
-epochs: 20
+epochs: 50
 
 # If a value, clips the gradients during training to that norm.
 clip_gradient_norm: 2
@@ -123,7 +123,7 @@ data_dir: /sci/labs/efratmorin/ranga/FloodMLRan/data/
 # Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
 # can be either a list of forcings or a single forcing product
 forcings:
-  - maurer
+
 
 dynamic_inputs:
   - precip
