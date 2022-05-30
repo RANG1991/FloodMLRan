@@ -194,7 +194,10 @@ def load_ERA5_attributes(data_dir: Path) -> pd.DataFrame:
     if not attributes_path.exists():
         raise RuntimeError(f"Attribute folder not found at {attributes_path}")
 
+    df_attr = pd.read_csv(attributes_path, dtype={'gauge_id': str})
+    df_attr = df_attr.set_index('gauge_id')
 
-
-
-    return df
+    # convert huc column to double digit strings
+    df_attr['huc'] = df_attr['huc_02'].apply(lambda x: str(x).zfill(2))
+    df_attr = df_attr.drop('huc_02', axis=1)
+    return df_attr
