@@ -53,6 +53,7 @@ def parse_single_basin_discharge(station_id, output_folder_name):
         parameter=param_id)
 
     FT2M = 0.3048
+    datetimes = []
     for series in data:
         flow = [r[1] for r in series.data]
         datetimes = [r[0] for r in series.data]
@@ -71,11 +72,11 @@ def parse_single_basin_discharge(station_id, output_folder_name):
     df_group.to_csv(filename)
 
 
-def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name, ERA5_data_folder_name,
+def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name, ERA5_data_folder_name,
                                      output_folder_name):
     all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
     if all_files_exist:
-        print("all percipitation file of the basin: {} exists".format(station_id))
+        print("all precipitation file of the basin: {} exists".format(station_id))
         return
     basin_boundaries = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
@@ -134,7 +135,7 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
 
     # concatenate the datetimes from all the years
     datetimes = np.concatenate(list_of_dates, axis=0)
-    # concatenate the percipitation data from all the years
+    # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations, axis=0)
     percip_sum_lat_lon = np.sum(precip, axis=(1, 2))
     df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
@@ -191,7 +192,7 @@ def parse_single_basin_percipitation(station_id, basin_data, discharge_file_name
 def main():
     root_folder = "/sci/labs/efratmorin/lab_share/FloodsML/data/ERA5/"
     boundaries_file_name = root_folder + "/HCDN_nhru_final_671.shp"
-    ERA5_percip_data_folder_name = root_folder + "/Percipitation/"
+    ERA5_percip_data_folder_name = root_folder + "/Precipitation/"
     ERA5_discharge_data_folder_name = root_folder + "/Discharge/"
     output_folder_name = root_folder + "/ERA_5_all_data/"
     # read the basins' boundaries file using gpd.read_file()
@@ -203,7 +204,7 @@ def main():
         discharge_file_name = ERA5_discharge_data_folder_name + '/dis_' + str(station_id) + '.csv'
         # get the boundaries of the required basin using its station ID
         basin_data = basins_data[basins_data['hru_id'] == int(station_id)]
-        parse_single_basin_percipitation(station_id, basin_data, discharge_file_name, ERA5_percip_data_folder_name,
+        parse_single_basin_precipitation(station_id, basin_data, discharge_file_name, ERA5_percip_data_folder_name,
                                          output_folder_name)
 
 
