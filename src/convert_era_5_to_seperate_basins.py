@@ -138,10 +138,10 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     datetimes = np.concatenate(list_of_dates, axis=0)
     # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations, axis=0)
-    percip_sum_lat_lon = np.sum(precip, axis=(1, 2))
+    percip_mean_lat_lon = np.mean(precip, axis=(1, 2))
     df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df_percip_times.index.to_pydatetime()
-    ls = [[percip_sum_lat_lon[i]] for i in range(0, len(datetimes))]
+    ls = [[percip_mean_lat_lon[i]] for i in range(0, len(datetimes))]
     df_percip = pd.DataFrame(data=ls, index=datetimes, columns=['precip'])
 
     # down sample the datetime data into 1D (1 day) bins and sum the values falling into the same bin
