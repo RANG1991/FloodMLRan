@@ -38,7 +38,8 @@ def check_if_all_percip_files_exist(station_id, output_folder_name):
     return all_files_exist
 
 
-def parse_single_basin_discharge(station_id, output_folder_name):
+def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
+    area = basin_data.area
     dis_file_exists = check_if_discharge_file_exists(station_id, output_folder_name)
     if dis_file_exists:
         print("The discharge file of the basin: {} exists".format(station_id))
@@ -62,7 +63,7 @@ def parse_single_basin_discharge(station_id, output_folder_name):
     ls = []
     for i in range(0, len(datetimes)):
         t = datetimes[i].astimezone(datetime.timezone.utc)
-        ls.append([t.year, t.month, t.day, t.hour, t.minute, flow[i] * (FT2M ** 3)])
+        ls.append([t.year, t.month, t.day, t.hour, t.minute, flow[i] * (((FT2M ** 3) / area) * 3.6 * 24)])
 
     df = pd.DataFrame(data=ls, columns=['year', 'month', 'day', 'hour', 'minute', 'flow'])
     df_group = df.groupby(by=['year', 'month', 'day', 'hour']).mean()
@@ -201,10 +202,10 @@ def main():
     for station_id in basins_data["hru_id"]:
         station_id = str(station_id).zfill(8)
         print("working on basin with id: {}".format(station_id))
-        parse_single_basin_discharge(station_id, ERA5_discharge_data_folder_name)
+        basin_data = basins_data[basins_data['hru_id'] == int(station_id)]
+        parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
         discharge_file_name = ERA5_discharge_data_folder_name + '/dis_' + str(station_id) + '.csv'
         # get the boundaries of the required basin using its station ID
-        basin_data = basins_data[basins_data['hru_id'] == int(station_id)]
         parse_single_basin_precipitation(station_id, basin_data, discharge_file_name, ERA5_percip_data_folder_name,
                                          output_folder_name)
 
