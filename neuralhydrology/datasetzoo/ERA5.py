@@ -164,3 +164,37 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.DataFrame:
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df[["date", "flow"]]
     return df
+
+
+def load_ERA5_attributes(data_dir: Path) -> pd.DataFrame:
+    """Load CAMELS US attributes from the dataset provided by [#]_
+
+    Parameters
+    ----------
+    data_dir : Path
+        Path to the CAMELS US directory. This folder must contain a 'camels_attributes_v2.0' folder (the original
+        data set) containing the corresponding txt files for each attribute group.
+    basins : List[str], optional
+        If passed, return only attributes for the basins specified in this list. Otherwise, the attributes of all basins
+        are returned.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Basin-indexed DataFrame, containing the attributes as columns.
+
+    References
+    ----------
+    .. [#] Addor, N., Newman, A. J., Mizukami, N. and Clark, M. P.: The CAMELS data set: catchment attributes and
+        meteorology for large-sample studies, Hydrol. Earth Syst. Sci., 21, 5293-5313, doi:10.5194/hess-21-5293-2017,
+        2017.
+    """
+    attributes_path = data_dir / 'ERA5/'
+
+    if not attributes_path.exists():
+        raise RuntimeError(f"Attribute folder not found at {attributes_path}")
+
+
+
+
+    return df
