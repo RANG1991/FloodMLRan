@@ -16,7 +16,6 @@ import datetime
 from shapely.geometry import Point
 from pathlib import Path
 
-# drive.mount('/content/drive', force_remount=True)
 
 TEST_PERIOD = ("1989-10-01", "1999-09-30")
 TRAINING_PERIOD = ("1999-10-01", "2008-09-30")
@@ -125,7 +124,7 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
             ind_lat_min = np.squeeze(np.argwhere(lat == max(min_lat, min_lat_array)))
             ind_lat_max = np.squeeze(np.argwhere(lat == min(max_lat, max_lat_array)))
             started_reading_data = True
-        tp = np.asarray(dataset['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1], dtype=np.float32)
+        tp = np.asarray(dataset['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1], dtype=np.float64)
         tp[tp < 0] = 0
         # convert the time to datetime format and append it to the times array
         times = [datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M") + datetime.timedelta(hours=int(ti[i]))
@@ -138,7 +137,7 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     datetimes = np.concatenate(list_of_dates, axis=0)
     # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations, axis=0)
-    percip_mean_lat_lon = np.mean(precip, axis=(1, 2), dtype=np.float64)
+    percip_mean_lat_lon = np.sum(precip, axis=(1, 2), dtype=np.float64)
     df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df_percip_times.index.to_pydatetime()
     ls = [[percip_mean_lat_lon[i]] for i in range(0, len(datetimes))]
