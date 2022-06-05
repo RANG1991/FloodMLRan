@@ -79,12 +79,12 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     if all_files_exist:
         print("all precipitation file of the basin: {} exists".format(station_id))
         return
-    basin_boundaries = basin_data.bounds
+    bounds = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
-    min_lon = np.squeeze(np.floor((basin_boundaries['minx'].values * 10) / 10))
-    min_lat = np.squeeze(np.floor((basin_boundaries['miny'].values * 10) / 10))
-    max_lon = np.squeeze(np.ceil((basin_boundaries['maxx'].values * 10) / 10))
-    max_lat = np.squeeze(np.ceil((basin_boundaries['maxy'].values * 10) / 10))
+    min_lon = np.squeeze(np.floor(bounds['minx'].values*10) / 10)
+    min_lat = np.squeeze(np.floor(bounds['miny'].values*10) / 10)
+    max_lon = np.squeeze(np.ceil(bounds['maxx'].values*10) / 10)
+    max_lat = np.squeeze(np.ceil(bounds['maxy'].values*10) / 10)
 
     # read the discharge of the required station
     df_dis = pd.read_csv(discharge_file_name)
@@ -149,7 +149,7 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     df_percip_one_day = df_percip_one_day.rename(columns={"index": "date"})
     print(df_percip_one_day)
     df_percip_one_day = df_percip_one_day[["date", "precip"]]
-    # downsample the datetime data into 1D (1 day) bins and take the mean of the values falling into the same bin
+    # down sample the datetime data into 1D (1 day) bins and take the mean of the values falling into the same bin
     df_dis_one_day = df_dis.resample('1D').mean()
     df_dis_one_day = df_dis_one_day.reset_index()
     df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
@@ -190,20 +190,21 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
 
 
 def main():
-    root_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/"
+    root_folder = "../data/ERA5/"
     boundaries_file_name = root_folder + "/HCDN_nhru_final_671.shp"
     ERA5_percip_data_folder_name = root_folder + "/Precipitation/"
     ERA5_discharge_data_folder_name = root_folder + "/Discharge/"
     output_folder_name = root_folder + "/ERA_5_all_data/"
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
-    for station_id in basins_data["hru_id"]:
+    station_ids_list = basins_data["hru_id"]
+    # station_ids_list = ["01052500"]
+    for station_id in station_ids_list:
         station_id = str(station_id).zfill(8)
         print("working on basin with id: {}".format(station_id))
         basin_data = basins_data[basins_data['hru_id'] == int(station_id)]
         parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
         discharge_file_name = ERA5_discharge_data_folder_name + '/dis_' + str(station_id) + '.csv'
-        # get the boundaries of the required basin using its station ID
         parse_single_basin_precipitation(station_id, basin_data, discharge_file_name, ERA5_percip_data_folder_name,
                                          output_folder_name)
 
