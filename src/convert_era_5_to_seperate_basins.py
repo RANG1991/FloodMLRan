@@ -190,7 +190,7 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
 
 
 def main():
-    root_folder = "../data/ERA5/"
+    root_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/"
     boundaries_file_name = root_folder + "/HCDN_nhru_final_671.shp"
     ERA5_percip_data_folder_name = root_folder + "/Precipitation/"
     ERA5_discharge_data_folder_name = root_folder + "/Discharge/"
