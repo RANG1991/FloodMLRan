@@ -62,7 +62,7 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
     ls = []
     for i in range(0, len(datetimes)):
         t = datetimes[i].astimezone(datetime.timezone.utc)
-        ls.append([t.year, t.month, t.day, t.hour, t.minute, flow[i] * (((FT2M ** 3) / area) * 3.6 * 24)])
+        ls.append([t.year, t.month, t.day, t.hour, t.minute, (flow[i] * 3.6 * 24 / area)])
 
     df = pd.DataFrame(data=ls, columns=['year', 'month', 'day', 'hour', 'minute', 'flow'])
     df_group = df.groupby(by=['year', 'month', 'day', 'hour']).mean()
@@ -124,10 +124,12 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
             ind_lat_min = np.squeeze(np.argwhere(lat == max(min_lat, min_lat_array)))
             ind_lat_max = np.squeeze(np.argwhere(lat == min(max_lat, max_lat_array)))
             started_reading_data = True
-        tp = np.asarray(dataset['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1], dtype=np.float64)
+        tp = np.asarray(dataset['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1])
+        tp[:, :, :] = tp[:, :, :] * 1000
         tp[tp < 0] = 0
         # convert the time to datetime format and append it to the times array
-        times = [datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M") + datetime.timedelta(hours=int(ti[i]))
+        times = [datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M") +
+                 datetime.timedelta(hours=int(ti[i]))
                  for i in range(0, len(ti))]
         times = np.asarray(times)
         list_of_dates.append(times)
@@ -137,7 +139,7 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     datetimes = np.concatenate(list_of_dates, axis=0)
     # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations, axis=0)
-    percip_mean_lat_lon = np.sum(precip, axis=(1, 2), dtype=np.float64)
+    percip_mean_lat_lon = np.mean(precip, axis=(1, 2))
     df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df_percip_times.index.to_pydatetime()
     ls = [[percip_mean_lat_lon[i]] for i in range(0, len(datetimes))]
@@ -198,7 +200,7 @@ def main():
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"]
-    # station_ids_list = ["01052500"]
+    station_ids_list = ["01052500"]
     for station_id in station_ids_list:
         station_id = str(station_id).zfill(8)
         print("working on basin with id: {}".format(station_id))
