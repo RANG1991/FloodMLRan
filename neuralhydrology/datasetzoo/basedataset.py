@@ -270,7 +270,6 @@ class BaseDataset(Dataset):
             keep_cols = list(sorted(set(keep_cols)))
 
             if not self._disable_pbar:
-                LOGGER.info("Loading basin data into xarray data set.")
             for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
                 df = self._load_basin_data(basin)
 
@@ -285,7 +284,6 @@ class BaseDataset(Dataset):
 
                 # remove unnecessary columns
                 try:
-                    # LOGGER.info("the data frame is: {}".format(df))
                     df = df[keep_cols]
                 except KeyError:
                     not_available_columns = [x for x in keep_cols if x not in df.columns]
@@ -300,7 +298,6 @@ class BaseDataset(Dataset):
                 start_dates = self.dates[basin]["start_dates"]
                 end_dates = [date + pd.Timedelta(days=1, seconds=-1) for date in self.dates[basin]["end_dates"]]
 
-                # LOGGER.info(df.index)
                 native_frequency = utils.infer_frequency(df.index)
                 if not self.frequencies:
                     self.frequencies = [native_frequency]  # use df's native resolution by default
@@ -325,8 +322,6 @@ class BaseDataset(Dataset):
 
                 # create xarray data set for each period slice of the specific basin
                 for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
-                    # LOGGER.info("in xarray creation. start dates are: {}".format(start_dates))
-                    # LOGGER.info("in xarray creation. end dates are: {}".format(end_dates))
                     # if the start date is not aligned with the frequency, the resulting datetime indices will be off
                     if not all(to_offset(freq).is_on_offset(start_date) for freq in self.frequencies):
                         misaligned = [freq for freq in self.frequencies if not to_offset(freq).is_on_offset(start_date)]
@@ -352,13 +347,13 @@ class BaseDataset(Dataset):
                     xr = xr.assign_coords({'basin': basin_str})
                     data_list.append(xr.astype(np.float32))
 
-                # LOGGER.info("the start date is: {} the end date is: {}".format(start_dates, end_dates))
             # create one large dataset that has two coordinates: datetime and basin
-            xr = xarray.concat(data_list, dim="basin")
+            if len(data_list) > 0:
+                xr = xarray.concat(data_list, dim="basin")
 
             if self.is_train and self.cfg.save_train_data:
                 self._save_xarray_dataset(xr)
-
+                
         else:
             with self.cfg.train_data_file.open("rb") as fp:
                 d = pickle.load(fp)
