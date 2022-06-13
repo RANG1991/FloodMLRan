@@ -561,6 +561,7 @@ class BaseDataset(Dataset):
             for basin in self.basins:
                 attributes = df.loc[df.index == basin].values.flatten()
                 self.attributes[basin] = torch.from_numpy(attributes.astype(np.float32))
+        LOGGER.info(self.attributes)
 
     def _load_data(self):
         # load attributes first to sanity-check those features before doing the compute expensive time series loading
