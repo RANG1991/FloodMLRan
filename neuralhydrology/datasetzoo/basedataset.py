@@ -554,10 +554,13 @@ class BaseDataset(Dataset):
                 df = (df - self.scaler['attribute_means']) / self.scaler["attribute_stds"]
 
             # preprocess each basin feature vector as pytorch tensor
+            basins_to_remove = []
             for basin in self.basins:
                 attributes = df.loc[df.index == basin].values.flatten()
+                if len(attributes) == 0:
+                    basins_to_remove.append(basin)
                 self.attributes[basin] = torch.from_numpy(attributes.astype(np.float32))
-        LOGGER.info(self.attributes)
+           self.basins = [basin for basin in self.basins if basin not in basins_to_remove]
 
     def _load_data(self):
         # load attributes first to sanity-check those features before doing the compute expensive time series loading
