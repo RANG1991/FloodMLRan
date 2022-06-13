@@ -274,10 +274,6 @@ class BaseDataset(Dataset):
             for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
                 df = self._load_basin_data(basin)
 
-                if df.empty:
-                    LOGGER.info("empty basin {}".format(basin))
-                    continue
-
                 # add columns from dataframes passed as additional data files
                 df = pd.concat([df, *[d[basin] for d in self.additional_features]], axis=1)
 
