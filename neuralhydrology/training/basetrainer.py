@@ -141,12 +141,12 @@ class BaseTrainer(object):
             LOGGER.info(f"Starting training from Checkpoint {self.cfg.checkpoint_path}")
             self.model.load_state_dict(torch.load(str(self.cfg.checkpoint_path), map_location=self.device))
         elif self.cfg.checkpoint_path is None and self.cfg.is_finetuning:
-            # the default for finetuning is the last model state
+            # the default for fine-tuning is the last model state
             checkpoint_path = [x for x in sorted(list(self.cfg.base_run_dir.glob('model_epoch*.pt')))][-1]
             LOGGER.info(f"Starting training from checkpoint {checkpoint_path}")
             self.model.load_state_dict(torch.load(str(checkpoint_path), map_location=self.device))
 
-        # freeze model parts and load scaler from pre-trained model
+        # freeze model parts and load scalar from pre-trained model
         if self.cfg.is_finetuning:
             self._freeze_model_parts()
             self._scaler = load_scaler(self.cfg.base_run_dir)
