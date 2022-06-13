@@ -281,7 +281,7 @@ class BaseTrainer(object):
 
             # apply possible subclass pre-processing
             data = self._pre_model_hook(data)
-
+            print(data['x_d'].shape)
             # get predictions
             predictions = self.model(data)
 
