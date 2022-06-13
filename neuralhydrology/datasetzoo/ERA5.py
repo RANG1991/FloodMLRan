@@ -106,7 +106,8 @@ class ERA5(BaseDataset):
         pd.DataFrame
             Basin-indexed DataFrame, containing the attributes as columns.
         """
-        return pd.DataFrame()
+        df_attr = load_ERA5_attributes(data_dir=self.cfg.data_dir)
+        return df_attr
 
 
 def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
@@ -130,7 +131,6 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
         file_path = file_path[0]
     else:
         return pd.DataFrame(columns=["date", "precip"])
-        # raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
@@ -157,7 +157,6 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.DataFrame:
         file_path = file_path[0]
     else:
         return pd.DataFrame(columns=["date", "flow"])
-        # raise FileNotFoundError(f'No file for Basin {basin} at {file_path}')
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
@@ -189,15 +188,17 @@ def load_ERA5_attributes(data_dir: Path) -> pd.DataFrame:
         meteorology for large-sample studies, Hydrol. Earth Syst. Sci., 21, 5293-5313, doi:10.5194/hess-21-5293-2017,
         2017.
     """
-    attributes_path = data_dir / 'ERA5/'
+    attributes_path_caravan = data_dir / 'ERA5/attributes_caravan_us.csv'
+    attributes_path_hydroatlas = data_dir / 'ERA5/attributes_hydroatlas_us.csv'
 
-    if not attributes_path.exists():
-        raise RuntimeError(f"Attribute folder not found at {attributes_path}")
+    if not attributes_path_caravan.exists():
+        raise RuntimeError(f"Attribute folder not found at {attributes_path_caravan}")
 
-    df_attr = pd.read_csv(attributes_path, dtype={'gauge_id': str})
-    df_attr = df_attr.set_index('gauge_id')
+    if not attributes_path_hydroatlas.exists():
+        raise RuntimeError(f"Attribute folder not found at {attributes_path_hydroatlas}")
 
-    # convert huc column to double digit strings
-    df_attr['huc'] = df_attr['huc_02'].apply(lambda x: str(x).zfill(2))
-    df_attr = df_attr.drop('huc_02', axis=1)
+    df_attr_caravan = pd.read_csv(attributes_path_caravan, dtype={'gauge_id': str})
+    df_attr_hydroatlas = pd.read_csv(attributes_path_hydroatlas, dtype={'gauge_id': str})
+    df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")
+    df_attr.set_index('gauge_id')
     return df_attr
