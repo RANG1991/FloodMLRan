@@ -106,9 +106,8 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     print(year_start, year_end)
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
-    dict_of_dates_by_day = {}
     started_reading_data = False
-    for year in range(year_start, year_start + 1):
+    for year in range(year_start, year_end + 1):
         fn = f"{ERA5_data_folder_name}/tp_US_{year}.nc"
         try:
             dataset = nc.Dataset(fn)
