@@ -357,10 +357,10 @@ class BaseDataset(Dataset):
                         data_list.append(xr.astype(np.float32))
 
                 # create one large dataset that has two coordinates: datetime and basin
-                xr = xarray.concat(data_list, dim="basin")
+            xr = xarray.concat(data_list, dim="basin")
 
-                if self.is_train and self.cfg.save_train_data:
-                    self._save_xarray_dataset(xr)
+            if self.is_train and self.cfg.save_train_data:
+                self._save_xarray_dataset(xr)
 
         else:
             with self.cfg.train_data_file.open("rb") as fp:
