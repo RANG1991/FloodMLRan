@@ -34,7 +34,6 @@ def check_if_all_percip_files_exist(station_id, output_folder_name):
 
 
 def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
-    print(basin_data)
     dis_file_exists = check_if_discharge_file_exists(station_id, output_folder_name)
     if dis_file_exists:
         print("The discharge file of the basin: {} exists".format(station_id))
@@ -79,9 +78,9 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
                                      ERA5_data_folder_name, discharge_folder_name,
                                      output_folder_name):
     all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
-    # if all_files_exist:
-    #     print("all precipitation file of the basin: {} exists".format(station_id))
-    #     return
+    if all_files_exist:
+        print("all precipitation file of the basin: {} exists".format(station_id))
+        return
     bounds = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
     min_lon = np.squeeze(np.floor(bounds['minx'].values * 10) / 10)
@@ -227,7 +226,6 @@ def main():
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"]
-    station_ids_list = ["01052500"]
     for station_id in station_ids_list:
         print("working on basin with id: {}".format(station_id))
         station_id = str(station_id).zfill(8)
