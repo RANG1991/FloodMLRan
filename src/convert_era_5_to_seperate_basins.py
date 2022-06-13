@@ -7,7 +7,7 @@ import datetime
 from shapely.geometry import Point
 from pathlib import Path
 
-PATH_ROOT = "drive/MyDrive/ERA5/"
+PATH_ROOT = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/"
 
 TEST_PERIOD = ("1989-10-01", "1999-09-30")
 TRAINING_PERIOD = ("1999-10-01", "2008-09-30")
