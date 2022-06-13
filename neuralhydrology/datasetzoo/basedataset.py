@@ -270,90 +270,90 @@ class BaseDataset(Dataset):
             keep_cols = list(sorted(set(keep_cols)))
 
             if not self._disable_pbar:
-            for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
-                df = self._load_basin_data(basin)
+                for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
+                    df = self._load_basin_data(basin)
 
-                # add columns from dataframes passed as additional data files
-                df = pd.concat([df, *[d[basin] for d in self.additional_features]], axis=1)
+                    # add columns from dataframes passed as additional data files
+                    df = pd.concat([df, *[d[basin] for d in self.additional_features]], axis=1)
 
-                # check if any feature should be duplicated
-                df = self._duplicate_features(df)
+                    # check if any feature should be duplicated
+                    df = self._duplicate_features(df)
 
-                # check if a shifted copy of a feature should be added
-                df = self._add_lagged_features(df)
+                    # check if a shifted copy of a feature should be added
+                    df = self._add_lagged_features(df)
 
-                # remove unnecessary columns
-                try:
-                    df = df[keep_cols]
-                except KeyError:
-                    not_available_columns = [x for x in keep_cols if x not in df.columns]
-                    msg = [
-                        f"The following features are not available in the data: {not_available_columns}. ",
-                        f"These are the available features: {df.columns.tolist()}"
-                    ]
-                    raise KeyError("".join(msg))
+                    # remove unnecessary columns
+                    try:
+                        df = df[keep_cols]
+                    except KeyError:
+                        not_available_columns = [x for x in keep_cols if x not in df.columns]
+                        msg = [
+                            f"The following features are not available in the data: {not_available_columns}. ",
+                            f"These are the available features: {df.columns.tolist()}"
+                        ]
+                        raise KeyError("".join(msg))
 
-                # make end_date the last second of the specified day, such that the
-                # dataset will include all hours of the last day, not just 00:00.
-                start_dates = self.dates[basin]["start_dates"]
-                end_dates = [date + pd.Timedelta(days=1, seconds=-1) for date in self.dates[basin]["end_dates"]]
+                    # make end_date the last second of the specified day, such that the
+                    # dataset will include all hours of the last day, not just 00:00.
+                    start_dates = self.dates[basin]["start_dates"]
+                    end_dates = [date + pd.Timedelta(days=1, seconds=-1) for date in self.dates[basin]["end_dates"]]
 
-                native_frequency = utils.infer_frequency(df.index)
-                if not self.frequencies:
-                    self.frequencies = [native_frequency]  # use df's native resolution by default
+                    native_frequency = utils.infer_frequency(df.index)
+                    if not self.frequencies:
+                        self.frequencies = [native_frequency]  # use df's native resolution by default
 
-                # Assert that the used frequencies are lower or equal than the native frequency. There may be cases
-                # where our logic cannot determine whether this is the case, because pandas might return an exotic
-                # native frequency. In this case, all we can do is print a warning and let the user check themselves.
-                try:
-                    freq_vs_native = [utils.compare_frequencies(freq, native_frequency) for freq in self.frequencies]
-                except ValueError:
-                    LOGGER.warning('Cannot compare provided frequencies with native frequency. '
-                                   'Make sure the frequencies are not higher than the native frequency.')
-                    freq_vs_native = []
-                if any(comparison > 1 for comparison in freq_vs_native):
-                    raise ValueError(f'Frequency is higher than native data frequency {native_frequency}.')
+                    # Assert that the used frequencies are lower or equal than the native frequency. There may be cases
+                    # where our logic cannot determine whether this is the case, because pandas might return an exotic
+                    # native frequency. In this case, all we can do is print a warning and let the user check themselves.
+                    try:
+                        freq_vs_native = [utils.compare_frequencies(freq, native_frequency) for freq in self.frequencies]
+                    except ValueError:
+                        LOGGER.warning('Cannot compare provided frequencies with native frequency. '
+                                       'Make sure the frequencies are not higher than the native frequency.')
+                        freq_vs_native = []
+                    if any(comparison > 1 for comparison in freq_vs_native):
+                        raise ValueError(f'Frequency is higher than native data frequency {native_frequency}.')
 
-                # used to get the maximum warmup-offset across all frequencies. We don't use to_timedelta because it
-                # does not support all frequency strings. We can't calculate the maximum offset here, because to
-                # compare offsets, they need to be anchored to a specific date (here, the start date).
-                offsets = [(self.seq_len[i] - self._predict_last_n[i]) * to_offset(freq)
-                           for i, freq in enumerate(self.frequencies)]
+                    # used to get the maximum warmup-offset across all frequencies. We don't use to_timedelta because it
+                    # does not support all frequency strings. We can't calculate the maximum offset here, because to
+                    # compare offsets, they need to be anchored to a specific date (here, the start date).
+                    offsets = [(self.seq_len[i] - self._predict_last_n[i]) * to_offset(freq)
+                               for i, freq in enumerate(self.frequencies)]
 
-                # create xarray data set for each period slice of the specific basin
-                for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
-                    # if the start date is not aligned with the frequency, the resulting datetime indices will be off
-                    if not all(to_offset(freq).is_on_offset(start_date) for freq in self.frequencies):
-                        misaligned = [freq for freq in self.frequencies if not to_offset(freq).is_on_offset(start_date)]
-                        raise ValueError(f'start date {start_date} is not aligned with frequencies {misaligned}.')
-                    # add warmup period, so that we can make prediction at the first time step specified by period.
-                    # offsets has the warmup offset needed for each frequency; the overall warmup starts with the
-                    # earliest date, i.e., the largest offset across all frequencies.
-                    warmup_start_date = min(start_date - offset for offset in offsets)
-                    df_sub = df[warmup_start_date:end_date]
+                    # create xarray data set for each period slice of the specific basin
+                    for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
+                        # if the start date is not aligned with the frequency, the resulting datetime indices will be off
+                        if not all(to_offset(freq).is_on_offset(start_date) for freq in self.frequencies):
+                            misaligned = [freq for freq in self.frequencies if not to_offset(freq).is_on_offset(start_date)]
+                            raise ValueError(f'start date {start_date} is not aligned with frequencies {misaligned}.')
+                        # add warmup period, so that we can make prediction at the first time step specified by period.
+                        # offsets has the warmup offset needed for each frequency; the overall warmup starts with the
+                        # earliest date, i.e., the largest offset across all frequencies.
+                        warmup_start_date = min(start_date - offset for offset in offsets)
+                        df_sub = df[warmup_start_date:end_date]
 
-                    # make sure the df covers the full date range from warmup_start_date to end_date, filling any gaps
-                    # with NaNs. This may increase runtime, but is a very robust way to make sure dates and predictions
-                    # keep in sync. In training, the introduced NaNs will be discarded, so this only affects evaluation.
-                    full_range = pd.date_range(start=warmup_start_date, end=end_date, freq=native_frequency)
-                    df_sub = df_sub.reindex(pd.DatetimeIndex(full_range, name=df_sub.index.name))
+                        # make sure the df covers the full date range from warmup_start_date to end_date, filling any gaps
+                        # with NaNs. This may increase runtime, but is a very robust way to make sure dates and predictions
+                        # keep in sync. In training, the introduced NaNs will be discarded, so this only affects evaluation.
+                        full_range = pd.date_range(start=warmup_start_date, end=end_date, freq=native_frequency)
+                        df_sub = df_sub.reindex(pd.DatetimeIndex(full_range, name=df_sub.index.name))
 
-                    # as double check, set all targets before period start to NaN
-                    df_sub.loc[df_sub.index < start_date, self.cfg.target_variables] = np.nan
+                        # as double check, set all targets before period start to NaN
+                        df_sub.loc[df_sub.index < start_date, self.cfg.target_variables] = np.nan
 
-                    # For multiple slices per basin, a number is added to the basin string starting from the 2nd slice
-                    xr = xarray.Dataset.from_dataframe(df_sub)
-                    basin_str = basin if i == 0 else f"{basin}_period{i}"
-                    xr = xr.assign_coords({'basin': basin_str})
-                    data_list.append(xr.astype(np.float32))
+                        # For multiple slices per basin, a number is added to the basin string starting from the 2nd slice
+                        xr = xarray.Dataset.from_dataframe(df_sub)
+                        basin_str = basin if i == 0 else f"{basin}_period{i}"
+                        xr = xr.assign_coords({'basin': basin_str})
+                        data_list.append(xr.astype(np.float32))
 
-            # create one large dataset that has two coordinates: datetime and basin
-            if len(data_list) > 0:
-                xr = xarray.concat(data_list, dim="basin")
+                # create one large dataset that has two coordinates: datetime and basin
+                if len(data_list) > 0:
+                    xr = xarray.concat(data_list, dim="basin")
 
-            if self.is_train and self.cfg.save_train_data:
-                self._save_xarray_dataset(xr)
-                
+                if self.is_train and self.cfg.save_train_data:
+                    self._save_xarray_dataset(xr)
+
         else:
             with self.cfg.train_data_file.open("rb") as fp:
                 d = pickle.load(fp)
