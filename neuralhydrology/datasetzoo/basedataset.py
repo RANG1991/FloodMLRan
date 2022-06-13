@@ -273,6 +273,9 @@ class BaseDataset(Dataset):
                 for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
                     df = self._load_basin_data(basin)
 
+                    if df.empty:
+                        continue
+
                     # add columns from dataframes passed as additional data files
                     df = pd.concat([df, *[d[basin] for d in self.additional_features]], axis=1)
 
@@ -324,13 +327,14 @@ class BaseDataset(Dataset):
 
                     # create xarray data set for each period slice of the specific basin
                     for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
-                        # if the start date is not aligned with the frequency, the resulting datetime indices will be off
+                        # if the start date is not aligned with the frequency, the resulting datetime indices will be
+                        # off
                         if not all(to_offset(freq).is_on_offset(start_date) for freq in self.frequencies):
                             misaligned = [freq for freq in self.frequencies if
                                           not to_offset(freq).is_on_offset(start_date)]
                             raise ValueError(f'start date {start_date} is not aligned with frequencies {misaligned}.')
                         # add warmup period, so that we can make prediction at the first time step specified by period.
-                        # offsets has the warmup offset needed for each frequency; the overall warmup starts with the
+                        # offsets have the warmup offset needed for each frequency; the overall warmup starts with the
                         # earliest date, i.e., the largest offset across all frequencies.
                         warmup_start_date = min(start_date - offset for offset in offsets)
                         df_sub = df[warmup_start_date:end_date]
@@ -353,10 +357,7 @@ class BaseDataset(Dataset):
                         data_list.append(xr.astype(np.float32))
 
                 # create one large dataset that has two coordinates: datetime and basin
-                if len(data_list) > 0:
-                    xr = xarray.concat(data_list, dim="basin")
-                else:
-                    xr = xarray.Dataset()
+                xr = xarray.concat(data_list, dim="basin")
 
                 if self.is_train and self.cfg.save_train_data:
                     self._save_xarray_dataset(xr)
