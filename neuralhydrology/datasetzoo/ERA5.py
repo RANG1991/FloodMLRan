@@ -201,4 +201,5 @@ def load_ERA5_attributes(data_dir: Path) -> pd.DataFrame:
     df_attr_hydroatlas = pd.read_csv(attributes_path_hydroatlas, dtype={'gauge_id': str})
     df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")
     df_attr = df_attr.set_index('gauge_id')
+    df_attr['gauge_id'] = df_attr['gauge_id'].apply(lambda x: str(x).replace("us_", ""))
     return df_attr
