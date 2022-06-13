@@ -513,7 +513,7 @@ class BaseDataset(Dataset):
         # load dataset specific attributes from the subclass
         if self.cfg.static_attributes:
             df = self._load_attributes()
-
+            LOGGER.info(df)
             # remove all attributes not defined in the config
             missing_attrs = [attr for attr in self.cfg.static_attributes if attr not in df.columns]
             if len(missing_attrs) > 0:
