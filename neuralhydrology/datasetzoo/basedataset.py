@@ -300,13 +300,15 @@ class BaseDataset(Dataset):
 
                     native_frequency = utils.infer_frequency(df.index)
                     if not self.frequencies:
-                        self.frequencies = [native_frequency]  # use df's native resolution by default
+                        self.frequencies = [native_frequency]  # use dfs native resolution by default
 
-                    # Assert that the used frequencies are lower or equal than the native frequency. There may be cases
-                    # where our logic cannot determine whether this is the case, because pandas might return an exotic
-                    # native frequency. In this case, all we can do is print a warning and let the user check themselves.
+                    # Assert that the used frequencies are lower or equal than the native frequency. There may be
+                    # cases where our logic cannot determine whether this is the case, because pandas might return an
+                    # exotic native frequency. In this case, all we can do is print a warning and let the user check
+                    # themselves.
                     try:
-                        freq_vs_native = [utils.compare_frequencies(freq, native_frequency) for freq in self.frequencies]
+                        freq_vs_native = [utils.compare_frequencies(freq, native_frequency) for freq in
+                                          self.frequencies]
                     except ValueError:
                         LOGGER.warning('Cannot compare provided frequencies with native frequency. '
                                        'Make sure the frequencies are not higher than the native frequency.')
@@ -324,7 +326,8 @@ class BaseDataset(Dataset):
                     for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
                         # if the start date is not aligned with the frequency, the resulting datetime indices will be off
                         if not all(to_offset(freq).is_on_offset(start_date) for freq in self.frequencies):
-                            misaligned = [freq for freq in self.frequencies if not to_offset(freq).is_on_offset(start_date)]
+                            misaligned = [freq for freq in self.frequencies if
+                                          not to_offset(freq).is_on_offset(start_date)]
                             raise ValueError(f'start date {start_date} is not aligned with frequencies {misaligned}.')
                         # add warmup period, so that we can make prediction at the first time step specified by period.
                         # offsets has the warmup offset needed for each frequency; the overall warmup starts with the
@@ -332,16 +335,18 @@ class BaseDataset(Dataset):
                         warmup_start_date = min(start_date - offset for offset in offsets)
                         df_sub = df[warmup_start_date:end_date]
 
-                        # make sure the df covers the full date range from warmup_start_date to end_date, filling any gaps
-                        # with NaNs. This may increase runtime, but is a very robust way to make sure dates and predictions
-                        # keep in sync. In training, the introduced NaNs will be discarded, so this only affects evaluation.
+                        # make sure the df covers the full date range from warmup_start_date to end_date, filling any
+                        # gaps with NaNs. This may increase runtime, but is a very robust way to make sure dates and
+                        # predictions keep in sync. In training, the introduced NaNs will be discarded, so this only
+                        # affects evaluation.
                         full_range = pd.date_range(start=warmup_start_date, end=end_date, freq=native_frequency)
                         df_sub = df_sub.reindex(pd.DatetimeIndex(full_range, name=df_sub.index.name))
 
                         # as double check, set all targets before period start to NaN
                         df_sub.loc[df_sub.index < start_date, self.cfg.target_variables] = np.nan
 
-                        # For multiple slices per basin, a number is added to the basin string starting from the 2nd slice
+                        # For multiple slices per basin, a number is added to the basin string starting from the 2nd
+                        # slice
                         xr = xarray.Dataset.from_dataframe(df_sub)
                         basin_str = basin if i == 0 else f"{basin}_period{i}"
                         xr = xr.assign_coords({'basin': basin_str})
@@ -350,6 +355,8 @@ class BaseDataset(Dataset):
                 # create one large dataset that has two coordinates: datetime and basin
                 if len(data_list) > 0:
                     xr = xarray.concat(data_list, dim="basin")
+                else:
+                    xr = xarray.Dataset()
 
                 if self.is_train and self.cfg.save_train_data:
                     self._save_xarray_dataset(xr)
@@ -511,7 +518,7 @@ class BaseDataset(Dataset):
                 raise ValueError(f'Static attributes {missing_attrs} are missing.')
             df = df[self.cfg.static_attributes]
 
-            # in case of training (not finetuning) check for NaNs in feature std.
+            # in case of training (not fine-tuning) check for NaNs in feature std.
             if self._compute_scaler:
                 utils.attributes_sanity_check(df=df)
 
