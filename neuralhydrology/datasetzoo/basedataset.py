@@ -576,9 +576,6 @@ class BaseDataset(Dataset):
         # load attributes first to sanity-check those features before doing the compute expensive time series loading
         self._load_combined_attributes()
 
-        if len(self.basins) == 0:
-            return
-
         xr = self._load_or_create_xarray_dataset()
 
         if self.cfg.loss.lower() in ['nse', 'weightednse']:
