@@ -570,7 +570,7 @@ class BaseDataset(Dataset):
                 if len(attributes) == 0:
                     basins_to_remove.append(basin)
                 self.attributes[basin] = torch.from_numpy(attributes.astype(np.float32))
-            self.basins = [basin for basin in self.basins if basin not in basins_to_remove]
+            # self.basins = [basin for basin in self.basins if basin not in basins_to_remove]
 
     def _load_data(self):
         # load attributes first to sanity-check those features before doing the compute expensive time series loading
