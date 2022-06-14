@@ -201,6 +201,7 @@ class BaseTester(object):
                     ds = self._get_dataset(basin)
                 except NoTrainDataError as error:
                     # skip basin
+                    LOGGER.info(error)
                     continue
                 if self.cfg.cache_validation_data and self.period == "validation":
                     self.cached_datasets[basin] = ds
