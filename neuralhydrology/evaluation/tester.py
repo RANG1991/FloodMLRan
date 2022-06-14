@@ -132,6 +132,8 @@ class BaseTester(object):
 
     def _get_dataset(self, basin: str) -> BaseDataset:
         """Get dataset for a single basin."""
+        LOGGER.info(basin)
+        LOGGER.info(self.period)
         ds = get_dataset(cfg=self.cfg,
                          is_train=False,
                          period=self.period,
@@ -202,7 +204,7 @@ class BaseTester(object):
                 except NoTrainDataError as error:
                     # skip basin
                     LOGGER.info(error)
-                    continue
+                    raise NoTrainDataError(error)
                 if self.cfg.cache_validation_data and self.period == "validation":
                     self.cached_datasets[basin] = ds
 
