@@ -273,9 +273,6 @@ class BaseDataset(Dataset):
                 for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
                     df = self._load_basin_data(basin)
 
-                    if df.empty:
-                        continue
-
                     # add columns from dataframes passed as additional data files
                     df = pd.concat([df, *[d[basin] for d in self.additional_features]], axis=1)
 
@@ -356,7 +353,7 @@ class BaseDataset(Dataset):
                         xr = xr.assign_coords({'basin': basin_str})
                         data_list.append(xr.astype(np.float32))
 
-                # create one large dataset that has two coordinates: datetime and basin
+            # create one large dataset that has two coordinates: datetime and basin
             xr = xarray.concat(data_list, dim="basin")
 
             if self.is_train and self.cfg.save_train_data:
@@ -512,7 +509,6 @@ class BaseDataset(Dataset):
         # load dataset specific attributes from the subclass
         if self.cfg.static_attributes:
             df = self._load_attributes()
-            LOGGER.info(df)
             # remove all attributes not defined in the config
             missing_attrs = [attr for attr in self.cfg.static_attributes if attr not in df.columns]
             if len(missing_attrs) > 0:
