@@ -328,6 +328,8 @@ class BaseDataset(Dataset):
                 if not self.is_train:
                     LOGGER.info("the start dates are: {} the end dates are: {}".format(start_dates, end_dates))
                 for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
+                    if not self.is_train:
+                        LOGGER.info("the start date: {} the end date: {}".format(start_date, end_date))
                     # if the start date is not aligned with the frequency, the resulting datetime indices will be
                     # off
                     if not all(to_offset(freq).is_on_offset(start_date) for freq in self.frequencies):
