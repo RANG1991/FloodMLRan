@@ -323,6 +323,8 @@ class BaseDataset(Dataset):
                                for i, freq in enumerate(self.frequencies)]
 
                     # create xarray data set for each period slice of the specific basin
+                    if not self.is_train:
+                        LOGGER.info("the start dates are: {} the end dates rare: {}".format(start_dates, end_dates))
                     for i, (start_date, end_date) in enumerate(zip(start_dates, end_dates)):
                         # if the start date is not aligned with the frequency, the resulting datetime indices will be
                         # off
