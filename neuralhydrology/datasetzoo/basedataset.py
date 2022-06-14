@@ -272,7 +272,12 @@ class BaseDataset(Dataset):
             if not self._disable_pbar:
                 LOGGER.info("Loading basin data into xarray data set.")
 
+            if not self.is_train:
+                LOGGER.info("the basins are: {}".format(self.basins))
+
             for basin in tqdm(self.basins, disable=self._disable_pbar, file=sys.stdout):
+                if not self.is_train:
+                    LOGGER.info("the basin is: {}".format(basin))
                 df = self._load_basin_data(basin)
 
                 # add columns from dataframes passed as additional data files
