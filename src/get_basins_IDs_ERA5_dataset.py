@@ -2,6 +2,7 @@ import glob
 import pathlib
 import random
 import math
+import pandas as pd
 
 
 def main():
@@ -10,11 +11,15 @@ def main():
     validation_basins_ids_file = ERA5_file_dir + "/validation_basins_ERA5.txt"
     test_basins_ids_file = ERA5_file_dir + "/test_basins_ERA5.txt"
     files_paths = list(glob.glob(f'{ERA5_file_dir}/data24_*.csv'))
+    df_caravan_static_attr = pd.read_csv(r"C:\Users\galun\Desktop\Caravan\attributes\attributes_caravan_us.csv")
+    basins_ids_caravan = df_caravan_static_attr["gauge_id"]\
+        .apply(lambda x: x.replace("us_", "")).values.tolist()
     basins_ids_list = []
     for file_path in files_paths:
         file_name = pathlib.Path(file_path).name
         basin_id = file_name.replace("data24_", "").replace(".csv", "")
-        basins_ids_list.append(basin_id)
+        if basin_id in basins_ids_caravan:
+            basins_ids_list.append(basin_id)
     random.shuffle(basins_ids_list)
     with open(train_basins_ids_file, "w") as f:
         basins_ids_list_train = basins_ids_list[:math.floor(len(basins_ids_list) * 0.7)]
