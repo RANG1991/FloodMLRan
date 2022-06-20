@@ -129,7 +129,7 @@ dynamic_inputs:
   - total_precipitation_sum
   - temperature_2m_min
   - temperature_2m_max
-  - potential_evaporation
+  - potential_evaporation_sum
   - surface_net_solar_radiation_mean
 
 # which columns to use as target
