@@ -187,14 +187,14 @@ def load_ERA5_attributes(data_dir: Path) -> pd.DataFrame:
         meteorology for large-sample studies, Hydrol. Earth Syst. Sci., 21, 5293-5313, doi:10.5194/hess-21-5293-2017,
         2017.
     """
-    attributes_path_caravan = data_dir / 'ERA5/Caravan/attributes_caravan_us.csv'
-    attributes_path_hydroatlas = data_dir / 'ERA5/Caravan/attributes_hydroatlas_us.csv'
+    attributes_path_caravan = data_dir / 'ERA5/Caravan/attributes/attributes_caravan_us.csv'
+    attributes_path_hydroatlas = data_dir / 'ERA5/Caravan/attributes/attributes_hydroatlas_us.csv'
 
     if not attributes_path_caravan.exists():
-        raise RuntimeError(f"Attribute folder not found at {attributes_path_caravan}")
+        raise RuntimeError(f"Attribute file not found at {attributes_path_caravan}")
 
     if not attributes_path_hydroatlas.exists():
-        raise RuntimeError(f"Attribute folder not found at {attributes_path_hydroatlas}")
+        raise RuntimeError(f"Attribute file not found at {attributes_path_hydroatlas}")
 
     df_attr_caravan = pd.read_csv(attributes_path_caravan, dtype={'gauge_id': str})
     df_attr_hydroatlas = pd.read_csv(attributes_path_hydroatlas, dtype={'gauge_id': str})
