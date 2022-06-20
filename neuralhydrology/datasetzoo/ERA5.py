@@ -135,7 +135,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     print(file_path)
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
-        df["date"] = pd.to_datetime(df.date, format="%d/%m/%Y")
+        df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
     return df
 
 
@@ -160,7 +160,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.DataFrame:
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
-        df["date"] = pd.to_datetime(df.date, format="%d/%m/%Y")
+        df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
         df = df[["date", "streamflow"]]
     return df
 
