@@ -130,8 +130,9 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     if file_path:
         file_path = file_path[0]
     else:
-        return pd.DataFrame(columns=["date", "total_precipitation_sum"])
+        return pd.DataFrame()
 
+    print(file_path)
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
         df["date"] = pd.to_datetime(df.date, format="%d/%m/%Y")
@@ -155,7 +156,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.DataFrame:
     if file_path:
         file_path = file_path[0]
     else:
-        return pd.DataFrame(columns=["date", "streamflow"])
+        return pd.DataFrame()
 
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
