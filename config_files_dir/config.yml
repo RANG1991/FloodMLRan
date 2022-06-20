@@ -11,12 +11,12 @@ validation_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/trai
 test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins_ERA5.txt
 
 # training, validation and test time periods (format = 'dd/mm/yyyy')
-train_start_date: "01/10/2009"
-train_end_date: "30/09/2019"
-validation_start_date: "01/10/1989"
-validation_end_date: "30/09/1999"
-test_start_date: "01/10/1989"
-test_end_date: "30/09/1999"
+train_start_date: '01/10/1999'
+train_end_date: '30/09/2008'
+validation_start_date: '01/10/1989'
+validation_end_date: '30/09/1999'
+test_start_date: '01/10/1989'
+test_end_date: '30/09/1999'
 
 # which GPU (id) to use [in format of cuda:0, cuda:1 etc, or cpu or None]
 device: cuda:0
@@ -29,7 +29,7 @@ allow_subsequent_nan_losses: 10
 validate_every: 3
 
 # specify how many random basins to use for validation
-validate_n_random_basins: 5
+validate_n_random_basins: 10
 
 # specify which metrics to calculate during validation (see neuralhydrology.evaluation.metrics)
 # this can either be a list or a dictionary. If a dictionary is used, the inner keys must match the name of the
@@ -95,7 +95,7 @@ predict_last_n: 1
 
 # Length of the input sequence
 # If use_frequencies is used, this needs to be a dict mapping each frequency to a seq_length, else an int.
-seq_length: 270
+seq_length: 365
 
 # Number of parallel workers used in the data pipeline
 num_workers: 2
@@ -138,4 +138,13 @@ clip_targets_to_zero:
   
 # Which CAMELS attributes to use. Leave empty if none should be used
 static_attributes:
- 
+ - p_mean
+ - pet_mean
+ - aridity
+ - frac_snow
+ - moisture_index
+ - seasonality
+ - high_prec_freq
+ - high_prec_dur
+ - low_prec_freq
+ - low_prec_dur
