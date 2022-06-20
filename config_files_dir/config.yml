@@ -152,7 +152,7 @@ static_attributes:
   - low_prec_freq
   - low_prec_dur
   # mean elevation
-  - ele_mt_s_av
+  - ele_mt_sav
   # mean slope
   - slp_dg_sav
   # basin size
