@@ -121,11 +121,11 @@ class Preprocessor:
     def get_basin_indices_x(self, basin):
         """
         generating the "image" basin from a larger "image" by mask:
-        the lat_grid and lon_grid are two 1-d arrays that construct a matrix of points
+        the lat_grid and lon_grid are two 1-d arrays that construct a grid of points
         that depict the bottom right corner of every "pixel" of the large area.
-        from this large area, we are checking if the "pixels" of the basins smaller area
+        from this large area, we are checking if the "pixels" of the basin's smaller area
         are in this large area and creating a corresponding mask.
-        The mask is in the size of the large area - 1 if this pixel in also in the basin's area,
+        The mask is in the size of the large area - it has 1 if this pixel in also in the basin's area,
         and 0 otherwise
         """
         # getting the grid describing the basin from file

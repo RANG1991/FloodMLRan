@@ -1,5 +1,5 @@
-from RanCode.Godavari import IMDGodavari as new_G
-from RanCode.cnn_lstm_v3 import IMDGodavari as old_G
+from src.Godavari import IMDGodavari as new_G
+from src.Ronen_Code.cnn_lstm_v3 import IMDGodavari as old_G
 from pathlib import Path
 import numpy as np
 import torch

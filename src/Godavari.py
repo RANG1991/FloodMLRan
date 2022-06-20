@@ -136,18 +136,18 @@ class IMDGodavari(Dataset):
                 self.basin_name_to_mean_std_y[basin] = (mu_y, std_y)
             indices_to_include_months, y_new = self.extract_from_data_by_months(y, start_date, end_date,
                                                                                 basin_name=basin, basin_number=i)
-            self.sample_to_basin_x[(i * (len(indices_to_include_months)),
-                                    (i + 1) * (len(indices_to_include_months)))] = \
+            self.sample_to_basin_x[(i * (len(indices_to_include_months) - self.seq_length),
+                                    (i + 1) * (len(indices_to_include_months) - self.seq_length))] = \
                 (indices_X_time_features, static_features, indices_to_include_months)
-            self.sample_to_basin_name_y[(i * (len(indices_to_include_months)),
-                                         (i + 1) * (len(indices_to_include_months)))] = \
+            self.sample_to_basin_name_y[(i * (len(indices_to_include_months) - self.seq_length),
+                                         (i + 1) * (len(indices_to_include_months) - self.seq_length))] = \
                 (basin, y_new)
 
-        self.num_samples = len(self.basin_list) * (len(indices_to_include_months))
+        self.num_samples = len(self.basin_list) * (len(indices_to_include_months) - self.seq_length)
         if not self.include_static:
             self.num_attributes = 0
-        indices_to_include_months = range(indices_to_include_months[0],
-                                          indices_to_include_months[-1] + self.seq_length + self.lead)
+        # indices_to_include_months = range(indices_to_include_months[0],
+        #                                   indices_to_include_months[-1] + self.seq_length + self.lead)
         self.x = self.x[indices_to_include_months, :, :, :]
         self.time_span = self.x.shape[0]
         print("data set for {0} for basins: {1}".format(self.period, self.basin_list))
