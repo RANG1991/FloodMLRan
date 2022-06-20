@@ -15,7 +15,10 @@ def create_dict_basin_id_to_NSE(logs_filename):
                 nse_loss = basin_nse_loss_str.group(2)
                 if basin_id not in d.keys():
                     d[basin_id] = []
-                d[basin_id].append(float(nse_loss))
+                try:
+                    d[basin_id].append(float(nse_loss))
+                except ValueError as e:
+                    pass
     return d
 
 

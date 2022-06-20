@@ -126,25 +126,44 @@ forcings:
 
 
 dynamic_inputs:
-  - precip
+  - total_precipitation_sum
+  - temperature_2m_min
+  - temperature_2m_max
+  - potential_evaporation
+  - surface_net_solar_radiation_mean
 
 # which columns to use as target
 target_variables:
-  - flow
+  - streamflow
 
 # clip negative predictions to zero for all variables listed below. Should be a list, even for single variables.
 clip_targets_to_zero:
-  - flow
+  - streamflow
   
 # Which CAMELS attributes to use. Leave empty if none should be used
 static_attributes:
- - p_mean
- - pet_mean
- - aridity
- - frac_snow
- - moisture_index
- - seasonality
- - high_prec_freq
- - high_prec_dur
- - low_prec_freq
- - low_prec_dur
+  - p_mean
+  - pet_mean
+  - aridity
+  - seasonality
+  - frac_snow
+  - high_prec_freq
+  - high_prec_dur
+  - low_prec_freq
+  - low_prec_dur
+  # mean elevation
+  - ele_mt_s_av
+  # mean slope
+  - slp_dg_sav
+  # basin size
+  - basin_area
+  # forest cover area
+  - for_pc_sse
+  # Clay fraction in soil
+  - cly_pc_sav
+  # Silt fraction in soil
+  - slt_pc_sav
+  # Sand fraction in soil
+  - snd_pc_sav
+  # Organic carbon content in soil
+  - soc_th_sav
