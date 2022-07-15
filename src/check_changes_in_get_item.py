@@ -7,7 +7,7 @@ import tqdm.notebook
 import tqdm
 import os
 from preprocess_data import Preprocessor
-from matplotlib import pyplot as plt
+
 
 root_dir = str(Path(os.getcwd()).parent)
 RUN_LOCALLY = True
