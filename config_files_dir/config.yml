@@ -95,7 +95,7 @@ predict_last_n: 1
 
 # Length of the input sequence
 # If use_frequencies is used, this needs to be a dict mapping each frequency to a seq_length, else an int.
-seq_length: 365
+seq_length: 270
 
 # Number of parallel workers used in the data pipeline
 num_workers: 2
@@ -123,17 +123,17 @@ data_dir: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/
 # Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
 # can be either a list of forcings or a single forcing product
 forcings:
-- daymet
+- maurer
 
 # variables to use as time series input (names match the data file column headers)
 # Note: In case of multiple input forcing products, you have to append the forcing product behind
 # each variable. E.g. 'prcp(mm/day)' of the daymet product is 'prcp(mm/day)_daymet'
 dynamic_inputs:
-- prcp(mm/day)
-- srad(W/m2)
-- tmax(C)
-- tmin(C)
-- vp(Pa)
+- PRCP(mm/day)
+- SRAD(W/m2)
+- Tmax(C)
+- Tmin(C)
+- Vp(Pa)
 
 # which columns to use as target
 target_variables:
