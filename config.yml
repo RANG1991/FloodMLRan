@@ -4,9 +4,9 @@
 experiment_name: test_run
 
 # files to specify training, validation and test basins (relative to code root or absolute path)
-train_basin_file: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US/train_basins.txt
-validation_basin_file: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US/train_basins.txt
-test_basin_file: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US/train_basins.txt
+train_basin_file: /sci/labs/efratmorin/ranga/FloodsML/data/CAMELS_US/train_basins.txt
+validation_basin_file: /sci/labs/efratmorin/ranga/FloodsML/data/CAMELS_US/train_basins.txt
+test_basin_file: /sci/labs/efratmorin/ranga/FloodsML/data/CAMELS_US/train_basins.txt
 
 # training, validation and test time periods (format = 'dd/mm/yyyy')
 train_start_date: "01/10/1999"
@@ -116,7 +116,7 @@ save_weights_every: 1
 dataset: camels_us
 
 # Path to data set root
-data_dir: /sci/labs/efratmorin/lab_share/FloodsML/data/CAMELS_US
+data_dir: /sci/labs/efratmorin/ranga/FloodsML/data/CAMELS_US
 
 # Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
 # can be either a list of forcings or a single forcing product
