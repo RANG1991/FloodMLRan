@@ -14,5 +14,7 @@ LabReport/*.pdf
 **/data/**
 **/__pycache__/**
 output.log
-**/runs/**
 **/.tmp*/**
+neuralhydrology/runs/**
+**/.tmp.driveupload/*
+**/runs/*
