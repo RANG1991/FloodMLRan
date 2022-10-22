@@ -32,6 +32,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
+        print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
 
 
