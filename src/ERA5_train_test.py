@@ -1,9 +1,9 @@
 import os
 
 from torch.utils.data import DataLoader
-from ERA_5_dataset import Dataset_ERA5
+from ERA5_dataset import Dataset_ERA5
 import tqdm
-from tqdm import tqdm_notebook
+from tqdm.notebook import tqdm
 from ERA5_lstm import LSTM_ERA5
 import torch.optim
 import torch.nn as nn
@@ -15,7 +15,8 @@ import pandas as pd
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # set model to train mode (important for dropout)
     model.train()
-    pbar = tqdm_notebook(loader)
+    pbar = tqdm(loader)
+    print(f"Epoch {epoch}")
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     for xs, ys in pbar:
@@ -47,9 +48,9 @@ def read_basins_csv_files(folder_name, num_basins):
 
 
 def main():
-    df_all_data = read_basins_csv_files("../data/ERA5/all_data_daily", 3)
-    df_all_data.to_csv("../data/df_train.csv")
-    training_data = Dataset_ERA5("../data/df_train.csv")
+    df_all_data = read_basins_csv_files("./data/ERA5/all_data_daily", 3)
+    df_all_data.to_csv("./data/df_train.csv")
+    training_data = Dataset_ERA5("./data/df_train.csv")
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=20, input_dim=1).to(device)
