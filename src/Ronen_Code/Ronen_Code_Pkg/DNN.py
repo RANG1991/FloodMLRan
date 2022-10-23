@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 import torch.nn as nn
 
+
 class DNN(nn.Module):
     def __init__(self, input_size: int, num_hidden_layers: int, num_hidden_units: int, dropout_rate: float = 0.0):
         super(DNN, self).__init__()
