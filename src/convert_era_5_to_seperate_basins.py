@@ -7,7 +7,7 @@ import datetime
 from shapely.geometry import Point
 from pathlib import Path
 
-PATH_ROOT = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/"
+PATH_ROOT = "../../FloodMLRan/data/ERA5"
 
 TEST_PERIOD = ("1989-10-01", "1999-09-30")
 TRAINING_PERIOD = ("1999-10-01", "2008-09-30")
@@ -76,7 +76,7 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
 
 def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name,
                                      ERA5_data_folder_name, discharge_folder_name,
-                                     output_folder_name):
+                                     ERA5_static_data_file_name, output_folder_name):
     all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
     if all_files_exist:
         print("all precipitation file of the basin: {} exists".format(station_id))
@@ -120,19 +120,14 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
         if not started_reading_data:
             lon = dataset['longitude'][:]
             lat = dataset['latitude'][:]
-
             min_lon_array = min_lon - lon
             ind_lon_min = np.where(min_lon_array > 0, min_lon_array, np.inf).argmin()
-
             max_lon_array = lon - max_lon
             ind_lon_max = np.where(max_lon_array > 0, max_lon_array, np.inf).argmin()
-
             min_lat_array = lat - min_lat
             ind_lat_min = np.where(min_lat_array > 0, min_lat_array, np.inf).argmin()
-
             max_lat_array = max_lat - lat
             ind_lat_max = np.where(max_lat_array > 0, max_lat_array, np.inf).argmin()
-
             started_reading_data = True
         tp = np.asarray(dataset['tp'][:, ind_lat_max:ind_lat_min + 1, ind_lon_min:ind_lon_max + 1])
         # multiply the precipitation by 1000 to get millimeter instead of meter
@@ -158,7 +153,7 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df_percip_times.index.to_pydatetime()
     # convert the precipitation data to the correct format by subtracting each hour from its previous hour
-    # starting from 1 - this is becuase the precipitation data is cummulative
+    # starting from 1 - this is because the precipitation data is cumulative
     percip_mean_lat_lon_new = []
     for i in range(percip_mean_lat_lon.shape[0]):
         if datetimes[i].hour != 1 and i > 0:
@@ -166,7 +161,8 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
         else:
             percip_mean_lat_lon_new.append(percip_mean_lat_lon[i])
     ls = [[percip_mean_lat_lon_new[i]] for i in range(0, len(datetimes))]
-    # convert the precipitation times from UTC (grinitch) to current timezone
+
+    # convert the precipitation times from UTC (Grinch) to current timezone
     print(utc_offset)
     datetimes = [time + datetime.timedelta(hours=utc_offset) for time in datetimes]
     # create a dataframe from the precipitation data and the timedates
@@ -184,6 +180,10 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
     df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
     df_dis_one_day = df_dis_one_day[["date", "flow"]]
     print(df_dis_one_day)
+
+    df_static_data = pd.read_csv(ERA5_static_data_file_name)
+    df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(lambda s: s.replce("us_", ""))
+    basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
 
     # join the two dataframes (precipitation and discharge) by date to get the final dataframe
     df_joined = df_percip_one_day.merge(df_dis_one_day, on="date")
@@ -216,12 +216,23 @@ def parse_single_basin_precipitation(station_id, basin_data, discharge_file_name
               lon[ind_lon_max], file=f)
 
 
+def check(ERA5_static_data_file_name, station_id):
+    df_static_data = pd.read_csv(ERA5_static_data_file_name)
+    df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(lambda s: s.replace("us_", ""))
+    basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
+    basin_static_data = basin_static_data.append([basin_static_data]*5, ignore_index=True)
+    print(basin_static_data)
+
+
 def main():
     root_folder = PATH_ROOT
     boundaries_file_name = root_folder + "/HCDN_nhru_final_671.shp"
+    ERA5_static_data_file_name = root_folder + "/Caravan/attributes/attributes_hydroatlas_us.csv"
     ERA5_percip_data_folder_name = root_folder + "/Precipitation/"
     ERA5_discharge_data_folder_name = root_folder + "/Discharge/"
     output_folder_name = root_folder + "/ERA_5_all_data/"
+    # check(ERA5_static_data_file_name, "01031500")
+    # return
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"]
@@ -231,8 +242,10 @@ def main():
         basin_data = basins_data[basins_data['hru_id'] == int(station_id)]
         parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
         discharge_file_name = ERA5_discharge_data_folder_name + '/dis_' + str(station_id) + '.csv'
-        parse_single_basin_precipitation(station_id, basin_data, discharge_file_name, ERA5_percip_data_folder_name,
-                                         ERA5_discharge_data_folder_name, output_folder_name)
+        parse_single_basin_precipitation(station_id, basin_data,
+                                         discharge_file_name, ERA5_percip_data_folder_name,
+                                         ERA5_discharge_data_folder_name, ERA5_static_data_file_name,
+                                         output_folder_name)
 
 
 main()
