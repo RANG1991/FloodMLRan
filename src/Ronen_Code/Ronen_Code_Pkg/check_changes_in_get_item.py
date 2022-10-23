@@ -1,13 +1,12 @@
-from RanCode.Godavari import IMDGodavari as new_G
-from RanCode.cnn_lstm_v3 import IMDGodavari as old_G
+from Godavari import IMDGodavari as new_G
+from src.Ronen_Code.cnn_lstm_v3 import IMDGodavari as old_G
 from pathlib import Path
 import numpy as np
 import torch
 import tqdm.notebook
 import tqdm
 import os
-from preprocess_data import Preprocessor
-from matplotlib import pyplot as plt
+from src.Ronen_Code.Ronen_Code_Pkg.preprocess_data import Preprocessor
 
 root_dir = str(Path(os.getcwd()).parent)
 RUN_LOCALLY = True
