@@ -1,9 +1,8 @@
 import os
 
 from torch.utils.data import DataLoader
-from ERA_5_dataset import Dataset_ERA5
-import tqdm
-from tqdm import tqdm_notebook
+from ERA5_dataset import Dataset_ERA5
+from tqdm.notebook import tqdm as tqdm_notebook
 from ERA5_lstm import LSTM_ERA5
 import torch.optim
 import torch.nn as nn
@@ -16,6 +15,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # set model to train mode (important for dropout)
     model.train()
     pbar = tqdm_notebook(loader)
+    print(f"Epoch {epoch}")
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     for xs, ys in pbar:
@@ -26,12 +26,13 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         # get model predictions
         y_hat = model(xs)
         # calculate loss
-        loss = loss_func(y_hat, ys)
+        loss = loss_func(y_hat.squeeze(0), ys)
         # calculate gradients
         loss.backward()
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
+        print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
 
 
