@@ -39,7 +39,7 @@ parent_dir = Path(os.getcwd()).__str__()
 #### Definitions ####
 RUN_LOCALLY = True
 
-root_dir = str(Path(os.getcwd()).parent)
+root_dir = str(Path(os.getcwd()).parent.parent)
 PATH_ROOT = root_dir + "/"  # Change only here the path
 PATH_DATA_FILE = PATH_ROOT if not RUN_LOCALLY else Path(PATH_ROOT + "/" + "data/raw_data_fixed_17532_3_22_38").__str__()
 PATH_LABEL = PATH_ROOT + "data/CWC/"

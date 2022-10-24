@@ -50,11 +50,22 @@ def read_basins_csv_files(folder_name, num_basins):
 def main():
     df_all_data = read_basins_csv_files("../data/ERA5/all_data_daily", 3)
     df_all_data.to_csv("../data/df_train.csv")
-    training_data = Dataset_ERA5("../data/df_train.csv")
-    train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
+    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
+                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
+                               "p_mean", "pet_mean",
+                               "aridity", "frac_snow",
+                               "high_prec_freq",
+                               "high_prec_dur",
+                               "low_prec_freq", "low_prec_dur"]
+    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily",
+                                 static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
+                                 static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
+                                                             "/attributes_hydroatlas_us.csv",
+                                 static_attributes_names=static_attributes_names)
+    train_dataloader = DataLoader(training_data, batch_size=64, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = LSTM_ERA5(hidden_dim=20, input_dim=1).to(device)
-    learning_rate = 1e-4
+    model = LSTM_ERA5(hidden_dim=20, input_dim=len(static_attributes_names) + 1).to(device)
+    learning_rate = 1e-5
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     for i in range(50):

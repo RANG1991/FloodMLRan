@@ -9,7 +9,7 @@ import os
 from src.Ronen_Code.Ronen_Code_Pkg.preprocess_data import Preprocessor
 
 
-root_dir = str(Path(os.getcwd()).parent)
+root_dir = str(Path(os.getcwd()).parent.parent.parent)
 RUN_LOCALLY = True
 PATH_ROOT = root_dir + "/"  # Change only here the path
 PATH_DATA_FILE = root_dir + str(Path("/" + "data/raw_data_fixed_17532_3_22_38"))
