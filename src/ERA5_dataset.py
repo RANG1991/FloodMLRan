@@ -50,13 +50,13 @@ class Dataset_ERA5(Dataset):
         df_attr_caravan = pd.read_csv(self.static_data_file_caravan, dtype={'gauge_id': str})
         df_attr_hydroatlas = pd.read_csv(self.static_data_file_hydroatlas, dtype={'gauge_id': str})
         df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")
-        station_ids = df_attr['gauge_id'].apply(lambda x: str(x).replace("us_", "")).values.tolist()
+        df_attr['gauge_id'] = df_attr['gauge_id'].apply(lambda x: str(x).replace("us_", "")).values.tolist()
         df_attr = df_attr.dropna()
         df_attr = df_attr[['gauge_id'] + self.list_static_attributes_names]
         maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
         mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
         df_attr[self.list_static_attributes_names] = (df_attr.drop(columns=['gauge_id']).to_numpy() - mins) / (maxes - mins)
-        return df_attr, station_ids
+        return df_attr, df_attr['gauge_id'].values.tolist()
 
     def read_single_station_file(self, station_id):
         station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
