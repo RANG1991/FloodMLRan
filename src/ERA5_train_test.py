@@ -9,14 +9,16 @@ import torch.nn as nn
 from os import listdir
 from os.path import isfile, join
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
-    # set model to train mode (important for dropout)
-    model.train()
+    # # set model to train mode (important for dropout)
+    # model.train()
     pbar = tqdm_notebook(loader)
     print(f"Epoch {epoch}")
     pbar.set_description(f"Epoch {epoch}")
+    loss_list = []
     # request mini-batch of data from the loader
     for xs, ys in pbar:
         # delete previously stored gradients from the model
@@ -31,9 +33,11 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         loss.backward()
         # update the weights
         optimizer.step()
+        loss_list.append(loss.item())
         # write current loss in the progress bar
         print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
+    return loss_list
 
 
 def read_basins_csv_files(folder_name, num_basins):
@@ -68,8 +72,13 @@ def main():
     learning_rate = 1e-5
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
-    for i in range(50):
-        train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
+    loss_list = []
+    for i in range(3):
+        training_data.zero_out_accumulators()
+        loss_list_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
+        loss_list.extend(loss_list_epoch)
+    plt.plot(loss_list)
+    plt.show()
 
 
 if __name__ == "__main__":

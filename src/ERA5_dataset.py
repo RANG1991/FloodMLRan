@@ -31,6 +31,8 @@ class Dataset_ERA5(Dataset):
         self.curr_station_index = 0
         self.X_data = np.array([])
         self.y_data = np.array([])
+        self.y_std = 0
+        self.y_mean = 0
 
     def __len__(self):
         return self.calculate_dataset_length(self.list_stations)
@@ -38,7 +40,7 @@ class Dataset_ERA5(Dataset):
     def __getitem__(self, index) -> T_co:
         if (index - self.acum_stations_length) + self.sequence_length >= self.X_data.shape[0]:
             if self.curr_station_index > 0:
-                self.acum_stations_length += self.X_data.shape[0]
+                self.acum_stations_length += (self.X_data.shape[0] - self.sequence_length)
             self.X_data, self.y_data = self.read_single_station_file(self.list_stations[self.curr_station_index])
             self.curr_station_index += 1
         X_data_tensor = torch.tensor(self.X_data[(index - self.acum_stations_length):
@@ -64,11 +66,15 @@ class Dataset_ERA5(Dataset):
         print(df_dynamic_data.head())
         df_dynamic_data = df_dynamic_data.dropna()
         X_data = df_dynamic_data["precip"].to_numpy()
-        X_data -= np.mean(X_data)
-        X_data /= np.std(X_data)
+        X_max = np.max(X_data)
+        X_min = np.min(X_data)
+        X_data = (X_data - X_min) / (X_max - X_min)
         y_data = df_dynamic_data["flow"].to_numpy().flatten()
         X_data = X_data.reshape(-1, 1)
         y_data = y_data.reshape(-1, 1)
+        y_data_mean = y_data.mean()
+        y_data_std = y_data.std()
+        y_data = ((y_data - y_data_mean) / y_data_std)
         static_attrib_station = (self.df_attr[self.df_attr["gauge_id"] == station_id]).drop("gauge_id", axis=1)\
             .to_numpy().reshape(1, -1)
         static_attrib_station_rep = static_attrib_station.repeat(X_data.shape[0], axis=0)
@@ -83,3 +89,9 @@ class Dataset_ERA5(Dataset):
             df_dynamic_data = df_dynamic_data.dropna()
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
+
+    def zero_out_accumulators(self):
+        self.acum_stations_length = 0
+        self.curr_station_index = 0
+        self.X_data = np.array([])
+        self.y_data = np.array([])
