@@ -14,12 +14,14 @@ import matplotlib.pyplot as plt
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # # set model to train mode (important for dropout)
-    # model.train()
+    model.train()
     pbar = tqdm_notebook(loader)
     print(f"Epoch {epoch}")
     pbar.set_description(f"Epoch {epoch}")
     loss_list = []
     # request mini-batch of data from the loader
+    running_loss = 0.0
+    i = 0
     for xs, ys in pbar:
         # delete previously stored gradients from the model
         optimizer.zero_grad()
@@ -33,10 +35,14 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         loss.backward()
         # update the weights
         optimizer.step()
-        loss_list.append(loss.item())
         # write current loss in the progress bar
-        print(f"Loss: {loss.item():.4f}")
+        running_loss += loss.item()
+        if i % 200 == 199:  # print every 2000 mini-batches
+            print(f'[{epoch + 1}] loss: {running_loss / 200:.3f}')
+            loss_list.append(running_loss)
+            running_loss = 0.0
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
+        i += 1
     return loss_list
 
 
@@ -69,11 +75,11 @@ def main():
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=20, input_dim=len(static_attributes_names) + 1).to(device)
-    learning_rate = 1e-5
+    learning_rate = 1e-4
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list = []
-    for i in range(3):
+    for i in range(50):
         training_data.zero_out_accumulators()
         loss_list_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
         loss_list.extend(loss_list_epoch)

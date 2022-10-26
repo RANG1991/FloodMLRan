@@ -74,7 +74,7 @@ class Dataset_ERA5(Dataset):
         y_data = y_data.reshape(-1, 1)
         y_data_mean = y_data.mean()
         y_data_std = y_data.std()
-        y_data = ((y_data - y_data_mean) / y_data_std)
+        # y_data = ((y_data - y_data_mean) / y_data_std)
         static_attrib_station = (self.df_attr[self.df_attr["gauge_id"] == station_id]).drop("gauge_id", axis=1)\
             .to_numpy().reshape(1, -1)
         static_attrib_station_rep = static_attrib_station.repeat(X_data.shape[0], axis=0)
