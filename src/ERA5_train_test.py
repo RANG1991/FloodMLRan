@@ -10,6 +10,58 @@ from os import listdir
 from os.path import isfile, join
 import pandas as pd
 import matplotlib.pyplot as plt
+from typing import Tuple
+import numpy as np
+
+
+def eval_model(model, loader, device) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Evaluate the model.
+
+    :param model: A torch.nn.Module implementing the LSTM model
+    :param loader: A PyTorch DataLoader, providing the data.
+
+    :return: Two torch Tensors, containing the observations and
+        model predictions
+    """
+    # set model to eval mode (important for dropout)
+    model.eval()
+    obs = []
+    preds = []
+    # in inference mode, we don't need to store intermediate steps for
+    # backprob
+    with torch.no_grad():
+        # request mini-batch of data from the loader
+        for xs, ys in loader:
+            # push data to GPU (if available)
+            xs = xs.to(device)
+            # get model predictions
+            y_hat = model(xs)
+            obs.append(ys)
+            preds.append(y_hat)
+    return torch.cat(obs), torch.cat(preds)
+
+
+def calc_nse(obs: np.array, sim: np.array) -> float:
+    """Calculate Nash-Sutcliff-Efficiency.
+
+    :param obs: Array containing the observations
+    :param sim: Array containing the simulations
+    :return: NSE value.
+    """
+    # only consider time steps, where observations are available
+    # COMMENT FROM EFRAT TO RONEN: NEGATIVE VALUES ARE FINE! I COMMENTED THE TWO LINES BELOW
+    # sim = np.delete(sim, np.argwhere(obs < 0), axis=0)
+    # obs = np.delete(obs, np.argwhere(obs < 0), axis=0)
+
+    # check for NaNs in observations
+    sim = np.delete(sim, np.argwhere(np.isnan(obs)), axis=0)
+    obs = np.delete(obs, np.argwhere(np.isnan(obs)), axis=0)
+
+    denominator = np.sum((obs - np.mean(obs)) ** 2)
+    numerator = np.sum((sim - obs) ** 2)
+    nse_val = 1 - numerator / denominator
+
+    return nse_val
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
@@ -58,8 +110,9 @@ def read_basins_csv_files(folder_name, num_basins):
 
 
 def main():
-    df_all_data = read_basins_csv_files("../data/ERA5/all_data_daily", 3)
-    df_all_data.to_csv("../data/df_train.csv")
+    # df_all_data = read_basins_csv_files("../data/ERA5/all_data_daily", 3)
+    # df_all_data.to_csv("../data/df_train.csv")
+    load_datasets_dynamically = False
     static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
                                "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
                                "p_mean", "pet_mean",
@@ -67,22 +120,33 @@ def main():
                                "high_prec_freq",
                                "high_prec_dur",
                                "low_prec_freq", "low_prec_dur"]
-    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily",
+    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/train/",
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                              "/attributes_hydroatlas_us.csv",
-                                 static_attributes_names=static_attributes_names)
-    train_dataloader = DataLoader(training_data, batch_size=64, shuffle=False)
+                                 static_attributes_names=static_attributes_names, load_dynamically=load_datasets_dynamically)
+    train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
+    test_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/test/",
+                             static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
+                             static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
+                                                         "/attributes_hydroatlas_us.csv",
+                             static_attributes_names=static_attributes_names, load_dynamically=load_datasets_dynamically)
+    test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=20, input_dim=len(static_attributes_names) + 1).to(device)
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list = []
-    for i in range(50):
-        training_data.zero_out_accumulators()
+    for i in range(10):
+        if load_datasets_dynamically:
+            training_data.zero_out_accumulators()
+            test_data.zero_out_accumulators()
         loss_list_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
         loss_list.extend(loss_list_epoch)
+        obs, preds = eval_model(model, test_dataloader, device)
+        nse = calc_nse(obs.cpu().numpy(), preds.cpu().numpy())
+        print(f"NSE is: {nse}")
     plt.plot(loss_list)
     plt.show()
 
