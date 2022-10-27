@@ -130,7 +130,9 @@ def main():
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                              static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                          "/attributes_hydroatlas_us.csv",
-                             static_attributes_names=static_attributes_names, load_dynamically=load_datasets_dynamically)
+                             static_attributes_names=static_attributes_names, load_dynamically=load_datasets_dynamically,
+                             x_maxs=training_data.get_x_max(), x_mins=training_data.get_x_min(),
+                             y_mean=training_data.get_y_mean(), y_std=training_data.get_y_std())
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=20, input_dim=len(static_attributes_names) + 1).to(device)

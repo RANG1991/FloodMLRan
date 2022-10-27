@@ -13,7 +13,8 @@ class Dataset_ERA5(Dataset):
 
     def __init__(self, dynamic_data_folder, static_data_file_caravan,
                  static_data_file_hydroatlas, static_attributes_names=[],
-                 is_training=True, sequence_length=270, load_dynamically=True):
+                 is_training=True, sequence_length=270, load_dynamically=True,
+                 x_mins=None, x_maxs=None, y_mean=None, y_std=None):
         self.is_training = is_training
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
@@ -26,8 +27,6 @@ class Dataset_ERA5(Dataset):
         self.curr_station_index = 0
         self.X_data = np.array([])
         self.y_data = np.array([])
-        self.y_std = 0
-        self.y_mean = 0
         self.load_dynamically = load_dynamically
         list_stations_dynamic = []
         X_data_list = []
@@ -44,6 +43,12 @@ class Dataset_ERA5(Dataset):
         if not self.load_dynamically:
             self.X_data = np.concatenate(X_data_list)
             self.y_data = np.concatenate(y_data_list)
+            self.y_std = y_std if y_std is not None else self.y_data.std()
+            self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
+            self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
+            self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
+            self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + (10**-10))
+            self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations = list(set(list_stations_static).intersection(set(list_stations_dynamic)))
 
     def __len__(self):
@@ -55,6 +60,10 @@ class Dataset_ERA5(Dataset):
                 if self.curr_station_index > 0:
                     self.acum_stations_length += (self.X_data.shape[0] - self.sequence_length)
                 self.X_data, self.y_data = self.read_single_station_file(self.list_stations[self.curr_station_index])
+                self.y_std = self.y_data.std()
+                self.y_mean = self.y_data.mean()
+                self.x_max = self.X_data.max(axis=1)
+                self.x_min = self.X_data.min(axis=1)
                 self.curr_station_index += 1
             X_data_tensor = torch.tensor(self.X_data[(index - self.acum_stations_length):
                                                      (index - self.acum_stations_length) + self.sequence_length]).to(
@@ -76,7 +85,7 @@ class Dataset_ERA5(Dataset):
         maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
         mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
         df_attr[self.list_static_attributes_names] = (df_attr.drop(columns=['gauge_id']).to_numpy() - mins) / (
-                    maxes - mins)
+                maxes - mins)
         return df_attr, df_attr['gauge_id'].values.tolist()
 
     def read_single_station_file(self, station_id):
@@ -90,14 +99,8 @@ class Dataset_ERA5(Dataset):
         y_data = df_dynamic_data["flow"].to_numpy().flatten()
         if X_data.size == 0 or y_data.size == 0:
             return np.array([]), np.array([])
-        X_max = np.max(X_data)
-        X_min = np.min(X_data)
-        X_data = (X_data - X_min) / (X_max - X_min)
         X_data = X_data.reshape(-1, 1)
         y_data = y_data.reshape(-1, 1)
-        y_data_mean = y_data.mean()
-        y_data_std = y_data.std()
-        y_data = ((y_data - y_data_mean) / y_data_std)
         static_attrib_station = (self.df_attr[self.df_attr["gauge_id"] == station_id]).drop("gauge_id", axis=1) \
             .to_numpy().reshape(1, -1)
         static_attrib_station_rep = static_attrib_station.repeat(X_data.shape[0], axis=0)
@@ -120,3 +123,15 @@ class Dataset_ERA5(Dataset):
         self.curr_station_index = 0
         self.X_data = np.array([])
         self.y_data = np.array([])
+
+    def get_x_min(self):
+        return self.x_min
+
+    def get_x_max(self):
+        return self.x_max
+
+    def get_y_std(self):
+        return self.y_std
+
+    def get_y_mean(self):
+        return self.y_mean
