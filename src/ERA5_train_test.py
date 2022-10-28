@@ -59,7 +59,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
 
     denominator = np.sum((obs - np.mean(obs)) ** 2)
     numerator = np.sum((sim - obs) ** 2)
-    nse_val = 1 - numerator / denominator
+    nse_val = 1 - (numerator / denominator)
 
     return nse_val
 
@@ -124,23 +124,25 @@ def main():
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                              "/attributes_hydroatlas_us.csv",
-                                 static_attributes_names=static_attributes_names, load_dynamically=load_datasets_dynamically)
+                                 static_attributes_names=static_attributes_names,
+                                 load_dynamically=load_datasets_dynamically, sequence_length=30)
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/test/",
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                              static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                          "/attributes_hydroatlas_us.csv",
-                             static_attributes_names=static_attributes_names, load_dynamically=load_datasets_dynamically,
+                             static_attributes_names=static_attributes_names,
+                             load_dynamically=load_datasets_dynamically,
                              x_maxs=training_data.get_x_max(), x_mins=training_data.get_x_min(),
-                             y_mean=training_data.get_y_mean(), y_std=training_data.get_y_std())
+                             y_mean=training_data.get_y_mean(), y_std=training_data.get_y_std(), sequence_length=30)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=20, input_dim=len(static_attributes_names) + 1).to(device)
-    learning_rate = 1e-3
+    learning_rate = 5e-3
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list = []
-    for i in range(10):
+    for i in range(50):
         if load_datasets_dynamically:
             training_data.zero_out_accumulators()
             test_data.zero_out_accumulators()

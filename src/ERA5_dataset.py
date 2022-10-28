@@ -93,8 +93,8 @@ class Dataset_ERA5(Dataset):
         df_dynamic_data = pd.read_csv(station_data_file)
         print(df_dynamic_data.head())
         df_dynamic_data = df_dynamic_data.dropna()
-        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["precip"] > 0]
-        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["flow"] > 0]
+        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["precip"].apply(lambda x: int(x)) > 0]
+        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["flow"].apply(lambda x: int(x)) > 0]
         X_data = df_dynamic_data["precip"].to_numpy()
         y_data = df_dynamic_data["flow"].to_numpy().flatten()
         if X_data.size == 0 or y_data.size == 0:
@@ -112,9 +112,9 @@ class Dataset_ERA5(Dataset):
         for station_id in station_ids:
             station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
             df_dynamic_data = pd.read_csv(station_data_file)
-            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["precip"] > 0]
-            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["flow"] > 0]
             df_dynamic_data = df_dynamic_data.dropna()
+            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["precip"].apply(lambda x: int(x)) > 0]
+            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["flow"].apply(lambda x: int(x)) > 0]
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
 
