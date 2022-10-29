@@ -199,7 +199,7 @@ def check_pest_parameters():
 
 
 def main():
-    run_training_and_test(learning_rate=5 * 0.001, sequence_length=110, num_hidden_units=200, num_epochs=10)
+    run_training_and_test(learning_rate=5 * 0.001, sequence_length=110, num_hidden_units=200, num_epochs=50)
 
 
 if __name__ == "__main__":
