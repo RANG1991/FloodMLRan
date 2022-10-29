@@ -136,24 +136,25 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                "high_prec_freq",
                                "high_prec_dur",
                                "low_prec_freq", "low_prec_dur"]
-    dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
-                                "temperature_2m_max", "potential_evaporation_sum",
-                                "surface_net_solar_radiation_mean"]
-    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/Caravan/timeseries/csv/us/train/",
+    # dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
+    #                             "temperature_2m_max", "potential_evaporation_sum",
+    #                             "surface_net_solar_radiation_mean"]
+    dynamic_attributes_names = ["precip"]
+    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/train/",
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                              "/attributes_hydroatlas_us.csv",
                                  dynamic_attributes_names=dynamic_attributes_names,
-                                 discharge_str="streamflow",
+                                 discharge_str="flow",
                                  static_attributes_names=static_attributes_names,
                                  load_dynamically=load_datasets_dynamically, sequence_length=sequence_length)
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
-    test_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/Caravan/timeseries/csv/us/test/",
+    test_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/test/",
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                              static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                          "/attributes_hydroatlas_us.csv",
                              dynamic_attributes_names=dynamic_attributes_names,
-                             discharge_str="streamflow",
+                             discharge_str="flow",
                              static_attributes_names=static_attributes_names,
                              load_dynamically=load_datasets_dynamically,
                              x_maxs=training_data.get_x_max(), x_mins=training_data.get_x_min(),
@@ -175,6 +176,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
         obs, preds = eval_model(model, test_dataloader, device)
         nse = calc_nse(obs.cpu().numpy(), preds.cpu().numpy())
         nse_list.append(nse)
+        print(f"NSE is: {nse}")
     avg_nse = sum(nse_list) / len(nse_list)
     plot_NSE_CDF(nse_losses=nse_list)
     return avg_nse
@@ -197,7 +199,7 @@ def check_pest_parameters():
 
 
 def main():
-    run_training_and_test(learning_rate=5 * 0.001, sequence_length=110, num_hidden_units=200, num_epochs=5)
+    run_training_and_test(learning_rate=5 * 0.001, sequence_length=110, num_hidden_units=200, num_epochs=10)
 
 
 if __name__ == "__main__":

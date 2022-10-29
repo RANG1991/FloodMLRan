@@ -87,7 +87,7 @@ class Dataset_ERA5(Dataset):
         y_data_list = []
         all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
         for station_file_name in all_station_files:
-            station_id = re.search("us_(\\d+)\\.csv", station_file_name).group(1)
+            station_id = re.search("data24_(\\d+)\\.csv", station_file_name).group(1)
             if station_id in self.list_stations_static:
                 list_stations_dynamic.append(station_id)
                 if not self.load_dynamically:
@@ -98,14 +98,13 @@ class Dataset_ERA5(Dataset):
         return X_data_list, y_data_list, list_stations_dynamic
 
     def read_single_station_file(self, station_id):
-        station_data_file = Path(self.dynamic_data_folder) / f"us_{station_id}.csv"
+        station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
-        print(df_dynamic_data.head())
+        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
+        df_dynamic_data = df_dynamic_data[(df_dynamic_data > 0) & (df_dynamic_data < 1000)]
         df_dynamic_data = df_dynamic_data.dropna()
-        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.list_dynamic_attributes_names].apply(lambda x: float(x)) > 0]
-        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.discharge_str].apply(lambda x: float(x)) > 0]
-        X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
+        X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:
             return np.array([]), np.array([])
         X_data = X_data.reshape(-1, 1)
@@ -121,9 +120,9 @@ class Dataset_ERA5(Dataset):
         for station_id in station_ids:
             station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
             df_dynamic_data = pd.read_csv(station_data_file)
+            df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
+            df_dynamic_data = df_dynamic_data[(df_dynamic_data > 0) & (df_dynamic_data < 1000)]
             df_dynamic_data = df_dynamic_data.dropna()
-            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.list_dynamic_attributes_names].apply(lambda x: float(x)) > 0]
-            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.discharge_str].apply(lambda x: float(x)) > 0]
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
 
