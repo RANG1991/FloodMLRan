@@ -126,9 +126,8 @@ def read_basins_csv_files(folder_name, num_basins):
 
 
 def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_epochs):
-    # df_all_data = read_basins_csv_files("../data/ERA5/all_data_daily", 3)
-    # df_all_data.to_csv("../data/df_train.csv")
     load_datasets_dynamically = False
+    use_Caravan_dataset = True
     static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
                                "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
                                "p_mean", "pet_mean",
@@ -136,31 +135,47 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                "high_prec_freq",
                                "high_prec_dur",
                                "low_prec_freq", "low_prec_dur"]
-    # dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
-    #                             "temperature_2m_max", "potential_evaporation_sum",
-    #                             "surface_net_solar_radiation_mean"]
-    dynamic_attributes_names = ["precip"]
-    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/train/",
+    if use_Caravan_dataset:
+        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
+                                    "temperature_2m_max", "potential_evaporation_sum",
+                                    "surface_net_solar_radiation_mean"]
+        discharge_str = "streamflow"
+        dynamic_data_folder_train = "../data/ERA5/Caravan/timeseries/csv/us/train/"
+        dynamic_data_folder_test = "../data/ERA5/Caravan/timeseries/csv/us/test/"
+    else:
+        dynamic_attributes_names = ["precip"]
+        discharge_str = "flow"
+        dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
+        dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
+
+    training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_train,
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                              "/attributes_hydroatlas_us.csv",
                                  dynamic_attributes_names=dynamic_attributes_names,
-                                 discharge_str="flow",
+                                 discharge_str=discharge_str,
                                  static_attributes_names=static_attributes_names,
-                                 load_dynamically=load_datasets_dynamically, sequence_length=sequence_length)
+                                 load_dynamically=load_datasets_dynamically,
+                                 sequence_length=sequence_length,
+                                 use_Caravan_dataset=use_Caravan_dataset)
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
-    test_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/test/",
+
+    test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                              static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                          "/attributes_hydroatlas_us.csv",
                              dynamic_attributes_names=dynamic_attributes_names,
-                             discharge_str="flow",
+                             discharge_str=discharge_str,
                              static_attributes_names=static_attributes_names,
                              load_dynamically=load_datasets_dynamically,
-                             x_maxs=training_data.get_x_max(), x_mins=training_data.get_x_min(),
-                             y_mean=training_data.get_y_mean(), y_std=training_data.get_y_std(),
-                             sequence_length=sequence_length)
-    test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
+                             x_maxs=training_data.get_x_max(),
+                             x_mins=training_data.get_x_min(),
+                             y_mean=training_data.get_y_mean(),
+                             y_std=training_data.get_y_std(),
+                             sequence_length=sequence_length,
+                             use_Caravan_dataset=use_Caravan_dataset)
+    test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False,)
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=num_hidden_units, input_dim=len(static_attributes_names) + 1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

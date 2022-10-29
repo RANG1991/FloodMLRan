@@ -16,7 +16,7 @@ class Dataset_ERA5(Dataset):
                  dynamic_attributes_names, discharge_str,
                  static_attributes_names=[],
                  is_training=True, sequence_length=270, load_dynamically=True,
-                 x_mins=None, x_maxs=None, y_mean=None, y_std=None):
+                 x_mins=None, x_maxs=None, y_mean=None, y_std=None, use_Caravan_dataset=True):
         self.is_training = is_training
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
@@ -31,6 +31,8 @@ class Dataset_ERA5(Dataset):
         self.X_data = np.array([])
         self.y_data = np.array([])
         self.load_dynamically = load_dynamically
+        self.use_Caravan_dataset = use_Caravan_dataset
+        self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
         X_data_list, y_data_list, list_stations_dynamic = self.read_all_dynamic_data_files(dynamic_data_folder=
                                                                                            dynamic_data_folder)
         if not self.load_dynamically:
@@ -87,7 +89,7 @@ class Dataset_ERA5(Dataset):
         y_data_list = []
         all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
         for station_file_name in all_station_files:
-            station_id = re.search("data24_(\\d+)\\.csv", station_file_name).group(1)
+            station_id = re.search(f"{self.prefix_dynamic_data_file}(\\d+)\\.csv", station_file_name).group(1)
             if station_id in self.list_stations_static:
                 list_stations_dynamic.append(station_id)
                 if not self.load_dynamically:
@@ -98,7 +100,7 @@ class Dataset_ERA5(Dataset):
         return X_data_list, y_data_list, list_stations_dynamic
 
     def read_single_station_file(self, station_id):
-        station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
+        station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
         df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
         df_dynamic_data = df_dynamic_data[(df_dynamic_data >= 0) & (df_dynamic_data < 1000)]
@@ -118,7 +120,7 @@ class Dataset_ERA5(Dataset):
     def calculate_dataset_length(self, station_ids):
         count = 0
         for station_id in station_ids:
-            station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
+            station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
             df_dynamic_data = pd.read_csv(station_data_file)
             df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
             df_dynamic_data = df_dynamic_data[(df_dynamic_data >= 0) & (df_dynamic_data < 1000)]
