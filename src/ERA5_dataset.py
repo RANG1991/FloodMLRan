@@ -12,7 +12,9 @@ import re
 class Dataset_ERA5(Dataset):
 
     def __init__(self, dynamic_data_folder, static_data_file_caravan,
-                 static_data_file_hydroatlas, static_attributes_names=[],
+                 static_data_file_hydroatlas,
+                 dynamic_attributes_names, discharge_str,
+                 static_attributes_names=[],
                  is_training=True, sequence_length=270, load_dynamically=True,
                  x_mins=None, x_maxs=None, y_mean=None, y_std=None):
         self.is_training = is_training
@@ -21,25 +23,16 @@ class Dataset_ERA5(Dataset):
         self.static_data_file_caravan = static_data_file_caravan
         self.static_data_file_hydroatlas = static_data_file_hydroatlas
         self.list_static_attributes_names = static_attributes_names
-        self.df_attr, list_stations_static = self.read_static_attributes()
-        all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
+        self.list_dynamic_attributes_names = dynamic_attributes_names
+        self.discharge_str = discharge_str
+        self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.acum_stations_length = 0
         self.curr_station_index = 0
         self.X_data = np.array([])
         self.y_data = np.array([])
         self.load_dynamically = load_dynamically
-        list_stations_dynamic = []
-        X_data_list = []
-        y_data_list = []
-        for station_file_name in all_station_files:
-            station_id = re.search("data24_(\\d+)\\.csv", station_file_name).group(1)
-            if station_id in list_stations_static:
-                list_stations_dynamic.append(station_id)
-                if not self.load_dynamically:
-                    X_data_curr, y_data_curr = self.read_single_station_file(station_id)
-                    if X_data_curr.size > 0:
-                        X_data_list.append(X_data_curr)
-                        y_data_list.append(y_data_curr)
+        X_data_list, y_data_list, list_stations_dynamic = self.read_all_dynamic_data_files(dynamic_data_folder=
+                                                                                           dynamic_data_folder)
         if not self.load_dynamically:
             self.X_data = np.concatenate(X_data_list)
             self.y_data = np.concatenate(y_data_list)
@@ -47,9 +40,9 @@ class Dataset_ERA5(Dataset):
             self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
             self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
             self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
-            self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + (10**-10))
+            self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + (10 ** -10))
             self.y_data = (self.y_data - self.y_mean) / self.y_std
-        self.list_stations = list(set(list_stations_static).intersection(set(list_stations_dynamic)))
+        self.list_stations = list(set(self.list_stations_static).intersection(set(list_stations_dynamic)))
 
     def __len__(self):
         return self.calculate_dataset_length(self.list_stations)
@@ -88,15 +81,31 @@ class Dataset_ERA5(Dataset):
                 maxes - mins)
         return df_attr, df_attr['gauge_id'].values.tolist()
 
+    def read_all_dynamic_data_files(self, dynamic_data_folder):
+        list_stations_dynamic = []
+        X_data_list = []
+        y_data_list = []
+        all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
+        for station_file_name in all_station_files:
+            station_id = re.search("us_(\\d+)\\.csv", station_file_name).group(1)
+            if station_id in self.list_stations_static:
+                list_stations_dynamic.append(station_id)
+                if not self.load_dynamically:
+                    X_data_curr, y_data_curr = self.read_single_station_file(station_id)
+                    if X_data_curr.size > 0:
+                        X_data_list.append(X_data_curr)
+                        y_data_list.append(y_data_curr)
+        return X_data_list, y_data_list, list_stations_dynamic
+
     def read_single_station_file(self, station_id):
-        station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
+        station_data_file = Path(self.dynamic_data_folder) / f"us_{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
         print(df_dynamic_data.head())
         df_dynamic_data = df_dynamic_data.dropna()
-        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["precip"].apply(lambda x: int(x)) > 0]
-        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["flow"].apply(lambda x: int(x)) > 0]
-        X_data = df_dynamic_data["precip"].to_numpy()
-        y_data = df_dynamic_data["flow"].to_numpy().flatten()
+        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.list_dynamic_attributes_names].apply(lambda x: float(x)) > 0]
+        df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.discharge_str].apply(lambda x: float(x)) > 0]
+        X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
+        y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         if X_data.size == 0 or y_data.size == 0:
             return np.array([]), np.array([])
         X_data = X_data.reshape(-1, 1)
@@ -113,8 +122,8 @@ class Dataset_ERA5(Dataset):
             station_data_file = Path(self.dynamic_data_folder) / f"data24_{station_id}.csv"
             df_dynamic_data = pd.read_csv(station_data_file)
             df_dynamic_data = df_dynamic_data.dropna()
-            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["precip"].apply(lambda x: int(x)) > 0]
-            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data["flow"].apply(lambda x: int(x)) > 0]
+            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.list_dynamic_attributes_names].apply(lambda x: float(x)) > 0]
+            df_dynamic_data = df_dynamic_data.loc[df_dynamic_data[self.discharge_str].apply(lambda x: float(x)) > 0]
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
 

@@ -12,6 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
+import itertools
 
 
 def eval_model(model, loader, device) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -98,6 +99,21 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     return loss_list
 
 
+def plot_NSE_CDF(nse_losses):
+    nse_losses_np = np.array(nse_losses)
+    nse_losses_np = nse_losses_np[nse_losses_np >= 0]
+    # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
+    # evaluate the histogram
+    values, base = np.histogram(nse_losses_np, bins=100)
+    # evaluate the cumulative
+    cumulative = np.cumsum(values)
+    cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
+    # plot the cumulative function
+    plt.plot(base[:-1], cumulative, c='blue')
+    plt.grid()
+    plt.show()
+
+
 def read_basins_csv_files(folder_name, num_basins):
     df = pd.DataFrame(columns=["date", "precip", "flow"])
     data_csv_files = [f for f in listdir(folder_name) if isfile(join(folder_name, f))]
@@ -109,7 +125,7 @@ def read_basins_csv_files(folder_name, num_basins):
     return df
 
 
-def main():
+def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_epochs):
     # df_all_data = read_basins_csv_files("../data/ERA5/all_data_daily", 3)
     # df_all_data.to_csv("../data/df_train.csv")
     load_datasets_dynamically = False
@@ -120,29 +136,37 @@ def main():
                                "high_prec_freq",
                                "high_prec_dur",
                                "low_prec_freq", "low_prec_dur"]
-    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/train/",
+    dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
+                                "temperature_2m_max", "potential_evaporation_sum",
+                                "surface_net_solar_radiation_mean"]
+    training_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/Caravan/timeseries/csv/us/train/",
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                              "/attributes_hydroatlas_us.csv",
+                                 dynamic_attributes_names=dynamic_attributes_names,
+                                 discharge_str="streamflow",
                                  static_attributes_names=static_attributes_names,
-                                 load_dynamically=load_datasets_dynamically, sequence_length=30)
+                                 load_dynamically=load_datasets_dynamically, sequence_length=sequence_length)
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
-    test_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/all_data_daily/test/",
+    test_data = Dataset_ERA5(dynamic_data_folder="../data/ERA5/Caravan/timeseries/csv/us/test/",
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                              static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
                                                          "/attributes_hydroatlas_us.csv",
+                             dynamic_attributes_names=dynamic_attributes_names,
+                             discharge_str="streamflow",
                              static_attributes_names=static_attributes_names,
                              load_dynamically=load_datasets_dynamically,
                              x_maxs=training_data.get_x_max(), x_mins=training_data.get_x_min(),
-                             y_mean=training_data.get_y_mean(), y_std=training_data.get_y_std(), sequence_length=30)
+                             y_mean=training_data.get_y_mean(), y_std=training_data.get_y_std(),
+                             sequence_length=sequence_length)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = LSTM_ERA5(hidden_dim=20, input_dim=len(static_attributes_names) + 1).to(device)
-    learning_rate = 5e-3
+    model = LSTM_ERA5(hidden_dim=num_hidden_units, input_dim=len(static_attributes_names) + 1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list = []
-    for i in range(50):
+    nse_list = []
+    for i in range(num_epochs):
         if load_datasets_dynamically:
             training_data.zero_out_accumulators()
             test_data.zero_out_accumulators()
@@ -150,9 +174,30 @@ def main():
         loss_list.extend(loss_list_epoch)
         obs, preds = eval_model(model, test_dataloader, device)
         nse = calc_nse(obs.cpu().numpy(), preds.cpu().numpy())
-        print(f"NSE is: {nse}")
-    plt.plot(loss_list)
-    plt.show()
+        nse_list.append(nse)
+    avg_nse = sum(nse_list) / len(nse_list)
+    plot_NSE_CDF(nse_losses=nse_list)
+    return avg_nse
+
+
+def check_pest_parameters():
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=5).tolist()
+    sequence_length = np.linspace(30, 270, 4, dtype=np.int).tolist()
+    num_hidden_units = np.linspace(20, 200, 4, dtype=np.int).tolist()
+    num_epochs = [4]
+    best_avg_nse = -1
+    all_parameters = list(itertools.product(learning_rates, sequence_length, num_hidden_units, num_epochs))
+    for parameters in all_parameters:
+        avg_nse = run_training_and_test(*parameters)
+        if avg_nse > best_avg_nse or best_avg_nse == -1:
+            print(f"average NSE is: {avg_nse}")
+            best_avg_nse = avg_nse
+            best_parameters = parameters
+    print(f"best parameters: {best_parameters}")
+
+
+def main():
+    run_training_and_test(learning_rate=5 * 0.001, sequence_length=110, num_hidden_units=200, num_epochs=5)
 
 
 if __name__ == "__main__":
