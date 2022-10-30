@@ -177,7 +177,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False,)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = LSTM_ERA5(hidden_dim=num_hidden_units, input_dim=len(static_attributes_names) + 1).to(device)
+    model = LSTM_ERA5(hidden_dim=num_hidden_units, input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list = []
@@ -211,10 +211,12 @@ def check_pest_parameters():
             best_avg_nse = avg_nse
             best_parameters = parameters
     print(f"best parameters: {best_parameters}")
+    return best_parameters
 
 
 def main():
-    run_training_and_test(learning_rate=5 * 0.001, sequence_length=110, num_hidden_units=200, num_epochs=50)
+    best_parameters = check_pest_parameters()
+    run_training_and_test(*best_parameters)
 
 
 if __name__ == "__main__":

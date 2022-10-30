@@ -87,7 +87,7 @@ class Dataset_ERA5(Dataset):
         list_stations_dynamic = []
         X_data_list = []
         y_data_list = []
-        all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
+        all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))][:50]
         for station_file_name in all_station_files:
             station_id = re.search(f"{self.prefix_dynamic_data_file}(\\d+)\\.csv", station_file_name).group(1)
             if station_id in self.list_stations_static:
@@ -109,7 +109,7 @@ class Dataset_ERA5(Dataset):
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:
             return np.array([]), np.array([])
-        X_data = X_data.reshape(-1, 1)
+        X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
         y_data = y_data.reshape(-1, 1)
         static_attrib_station = (self.df_attr[self.df_attr["gauge_id"] == station_id]).drop("gauge_id", axis=1) \
             .to_numpy().reshape(1, -1)
