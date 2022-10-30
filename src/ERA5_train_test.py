@@ -91,7 +91,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         # write current loss in the progress bar
         running_loss += loss.item()
         if i % 200 == 199:  # print every 2000 mini-batches
-            print(f'[{epoch + 1}] loss: {running_loss / 200:.3f}')
+            print(f'[{epoch}] loss: {running_loss / 200:.3f}')
             loss_list.append(running_loss)
             running_loss = 0.0
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
@@ -199,8 +199,8 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
 
 def check_pest_parameters():
     learning_rates = np.linspace(10 ** -3, 10 ** -5, num=5).tolist()
-    sequence_length = np.linspace(30, 270, 4, dtype=np.int).tolist()
-    num_hidden_units = np.linspace(20, 200, 4, dtype=np.int).tolist()
+    sequence_length = np.linspace(30, 270, 4, dtype=int).tolist()
+    num_hidden_units = np.linspace(20, 200, 4, dtype=int).tolist()
     num_epochs = [4]
     best_avg_nse = -1
     all_parameters = list(itertools.product(learning_rates, sequence_length, num_hidden_units, num_epochs))
