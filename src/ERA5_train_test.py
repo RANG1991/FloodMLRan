@@ -158,7 +158,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                  load_dynamically=load_datasets_dynamically,
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
-    train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True)
 
     test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
@@ -174,7 +174,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              y_std=training_data.get_y_std(),
                              sequence_length=sequence_length,
                              use_Caravan_dataset=use_Caravan_dataset)
-    test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False,)
+    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=num_hidden_units, input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
@@ -197,11 +197,11 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
     return avg_nse
 
 
-def check_pest_parameters():
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=5).tolist()
-    sequence_length = np.linspace(30, 270, 4, dtype=int).tolist()
-    num_hidden_units = np.linspace(20, 200, 4, dtype=int).tolist()
-    num_epochs = [4]
+def check_best_parameters():
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=4).tolist()
+    sequence_length = np.linspace(30, 270, 2, dtype=int).tolist()
+    num_hidden_units = np.linspace(20, 200, 2, dtype=int).tolist()
+    num_epochs = [2]
     best_avg_nse = -1
     all_parameters = list(itertools.product(learning_rates, sequence_length, num_hidden_units, num_epochs))
     for parameters in all_parameters:
@@ -215,8 +215,8 @@ def check_pest_parameters():
 
 
 def main():
-    best_parameters = check_pest_parameters()
-    run_training_and_test(*best_parameters)
+    # best_parameters = check_best_parameters()
+    run_training_and_test(0.00067, 270, 256, 5)
 
 
 if __name__ == "__main__":

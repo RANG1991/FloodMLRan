@@ -103,7 +103,7 @@ class Dataset_ERA5(Dataset):
         station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
         df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
-        df_dynamic_data = df_dynamic_data[(df_dynamic_data >= 0) & (df_dynamic_data < 1000)]
+        df_dynamic_data = df_dynamic_data[df_dynamic_data >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
@@ -123,7 +123,7 @@ class Dataset_ERA5(Dataset):
             station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
             df_dynamic_data = pd.read_csv(station_data_file)
             df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
-            df_dynamic_data = df_dynamic_data[(df_dynamic_data >= 0) & (df_dynamic_data < 1000)]
+            df_dynamic_data = df_dynamic_data[df_dynamic_data >= 0]
             df_dynamic_data = df_dynamic_data.dropna()
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
