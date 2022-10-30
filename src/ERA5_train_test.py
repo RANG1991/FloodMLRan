@@ -13,9 +13,10 @@ import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
 import itertools
+import random
 
 
-def eval_model(model, loader, device) -> Tuple[torch.Tensor, torch.Tensor]:
+def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
 
     :param model: A torch.nn.Module implementing the LSTM model
@@ -26,20 +27,18 @@ def eval_model(model, loader, device) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     # set model to eval mode (important for dropout)
     model.eval()
-    obs = []
-    preds = []
     # in inference mode, we don't need to store intermediate steps for
     # backprob
     with torch.no_grad():
         # request mini-batch of data from the loader
-        for xs, ys in loader:
+        for station_id, xs, ys in loader:
+            if station_id not in preds_obs_dict_per_basin.keys():
+                preds_obs_dict_per_basin[station_id] = []
             # push data to GPU (if available)
             xs = xs.to(device)
             # get model predictions
             y_hat = model(xs)
-            obs.append(ys)
-            preds.append(y_hat)
-    return torch.cat(obs), torch.cat(preds)
+            preds_obs_dict_per_basin[station_id].append((ys, y_hat))
 
 
 def calc_nse(obs: np.array, sim: np.array) -> float:
@@ -53,16 +52,24 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     # COMMENT FROM EFRAT TO RONEN: NEGATIVE VALUES ARE FINE! I COMMENTED THE TWO LINES BELOW
     # sim = np.delete(sim, np.argwhere(obs < 0), axis=0)
     # obs = np.delete(obs, np.argwhere(obs < 0), axis=0)
-
     # check for NaNs in observations
     sim = np.delete(sim, np.argwhere(np.isnan(obs)), axis=0)
     obs = np.delete(obs, np.argwhere(np.isnan(obs)), axis=0)
-
     denominator = np.sum((obs - np.mean(obs)) ** 2)
     numerator = np.sum((sim - obs) ** 2)
     nse_val = 1 - (numerator / denominator)
-
     return nse_val
+
+
+def calc_validation_basins_nse(preds_obs_dict_per_basin):
+    stations_ids = random.sample(list(preds_obs_dict_per_basin.keys()), 10)
+    for stations_id in stations_ids:
+        obs_and_preds = preds_obs_dict_per_basin[stations_id]
+        obs, preds = zip(*obs_and_preds)
+        obs = np.array(obs)
+        preds = np.array(preds)
+        nse = calc_nse(obs, preds)
+        print(f"station with id: {stations_id} has nse of: {nse}")
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
@@ -75,7 +82,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # request mini-batch of data from the loader
     running_loss = 0.0
     i = 0
-    for xs, ys in pbar:
+    for _, xs, ys in pbar:
         # delete previously stored gradients from the model
         optimizer.zero_grad()
         # push data to GPU (if available)
@@ -155,7 +162,6 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                  dynamic_attributes_names=dynamic_attributes_names,
                                  discharge_str=discharge_str,
                                  static_attributes_names=static_attributes_names,
-                                 load_dynamically=load_datasets_dynamically,
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
     train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True)
@@ -167,7 +173,6 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              dynamic_attributes_names=dynamic_attributes_names,
                              discharge_str=discharge_str,
                              static_attributes_names=static_attributes_names,
-                             load_dynamically=load_datasets_dynamically,
                              x_maxs=training_data.get_x_max(),
                              x_mins=training_data.get_x_min(),
                              y_mean=training_data.get_y_mean(),
@@ -175,26 +180,22 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              sequence_length=sequence_length,
                              use_Caravan_dataset=use_Caravan_dataset)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False)
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = LSTM_ERA5(hidden_dim=num_hidden_units, input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list = []
-    nse_list = []
+    preds_obs_dict_per_basin = {}
+    calc_nse_interval = 3
     for i in range(num_epochs):
         if load_datasets_dynamically:
             training_data.zero_out_accumulators()
             test_data.zero_out_accumulators()
         loss_list_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
         loss_list.extend(loss_list_epoch)
-        obs, preds = eval_model(model, test_dataloader, device)
-        nse = calc_nse(obs.cpu().numpy(), preds.cpu().numpy())
-        nse_list.append(nse)
-        print(f"NSE is: {nse}")
-    avg_nse = sum(nse_list) / len(nse_list)
-    plot_NSE_CDF(nse_losses=nse_list)
-    return avg_nse
+        eval_model(model, test_dataloader, device, preds_obs_dict_per_basin)
+        if (i % calc_nse_interval) == (calc_nse_interval - 1):
+            calc_validation_basins_nse(preds_obs_dict_per_basin)
 
 
 def check_best_parameters():
@@ -215,7 +216,6 @@ def check_best_parameters():
 
 
 def main():
-    # best_parameters = check_best_parameters()
     run_training_and_test(0.00067, 270, 256, 5)
 
 

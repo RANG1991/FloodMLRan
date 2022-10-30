@@ -15,7 +15,7 @@ class Dataset_ERA5(Dataset):
                  static_data_file_hydroatlas,
                  dynamic_attributes_names, discharge_str,
                  static_attributes_names=[],
-                 is_training=True, sequence_length=270, load_dynamically=True,
+                 is_training=True, sequence_length=270,
                  x_mins=None, x_maxs=None, y_mean=None, y_std=None, use_Caravan_dataset=True):
         self.is_training = is_training
         self.sequence_length = sequence_length
@@ -30,45 +30,28 @@ class Dataset_ERA5(Dataset):
         self.curr_station_index = 0
         self.X_data = np.array([])
         self.y_data = np.array([])
-        self.load_dynamically = load_dynamically
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
-        X_data_list, y_data_list, list_stations_dynamic = self.read_all_dynamic_data_files(dynamic_data_folder=
-                                                                                           dynamic_data_folder)
-        if not self.load_dynamically:
-            self.X_data = np.concatenate(X_data_list)
-            self.y_data = np.concatenate(y_data_list)
-            self.y_std = y_std if y_std is not None else self.y_data.std()
-            self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
-            self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
-            self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
-            self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + (10 ** -10))
-            self.y_data = (self.y_data - self.y_mean) / self.y_std
-        self.list_stations = list(set(self.list_stations_static).intersection(set(list_stations_dynamic)))
+        list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_data_files(dynamic_data_folder=
+                                                                                            dynamic_data_folder)
+        self.X_data = np.concatenate(X_data_list)
+        self.y_data = np.concatenate(y_data_list)
+        self.y_std = y_std if y_std is not None else self.y_data.std()
+        self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
+        self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
+        self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
+        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + (10 ** -10))
+        self.y_data = (self.y_data - self.y_mean) / self.y_std
+        self.list_stations_repeated = list_stations_repeated
 
     def __len__(self):
-        return self.calculate_dataset_length(self.list_stations)
+        return self.calculate_dataset_length(list(set(self.list_stations_repeated)))
 
     def __getitem__(self, index) -> T_co:
-        if self.load_dynamically:
-            if (index - self.acum_stations_length) + self.sequence_length >= self.X_data.shape[0]:
-                if self.curr_station_index > 0:
-                    self.acum_stations_length += (self.X_data.shape[0] - self.sequence_length)
-                self.X_data, self.y_data = self.read_single_station_file(self.list_stations[self.curr_station_index])
-                self.y_std = self.y_data.std()
-                self.y_mean = self.y_data.mean()
-                self.x_max = self.X_data.max(axis=1)
-                self.x_min = self.X_data.min(axis=1)
-                self.curr_station_index += 1
-            X_data_tensor = torch.tensor(self.X_data[(index - self.acum_stations_length):
-                                                     (index - self.acum_stations_length) + self.sequence_length]).to(
-                torch.float32)
-            y_data_tensor = torch.tensor(self.y_data[(index - self.acum_stations_length) + self.sequence_length]).to(
-                torch.float32)
-        else:
-            X_data_tensor = torch.tensor(self.X_data[index: index + self.sequence_length]).to(torch.float32)
-            y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(torch.float32)
-        return X_data_tensor, y_data_tensor
+        X_data_tensor = torch.tensor(self.X_data[index: index + self.sequence_length]).to(torch.float32)
+        y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(torch.float32)
+        station_id = self.list_stations_repeated[index + self.sequence_length]
+        return station_id, X_data_tensor, y_data_tensor
 
     def read_static_attributes(self):
         df_attr_caravan = pd.read_csv(self.static_data_file_caravan, dtype={'gauge_id': str})
@@ -84,25 +67,25 @@ class Dataset_ERA5(Dataset):
         return df_attr, df_attr['gauge_id'].values.tolist()
 
     def read_all_dynamic_data_files(self, dynamic_data_folder):
-        list_stations_dynamic = []
+        list_stations_repeated = []
         X_data_list = []
         y_data_list = []
         all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))][:50]
         for station_file_name in all_station_files:
             station_id = re.search(f"{self.prefix_dynamic_data_file}(\\d+)\\.csv", station_file_name).group(1)
             if station_id in self.list_stations_static:
-                list_stations_dynamic.append(station_id)
-                if not self.load_dynamically:
-                    X_data_curr, y_data_curr = self.read_single_station_file(station_id)
-                    if X_data_curr.size > 0:
-                        X_data_list.append(X_data_curr)
-                        y_data_list.append(y_data_curr)
-        return X_data_list, y_data_list, list_stations_dynamic
+                station_id_repeated, X_data_curr, y_data_curr = self.read_single_station_file(station_id)
+                list_stations_repeated.extend(station_id_repeated)
+                if X_data_curr.size > 0:
+                    X_data_list.append(X_data_curr)
+                    y_data_list.append(y_data_curr)
+        return list_stations_repeated, X_data_list, y_data_list
 
     def read_single_station_file(self, station_id):
         station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
-        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
+        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(
+            lambda x: float(x))
         df_dynamic_data = df_dynamic_data[df_dynamic_data >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
@@ -115,14 +98,16 @@ class Dataset_ERA5(Dataset):
             .to_numpy().reshape(1, -1)
         static_attrib_station_rep = static_attrib_station.repeat(X_data.shape[0], axis=0)
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
-        return X_data, y_data
+        station_id_repeated = [station_id] * X_data.shape[0]
+        return station_id_repeated, X_data, y_data
 
     def calculate_dataset_length(self, station_ids):
         count = 0
         for station_id in station_ids:
             station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
             df_dynamic_data = pd.read_csv(station_data_file)
-            df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
+            df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(
+                lambda x: float(x))
             df_dynamic_data = df_dynamic_data[df_dynamic_data >= 0]
             df_dynamic_data = df_dynamic_data.dropna()
             count += (len(df_dynamic_data.index) - self.sequence_length)
