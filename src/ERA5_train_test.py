@@ -31,8 +31,9 @@ def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.T
     # backprob
     with torch.no_grad():
         # request mini-batch of data from the loader
-        for station_id, xs, ys in loader:
-            if station_id not in preds_obs_dict_per_basin.keys():
+        for station_id_batch, xs, ys in loader:
+            station_id = station_id_batch[0]
+            if station_id_batch not in preds_obs_dict_per_basin.keys():
                 preds_obs_dict_per_basin[station_id] = []
             # push data to GPU (if available)
             xs = xs.to(device)
@@ -42,7 +43,7 @@ def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.T
 
 
 def calc_nse(obs: np.array, sim: np.array) -> float:
-    """Calculate Nash-Sutcliff-Efficiency.
+    """Calculate Nash-Shutcliff-Efficiency.
 
     :param obs: Array containing the observations
     :param sim: Array containing the simulations
@@ -61,15 +62,19 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     return nse_val
 
 
-def calc_validation_basins_nse(preds_obs_dict_per_basin):
-    stations_ids = random.sample(list(preds_obs_dict_per_basin.keys()), 10)
+def calc_validation_basins_nse(preds_obs_dict_per_basin, num_basins_for_nse_calc=10):
+    stations_ids = random.sample(list(preds_obs_dict_per_basin.keys()), min(len(preds_obs_dict_per_basin.keys()),
+                                                                            num_basins_for_nse_calc))
+    nse_list_basins = []
     for stations_id in stations_ids:
         obs_and_preds = preds_obs_dict_per_basin[stations_id]
         obs, preds = zip(*obs_and_preds)
-        obs = np.array(obs)
-        preds = np.array(preds)
+        obs = np.array([single_obs.cpu().numpy() for single_obs in obs])
+        preds = np.array([single_pred.cpu().numpy() for single_pred in preds])
         nse = calc_nse(obs, preds)
         print(f"station with id: {stations_id} has nse of: {nse}")
+        nse_list_basins.append(nse)
+    return nse_list_basins
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
@@ -132,7 +137,7 @@ def read_basins_csv_files(folder_name, num_basins):
     return df
 
 
-def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_epochs):
+def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_epochs, calc_nse_interval=1):
     load_datasets_dynamically = False
     use_Caravan_dataset = True
     static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
@@ -181,12 +186,13 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              use_Caravan_dataset=use_Caravan_dataset)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = LSTM_ERA5(hidden_dim=num_hidden_units, input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
+    model = LSTM_ERA5(hidden_dim=num_hidden_units,
+                      input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list = []
+    nse_list = []
     preds_obs_dict_per_basin = {}
-    calc_nse_interval = 3
     for i in range(num_epochs):
         if load_datasets_dynamically:
             training_data.zero_out_accumulators()
@@ -195,7 +201,12 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
         loss_list.extend(loss_list_epoch)
         eval_model(model, test_dataloader, device, preds_obs_dict_per_basin)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            calc_validation_basins_nse(preds_obs_dict_per_basin)
+            nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin)
+            preds_obs_dict_per_basin.clear()
+            nse_list.extend(nse_list_epoch)
+    plot_NSE_CDF(nse_list)
+    avg_nse = sum(nse_list) / len(nse_list)
+    return avg_nse
 
 
 def check_best_parameters():

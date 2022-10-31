@@ -28,8 +28,6 @@ class Dataset_ERA5(Dataset):
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.acum_stations_length = 0
         self.curr_station_index = 0
-        self.X_data = np.array([])
-        self.y_data = np.array([])
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
         list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_data_files(dynamic_data_folder=
