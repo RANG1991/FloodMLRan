@@ -13,8 +13,7 @@ import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
 import itertools
-import random
-
+from time import datetime
 
 def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
@@ -63,8 +62,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
 
 
 def calc_validation_basins_nse(preds_obs_dict_per_basin, num_basins_for_nse_calc=10):
-    stations_ids = random.sample(list(preds_obs_dict_per_basin.keys()), min(len(preds_obs_dict_per_basin.keys()),
-                                                                            num_basins_for_nse_calc))
+    stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
     for stations_id in stations_ids:
         obs_and_preds = preds_obs_dict_per_basin[stations_id]
@@ -124,7 +122,10 @@ def plot_NSE_CDF(nse_losses, plot_title):
     plt.plot(base[:-1], cumulative, c='blue')
     plt.title(plot_title)
     plt.grid()
-    plt.savefig("../data/images/" + plot_title.replace(" ", "_").replace("\n", "") + ".png")
+    curr_datetime = datetime.now()
+    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+    plt.savefig("../data/images/" + plot_title.replace(" ", "_").replace("\n", "").replace("=", "") +
+                f"_{curr_datetime_str}_" + ".png")
     plt.show()
 
 
@@ -231,7 +232,7 @@ def check_best_parameters():
 
 
 def main():
-    run_training_and_test(0.00067, 270, 256, 2)
+    run_training_and_test(0.00067, 270, 256, 10, calc_nse_interval=3)
 
 
 if __name__ == "__main__":
