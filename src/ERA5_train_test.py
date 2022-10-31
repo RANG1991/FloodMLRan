@@ -124,6 +124,7 @@ def plot_NSE_CDF(nse_losses, plot_title):
     plt.plot(base[:-1], cumulative, c='blue')
     plt.title(plot_title)
     plt.grid()
+    plt.savefig("../data/images/" + plot_title.replace(" ", "_").replace("\n", "") + ".png")
     plt.show()
 
 
@@ -206,7 +207,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
     plot_title = f"NSE plot with parameters: learning_rate={learning_rate} sequence_length={sequence_length} " \
-                 f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}"
+                 f"\nnum_hidden_units={num_hidden_units} num_epochs={num_epochs}"
     plot_NSE_CDF(nse_list, plot_title)
     avg_nse = sum(nse_list) / len(nse_list)
     return avg_nse
@@ -230,7 +231,7 @@ def check_best_parameters():
 
 
 def main():
-    run_training_and_test(0.00067, 270, 256, 10)
+    run_training_and_test(0.00067, 270, 256, 2)
 
 
 if __name__ == "__main__":
