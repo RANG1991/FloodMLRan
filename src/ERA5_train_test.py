@@ -111,7 +111,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     return loss_list
 
 
-def plot_NSE_CDF(nse_losses):
+def plot_NSE_CDF(nse_losses, plot_title):
     nse_losses_np = np.array(nse_losses)
     nse_losses_np = nse_losses_np[nse_losses_np >= 0]
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
@@ -122,6 +122,7 @@ def plot_NSE_CDF(nse_losses):
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     # plot the cumulative function
     plt.plot(base[:-1], cumulative, c='blue')
+    plt.title(plot_title)
     plt.grid()
     plt.show()
 
@@ -204,7 +205,9 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
             nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin)
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
-    plot_NSE_CDF(nse_list)
+    plot_title = f"NSE plot with parameters: learning_rate={learning_rate} sequence_length={sequence_length} " \
+                 f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}"
+    plot_NSE_CDF(nse_list, plot_title)
     avg_nse = sum(nse_list) / len(nse_list)
     return avg_nse
 
@@ -227,7 +230,7 @@ def check_best_parameters():
 
 
 def main():
-    run_training_and_test(0.00067, 270, 256, 5)
+    run_training_and_test(0.00067, 270, 256, 10)
 
 
 if __name__ == "__main__":

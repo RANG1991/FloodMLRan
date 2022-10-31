@@ -14,10 +14,8 @@ class Dataset_ERA5(Dataset):
     def __init__(self, dynamic_data_folder, static_data_file_caravan,
                  static_data_file_hydroatlas,
                  dynamic_attributes_names, discharge_str,
-                 static_attributes_names=[],
-                 is_training=True, sequence_length=270,
+                 static_attributes_names=[], sequence_length=270,
                  x_mins=None, x_maxs=None, y_mean=None, y_std=None, use_Caravan_dataset=True):
-        self.is_training = is_training
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_file_caravan = static_data_file_caravan
@@ -26,8 +24,6 @@ class Dataset_ERA5(Dataset):
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
         self.df_attr, self.list_stations_static = self.read_static_attributes()
-        self.acum_stations_length = 0
-        self.curr_station_index = 0
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
         list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_data_files(dynamic_data_folder=
@@ -110,12 +106,6 @@ class Dataset_ERA5(Dataset):
             df_dynamic_data = df_dynamic_data.dropna()
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
-
-    def zero_out_accumulators(self):
-        self.acum_stations_length = 0
-        self.curr_station_index = 0
-        self.X_data = np.array([])
-        self.y_data = np.array([])
 
     def get_x_min(self):
         return self.x_min
