@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
 import itertools
-from time import datetime
+from datetime import datetime
+
 
 def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
@@ -61,9 +62,13 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     return nse_val
 
 
-def calc_validation_basins_nse(preds_obs_dict_per_basin, num_basins_for_nse_calc=10):
+def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10):
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
+    max_nse = -1
+    max_basin = -1
+    max_preds = []
+    max_obs = []
     for stations_id in stations_ids:
         obs_and_preds = preds_obs_dict_per_basin[stations_id]
         obs, preds = zip(*obs_and_preds)
@@ -72,6 +77,18 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_basins_for_nse_calc
         nse = calc_nse(obs, preds)
         print(f"station with id: {stations_id} has nse of: {nse}")
         nse_list_basins.append(nse)
+        if nse > max_nse or max_nse == -1:
+            max_nse = nse
+            max_basin = stations_id
+            max_preds = preds
+            max_obs = obs
+    fig, ax = plt.subplots(figsize=(20, 6))
+    ax.plot(max_obs, label="observation")
+    ax.plot(max_preds, label="prediction")
+    ax.legend()
+    ax.set_title(f"Basin {max_basin} - NSE: {max_nse:.3f}")
+    plt.savefig(f"../data/images/Hydrography_of_{num_epoch}_epoch.png")
+    plt.show()
     return nse_list_basins
 
 
@@ -204,7 +221,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
         loss_list.extend(loss_list_epoch)
         eval_model(model, test_dataloader, device, preds_obs_dict_per_basin)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin)
+            nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
     plot_title = f"NSE plot with parameters: learning_rate={learning_rate} sequence_length={sequence_length} " \
@@ -232,7 +249,7 @@ def check_best_parameters():
 
 
 def main():
-    run_training_and_test(0.00067, 270, 256, 10, calc_nse_interval=3)
+    run_training_and_test(0.005, 270, 256, 9, calc_nse_interval=3)
 
 
 if __name__ == "__main__":
