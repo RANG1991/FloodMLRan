@@ -82,12 +82,14 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
             max_basin = stations_id
             max_preds = preds
             max_obs = obs
+    curr_datetime = datetime.now()
+    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     fig, ax = plt.subplots(figsize=(20, 6))
-    ax.plot(max_obs, label="observation")
-    ax.plot(max_preds, label="prediction")
+    ax.plot(max_obs.squeeze(), label="observation")
+    ax.plot(max_preds.squeeze(), label="prediction")
     ax.legend()
     ax.set_title(f"Basin {max_basin} - NSE: {max_nse:.3f}")
-    plt.savefig(f"../data/images/Hydrography_of_{num_epoch}_epoch.png")
+    plt.savefig(f"../data/images/Hydrography_of_{num_epoch}_epoch_{curr_datetime_str}.png")
     plt.show()
     return nse_list_basins
 
@@ -141,8 +143,8 @@ def plot_NSE_CDF(nse_losses, plot_title):
     plt.grid()
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    plt.savefig("../data/images/" + plot_title.replace(" ", "_").replace("\n", "").replace("=", "") +
-                f"_{curr_datetime_str}_" + ".png")
+    plt.savefig("../data/images/" + plot_title.replace(" ", "_").replace("\n", "").replace("=", "_") +
+                f"_{curr_datetime_str}" + ".png")
     plt.show()
 
 
