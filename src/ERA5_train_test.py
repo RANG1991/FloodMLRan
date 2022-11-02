@@ -2,7 +2,8 @@ import os
 from torch.utils.data import DataLoader
 from ERA5_dataset import Dataset_ERA5
 from tqdm.notebook import tqdm as tqdm_notebook
-from ERA5_lstm import LSTM_ERA5
+from ERA5_lstm import ERA5_LSTM
+from ERA5_transformer import ERA5_Transformer
 import torch.optim
 import torch.nn as nn
 from os import listdir
@@ -13,6 +14,8 @@ from typing import Tuple
 import numpy as np
 import itertools
 from datetime import datetime
+import statistics
+
 
 
 def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -207,7 +210,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              use_Caravan_dataset=use_Caravan_dataset)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = LSTM_ERA5(hidden_dim=num_hidden_units,
+    model = ERA5_LSTM(hidden_dim=num_hidden_units,
                       input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
@@ -228,6 +231,8 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
     plot_title = f"NSE plot with parameters: learning_rate={learning_rate} sequence_length={sequence_length} " \
                  f"\nnum_hidden_units={num_hidden_units} num_epochs={num_epochs}"
     plot_NSE_CDF(nse_list, plot_title)
+    print(f"parameters are: learning_rate={learning_rate} sequence_length={sequence_length} "
+          f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}")
     if len(nse_list) == 0:
         return 0
     else:

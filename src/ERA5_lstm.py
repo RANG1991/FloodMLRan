@@ -1,10 +1,10 @@
 import torch
 
 
-class LSTM_ERA5(torch.nn.Module):
+class ERA5_LSTM(torch.nn.Module):
 
     def __init__(self, input_dim, hidden_dim, sequence_length=270):
-        super(LSTM_ERA5, self).__init__()
+        super(ERA5_LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.sequence_length = sequence_length
