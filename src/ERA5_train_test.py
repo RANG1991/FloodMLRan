@@ -1,5 +1,4 @@
 import os
-
 from torch.utils.data import DataLoader
 from ERA5_dataset import Dataset_ERA5
 from tqdm.notebook import tqdm as tqdm_notebook
@@ -229,8 +228,11 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
     plot_title = f"NSE plot with parameters: learning_rate={learning_rate} sequence_length={sequence_length} " \
                  f"\nnum_hidden_units={num_hidden_units} num_epochs={num_epochs}"
     plot_NSE_CDF(nse_list, plot_title)
-    avg_nse = sum(nse_list) / len(nse_list)
-    return avg_nse
+    if len(nse_list) == 0:
+        return 0
+    else:
+        avg_nse = sum(nse_list) / len(nse_list)
+        return avg_nse
 
 
 def check_best_parameters():
@@ -251,7 +253,8 @@ def check_best_parameters():
 
 
 def main():
-    run_training_and_test(0.005, 270, 256, 9, calc_nse_interval=3)
+    best_parameters = check_best_parameters()
+    run_training_and_test(*best_parameters, calc_nse_interval=3)
 
 
 if __name__ == "__main__":
