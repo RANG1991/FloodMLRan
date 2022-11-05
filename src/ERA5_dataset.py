@@ -92,17 +92,7 @@ class Dataset_ERA5(Dataset):
     def read_single_station_file(self, station_id):
         station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
-        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str] + ["date"]]
-        df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]] = \
-            df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
-        df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
-        df_dynamic_data = df_dynamic_data.dropna()
-        df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
-        start_date = self.train_start_date if self.stage == "train" else self.test_start_date
-        start_date = datetime.strptime(start_date, "%d/%m/%Y")
-        end_date = self.train_end_date if self.stage == "train" else self.test_end_date
-        end_date = datetime.strptime(end_date, "%d/%m/%Y")
-        df_dynamic_data = df_dynamic_data[(df_dynamic_data["date"] >= start_date) & (df_dynamic_data["date"] <= end_date)]
+        df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:
@@ -116,15 +106,27 @@ class Dataset_ERA5(Dataset):
         station_id_repeated = [station_id] * X_data.shape[0]
         return station_id_repeated, X_data, y_data
 
+    def read_and_filter_dynamic_data(self, df_dynamic_data):
+        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str] + ["date"]]
+        df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]] = \
+            df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
+        df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
+        df_dynamic_data = df_dynamic_data.dropna()
+        df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
+        start_date = self.train_start_date if self.stage == "train" else self.test_start_date
+        start_date = datetime.strptime(start_date, "%d/%m/%Y")
+        end_date = self.train_end_date if self.stage == "train" else self.test_end_date
+        end_date = datetime.strptime(end_date, "%d/%m/%Y")
+        df_dynamic_data = df_dynamic_data[
+            (df_dynamic_data["date"] >= start_date) & (df_dynamic_data["date"] <= end_date)]
+        return df_dynamic_data
+
     def calculate_dataset_length(self, station_ids):
         count = 0
         for station_id in station_ids:
             station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
             df_dynamic_data = pd.read_csv(station_data_file)
-            df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(
-                lambda x: float(x))
-            df_dynamic_data = df_dynamic_data[df_dynamic_data >= 0]
-            df_dynamic_data = df_dynamic_data.dropna()
+            df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
 
