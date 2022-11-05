@@ -243,9 +243,9 @@ def check_best_parameters():
         else:
             avg_nse = sum(nse_list) / len(nse_list)
         if len(nse_list) > 0:
-            list_plots_titles.append(f"learning_rate={learning_rate_param} "
-                                     f"sequence_length={sequence_length_param} "
-                                     f"num_hidden_units={num_hidden_units_param} "
+            list_plots_titles.append(f"learning_rate={learning_rate_param}\n"
+                                     f"sequence_length={sequence_length_param}\n"
+                                     f"num_hidden_units={num_hidden_units_param}\n"
                                      f"num_epochs={num_epochs_param}")
             list_nse_lists_basins.append(nse_list)
         if avg_nse > best_avg_nse or best_avg_nse == -1:

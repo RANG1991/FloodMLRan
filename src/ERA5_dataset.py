@@ -64,7 +64,7 @@ class Dataset_ERA5(Dataset):
         list_stations_repeated = []
         X_data_list = []
         y_data_list = []
-        all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))][:50]
+        all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
         for station_file_name in all_station_files:
             station_id = re.search(f"{self.prefix_dynamic_data_file}(\\d+)\\.csv", station_file_name).group(1)
             if station_id in self.list_stations_static:
