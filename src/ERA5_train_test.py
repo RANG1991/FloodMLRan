@@ -17,7 +17,6 @@ from datetime import datetime
 import statistics
 
 
-
 def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
 
@@ -130,7 +129,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     return loss_list
 
 
-def plot_NSE_CDF(nse_losses, plot_title):
+def plot_NSE_CDF(nse_losses, title_for_legend):
     nse_losses_np = np.array(nse_losses)
     nse_losses_np = nse_losses_np[nse_losses_np >= 0]
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
@@ -140,14 +139,7 @@ def plot_NSE_CDF(nse_losses, plot_title):
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     # plot the cumulative function
-    plt.plot(base[:-1], cumulative, c='blue')
-    plt.title(plot_title)
-    plt.grid()
-    curr_datetime = datetime.now()
-    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    plt.savefig("../data/images/" + plot_title.replace(" ", "_").replace("\n", "").replace("=", "_") +
-                f"_{curr_datetime_str}" + ".png")
-    plt.show()
+    plt.plot(base[:-1], cumulative, label=title_for_legend)
 
 
 def read_basins_csv_files(folder_name, num_basins):
@@ -228,31 +220,50 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
             nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
-    plot_title = f"NSE plot with parameters: learning_rate={learning_rate} sequence_length={sequence_length} " \
-                 f"\nnum_hidden_units={num_hidden_units} num_epochs={num_epochs}"
-    plot_NSE_CDF(nse_list, plot_title)
-    print(f"parameters are: learning_rate={learning_rate} sequence_length={sequence_length} "
-          f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}")
-    if len(nse_list) == 0:
-        return 0
-    else:
-        avg_nse = sum(nse_list) / len(nse_list)
-        return avg_nse
+    if len(nse_list) > 0:
+        print(f"parameters are: learning_rate={learning_rate} sequence_length={sequence_length} "
+              f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}")
+    return nse_list
 
 
 def check_best_parameters():
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=4).tolist()
-    sequence_length = np.linspace(30, 270, 2, dtype=int).tolist()
-    num_hidden_units = np.linspace(20, 200, 2, dtype=int).tolist()
-    num_epochs = [2]
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=2).tolist()
+    sequence_length = np.linspace(30, 270, 1, dtype=int).tolist()
+    num_hidden_units = np.linspace(20, 200, 1, dtype=int).tolist()
+    num_epochs = [1]
     best_avg_nse = -1
+    list_nse_lists_basins = []
+    list_plots_titles = []
     all_parameters = list(itertools.product(learning_rates, sequence_length, num_hidden_units, num_epochs))
-    for parameters in all_parameters:
-        avg_nse = run_training_and_test(*parameters)
+    for learning_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
+        nse_list = run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
+                                         num_epochs_param)
+        if len(nse_list) == 0:
+            avg_nse = 0
+        else:
+            avg_nse = sum(nse_list) / len(nse_list)
+        if len(nse_list) > 0:
+            list_plots_titles.append(f"learning_rate={learning_rate_param} "
+                                     f"sequence_length={sequence_length_param} "
+                                     f"num_hidden_units={num_hidden_units_param} "
+                                     f"num_epochs={num_epochs_param}")
+            list_nse_lists_basins.append(nse_list)
         if avg_nse > best_avg_nse or best_avg_nse == -1:
             print(f"average NSE is: {avg_nse}")
             best_avg_nse = avg_nse
-            best_parameters = parameters
+            best_parameters = (learning_rate_param,
+                               sequence_length_param,
+                               num_hidden_units_param,
+                               num_epochs_param)
+    curr_datetime = datetime.now()
+    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+    for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
+        plot_NSE_CDF(list_nse, title)
+    plt.grid()
+    plt.legend()
+    plt.savefig("../data/images/parameters_comparison" +
+                f"_{curr_datetime_str}" + ".png")
+    plt.show()
     print(f"best parameters: {best_parameters}")
     return best_parameters
 
