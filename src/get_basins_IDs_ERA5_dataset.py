@@ -7,9 +7,9 @@ import pandas as pd
 
 def main():
     ERA5_file_dir = "../data/ERA5/ERA_5_all_data/"
-    train_basins_ids_file = ERA5_file_dir + "/train_basins_ERA5.txt"
-    validation_basins_ids_file = ERA5_file_dir + "/validation_basins_ERA5.txt"
-    test_basins_ids_file = ERA5_file_dir + "/test_basins_ERA5.txt"
+    train_basins_ids_file = ERA5_file_dir + "/train_basins.txt"
+    validation_basins_ids_file = ERA5_file_dir + "/validation_basins.txt"
+    test_basins_ids_file = ERA5_file_dir + "/test_basins.txt"
     files_paths = list(glob.glob(f'{ERA5_file_dir}/data24_*.csv'))
     df_caravan_static_attr = pd.read_csv(r"C:\Users\galun\Desktop\Caravan\attributes\attributes_caravan_us.csv")
     basins_ids_caravan = df_caravan_static_attr["gauge_id"]\

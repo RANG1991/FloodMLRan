@@ -1,7 +1,8 @@
 import os
+import sys
 from torch.utils.data import DataLoader
 from ERA5_dataset import Dataset_ERA5
-from tqdm.notebook import tqdm as tqdm_notebook
+from tqdm import tqdm
 from ERA5_lstm import ERA5_LSTM
 from ERA5_transformer import ERA5_Transformer
 import torch.optim
@@ -98,7 +99,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # # set model to train mode (important for dropout)
     model.train()
-    pbar = tqdm_notebook(loader)
+    pbar = tqdm(loader, file=sys.stdout)
     print(f"Epoch {epoch}")
     pbar.set_description(f"Epoch {epoch}")
     loss_list = []
@@ -185,7 +186,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                  static_attributes_names=static_attributes_names,
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
-    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True)
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
 
     test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
@@ -200,7 +201,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              y_std=training_data.get_y_std(),
                              sequence_length=sequence_length,
                              use_Caravan_dataset=use_Caravan_dataset)
-    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False)
+    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = ERA5_LSTM(hidden_dim=num_hidden_units,
                       input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
@@ -227,9 +228,9 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
 
 
 def check_best_parameters():
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=2).tolist()
-    sequence_length = np.linspace(30, 270, 1, dtype=int).tolist()
-    num_hidden_units = np.linspace(20, 200, 1, dtype=int).tolist()
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=4).tolist()
+    sequence_length = np.linspace(30, 270, num=2, dtype=int).tolist()
+    num_hidden_units = np.linspace(20, 200, num=2, dtype=int).tolist()
     num_epochs = [1]
     best_avg_nse = -1
     list_nse_lists_basins = []

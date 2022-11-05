@@ -9,9 +9,9 @@ class ERA5_LSTM(torch.nn.Module):
         self.hidden_dim = hidden_dim
         self.sequence_length = sequence_length
         self.lstm = torch.nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim, batch_first=True)
-        self.fc = torch.nn.Linear(in_features=self.hidden_dim, out_features=1)
+        self.head = torch.nn.Linear(in_features=self.hidden_dim, out_features=1)
 
     def forward(self, x):
         output, (h_n, c_n) = self.lstm(x)
         output = torch.nn.Dropout(0.4)(output)
-        return self.fc(output[:, -1, :])
+        return self.head(output[:, -1, :])
