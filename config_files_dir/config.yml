@@ -13,8 +13,8 @@ test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/test_basins.txt
 # training, validation and test time periods (format = 'dd/mm/yyyy')
 train_start_date: '01/10/1999'
 train_end_date: '30/09/2008'
-validation_start_date: '01/10/1980'
-validation_end_date: '30/09/1989'
+validation_start_date: '01/10/1989'
+validation_end_date: '30/09/1999'
 test_start_date: '01/10/1989'
 test_end_date: '30/09/1999'
 
@@ -29,7 +29,7 @@ allow_subsequent_nan_losses: 10
 validate_every: 3
 
 # specify how many random basins to use for validation
-validate_n_random_basins: 10
+# validate_n_random_basins: 10
 
 # specify which metrics to calculate during validation (see neuralhydrology.evaluation.metrics)
 # this can either be a list or a dictionary. If a dictionary is used, the inner keys must match the name of the
@@ -84,7 +84,7 @@ learning_rate:
 batch_size: 256
 
 # Number of training epochs
-epochs: 50
+epochs: 5
 
 # If a value, clips the gradients during training to that norm.
 clip_gradient_norm: 2

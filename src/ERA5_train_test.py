@@ -176,12 +176,6 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
         discharge_str = "flow"
         dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
         dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
-    train_start_date = '01/10/1999'
-    train_end_date = '30/09/2008'
-    validation_start_date = '01/10/1980'
-    validation_end_date = '30/09/1989'
-    test_start_date = '01/10/1989'
-    test_end_date = '30/09/1999'
     training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_train,
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
@@ -289,8 +283,17 @@ def check_best_parameters():
 
 
 def main():
-    best_parameters = check_best_parameters()
-    run_training_and_test(*best_parameters, calc_nse_interval=3)
+    # best_parameters = check_best_parameters()
+    list_nse = run_training_and_test(learning_rate=0.001, num_epochs=5, sequence_length=30, num_hidden_units=256,
+                                     calc_nse_interval=3)
+    curr_datetime = datetime.now()
+    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+    plot_NSE_CDF(list_nse, "CDF with parameters: 0.001, 50, 30, 256")
+    plt.grid()
+    plt.legend()
+    plt.savefig("../data/images/parameters_comparison" +
+                f"_{curr_datetime_str}" + ".png")
+    plt.show()
 
 
 if __name__ == "__main__":
