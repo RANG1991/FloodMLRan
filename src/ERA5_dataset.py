@@ -7,13 +7,20 @@ from pathlib import Path
 from os import listdir
 from os.path import isfile, join
 import re
-
+from datetime import datetime
 
 class Dataset_ERA5(Dataset):
 
     def __init__(self, dynamic_data_folder, static_data_file_caravan,
                  static_data_file_hydroatlas,
                  dynamic_attributes_names, discharge_str,
+                 train_start_date,
+                 train_end_date,
+                 validation_start_date,
+                 validation_end_date,
+                 test_start_date,
+                 test_end_date,
+                 stage,
                  static_attributes_names=[], sequence_length=270,
                  x_mins=None, x_maxs=None, y_mean=None, y_std=None, use_Caravan_dataset=True):
         self.sequence_length = sequence_length
@@ -23,6 +30,13 @@ class Dataset_ERA5(Dataset):
         self.list_static_attributes_names = static_attributes_names
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
+        self.train_start_date = train_start_date
+        self.train_end_date = train_end_date
+        self.validation_start_date = validation_start_date
+        self.validation_end_date = validation_end_date
+        self.test_start_date = test_start_date
+        self.test_end_date = test_end_date
+        self.stage = stage
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
@@ -78,10 +92,17 @@ class Dataset_ERA5(Dataset):
     def read_single_station_file(self, station_id):
         station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
-        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(
-            lambda x: float(x))
-        df_dynamic_data = df_dynamic_data[df_dynamic_data >= 0]
+        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str] + ["date"]]
+        df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]] = \
+            df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
+        df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
+        df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
+        start_date = self.train_start_date if self.stage == "train" else self.test_start_date
+        start_date = datetime.strptime(start_date, "%d/%m/%Y")
+        end_date = self.train_end_date if self.stage == "train" else self.test_end_date
+        end_date = datetime.strptime(end_date, "%d/%m/%Y")
+        df_dynamic_data = df_dynamic_data[(df_dynamic_data["date"] >= start_date) & (df_dynamic_data["date"] <= end_date)]
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:

@@ -176,7 +176,12 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
         discharge_str = "flow"
         dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
         dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
-
+    train_start_date = '01/10/1999'
+    train_end_date = '30/09/2008'
+    validation_start_date = '01/10/1980'
+    validation_end_date = '30/09/1989'
+    test_start_date = '01/10/1989'
+    test_end_date = '30/09/1999'
     training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_train,
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
@@ -184,6 +189,13 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                  dynamic_attributes_names=dynamic_attributes_names,
                                  discharge_str=discharge_str,
                                  static_attributes_names=static_attributes_names,
+                                 train_start_date='01/10/1999',
+                                 train_end_date='30/09/2008',
+                                 validation_start_date='01/10/1980',
+                                 validation_end_date='30/09/1989',
+                                 test_start_date='01/10/1989',
+                                 test_end_date='30/09/1999',
+                                 stage="train",
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
     train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
@@ -195,6 +207,13 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              dynamic_attributes_names=dynamic_attributes_names,
                              discharge_str=discharge_str,
                              static_attributes_names=static_attributes_names,
+                             train_start_date='01/10/1999',
+                             train_end_date='30/09/2008',
+                             validation_start_date='01/10/1980',
+                             validation_end_date='30/09/1989',
+                             test_start_date='01/10/1989',
+                             test_end_date='30/09/1999',
+                             stage="test",
                              x_maxs=training_data.get_x_max(),
                              x_mins=training_data.get_x_min(),
                              y_mean=training_data.get_y_mean(),
