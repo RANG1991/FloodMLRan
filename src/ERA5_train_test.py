@@ -192,7 +192,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                  stage="train",
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
-    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, num_workers=2)
 
     test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
@@ -241,11 +241,13 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
 
 
 def check_best_parameters():
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=4).tolist()
-    sequence_length = np.linspace(30, 270, num=2, dtype=int).tolist()
-    num_hidden_units = np.linspace(20, 200, num=2, dtype=int).tolist()
+    dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
+                    "median NSE": []}
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=1).tolist()
+    sequence_length = np.linspace(30, 270, num=1, dtype=int).tolist()
+    num_hidden_units = np.linspace(20, 200, num=1, dtype=int).tolist()
     num_epochs = [1]
-    best_avg_nse = -1
+    best_median_nse = -1
     list_nse_lists_basins = []
     list_plots_titles = []
     all_parameters = list(itertools.product(learning_rates, sequence_length, num_hidden_units, num_epochs))
@@ -253,22 +255,26 @@ def check_best_parameters():
         nse_list = run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
                                          num_epochs_param)
         if len(nse_list) == 0:
-            avg_nse = 0
+            median_nse = -1
         else:
-            avg_nse = sum(nse_list) / len(nse_list)
+            median_nse = statistics.median(nse_list)
         if len(nse_list) > 0:
             list_plots_titles.append(f"learning_rate={learning_rate_param}\n"
                                      f"sequence_length={sequence_length_param}\n"
                                      f"num_hidden_units={num_hidden_units_param}\n"
                                      f"num_epochs={num_epochs_param}")
             list_nse_lists_basins.append(nse_list)
-        if avg_nse > best_avg_nse or best_avg_nse == -1:
-            print(f"average NSE is: {avg_nse}")
-            best_avg_nse = avg_nse
+        if median_nse > best_median_nse or best_median_nse == -1:
+            best_median_nse = median_nse
             best_parameters = (learning_rate_param,
                                sequence_length_param,
                                num_hidden_units_param,
                                num_epochs_param)
+        dict_results["learning rate"].append(learning_rate_param)
+        dict_results["sequence length"].append(sequence_length_param)
+        dict_results["num hidden units"].append(num_hidden_units_param)
+        dict_results["num epochs"].append(num_epochs_param)
+        dict_results["median NSE"].append(median_nse)
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
@@ -279,21 +285,23 @@ def check_best_parameters():
                 f"_{curr_datetime_str}" + ".png")
     plt.show()
     print(f"best parameters: {best_parameters}")
+    df_results = pd.DataFrame(data=dict_results)
+    df_results.to_csv(f"./results_{curr_datetime_str}.csv")
     return best_parameters
 
 
 def main():
-    # best_parameters = check_best_parameters()
-    list_nse = run_training_and_test(learning_rate=0.001, num_epochs=5, sequence_length=30, num_hidden_units=256,
-                                     calc_nse_interval=1)
-    curr_datetime = datetime.now()
-    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    plot_NSE_CDF(list_nse, "CDF with parameters: 0.001, 50, 30, 256")
-    plt.grid()
-    plt.legend()
-    plt.savefig("../data/images/parameters_comparison" +
-                f"_{curr_datetime_str}" + ".png")
-    plt.show()
+    best_parameters = check_best_parameters()
+    # list_nse = run_training_and_test(learning_rate=0.001, num_epochs=5, sequence_length=30, num_hidden_units=256,
+    #                                  calc_nse_interval=1)
+    # curr_datetime = datetime.now()
+    # curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+    # plot_NSE_CDF(list_nse, "CDF with parameters: 0.001, 50, 30, 256")
+    # plt.grid()
+    # plt.legend()
+    # plt.savefig("../data/images/parameters_comparison" +
+    #             f"_{curr_datetime_str}" + ".png")
+    # plt.show()
 
 
 if __name__ == "__main__":
