@@ -23,7 +23,7 @@ class Dataset_ERA5(Dataset):
                  test_end_date,
                  stage,
                  static_attributes_names=[], sequence_length=270,
-                 x_mins=None, x_maxs=None, y_mean=None, y_std=None, use_Caravan_dataset=True):
+                 x_means=None, x_stds=None, y_mean=None, y_std=None, use_Caravan_dataset=True):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_file_caravan = static_data_file_caravan
@@ -47,9 +47,9 @@ class Dataset_ERA5(Dataset):
         self.y_data = np.concatenate(y_data_list)
         self.y_std = y_std if y_std is not None else self.y_data.std()
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
-        self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
-        self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
-        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + (10 ** -10))
+        self.x_mean = x_means if x_means is not None else self.X_data.mean(axis=0)
+        self.x_std = x_stds if x_stds is not None else self.X_data.std(axis=0)
+        self.X_data = (self.X_data - self.x_mean) / (self.x_std + (10 ** -10))
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 
@@ -131,11 +131,11 @@ class Dataset_ERA5(Dataset):
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
 
-    def get_x_min(self):
-        return self.x_min
+    def get_x_mean(self):
+        return self.x_mean
 
-    def get_x_max(self):
-        return self.x_max
+    def get_x_std(self):
+        return self.x_std
 
     def get_y_std(self):
         return self.y_std

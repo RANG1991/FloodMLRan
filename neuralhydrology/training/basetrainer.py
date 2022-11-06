@@ -96,7 +96,7 @@ class BaseTrainer(object):
         return get_tester(cfg=self.cfg, run_dir=self.cfg.run_dir, period="validation", init_model=False)
 
     def _get_data_loader(self, ds: BaseDataset) -> torch.utils.data.DataLoader:
-        return DataLoader(ds, batch_size=self.cfg.batch_size, shuffle=True, num_workers=self.cfg.num_workers)
+        return DataLoader(ds, batch_size=self.cfg.batch_size, shuffle=False, num_workers=self.cfg.num_workers)
 
     def _freeze_model_parts(self):
         # freeze all model weights

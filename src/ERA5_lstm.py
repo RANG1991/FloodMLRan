@@ -13,5 +13,6 @@ class ERA5_LSTM(torch.nn.Module):
 
     def forward(self, x):
         output, (h_n, c_n) = self.lstm(x)
+        output = output.transpose(0, 1)
         output = torch.nn.Dropout(0.4)(output)
-        return self.head(output[:, -1, :])
+        return self.head(output)
