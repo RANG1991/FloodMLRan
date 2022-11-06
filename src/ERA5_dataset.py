@@ -49,7 +49,7 @@ class Dataset_ERA5(Dataset):
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
         self.x_mean = x_means if x_means is not None else self.X_data.mean(axis=0)
         self.x_std = x_stds if x_stds is not None else self.X_data.std(axis=0)
-        self.X_data = (self.X_data - self.x_mean) / (self.x_std + (10 ** -10))
+        self.X_data = (self.X_data - self.x_mean) / self.x_std
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 
@@ -69,10 +69,9 @@ class Dataset_ERA5(Dataset):
         df_attr['gauge_id'] = df_attr['gauge_id'].apply(lambda x: str(x).replace("us_", "")).values.tolist()
         df_attr = df_attr.dropna()
         df_attr = df_attr[['gauge_id'] + self.list_static_attributes_names]
-        maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
-        mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
-        df_attr[self.list_static_attributes_names] = (df_attr.drop(columns=['gauge_id']).to_numpy() - mins) / (
-                maxes - mins)
+        # maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
+        # mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
+        df_attr[self.list_static_attributes_names] = df_attr.drop(columns=['gauge_id']).to_numpy()
         return df_attr, df_attr['gauge_id'].values.tolist()
 
     def read_all_dynamic_data_files(self, dynamic_data_folder):

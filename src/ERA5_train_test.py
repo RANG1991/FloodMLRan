@@ -192,7 +192,7 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                  stage="train",
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
-    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, num_workers=2)
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
 
     test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
@@ -285,7 +285,7 @@ def check_best_parameters():
 def main():
     # best_parameters = check_best_parameters()
     list_nse = run_training_and_test(learning_rate=0.001, num_epochs=5, sequence_length=30, num_hidden_units=256,
-                                     calc_nse_interval=3)
+                                     calc_nse_interval=1)
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     plot_NSE_CDF(list_nse, "CDF with parameters: 0.001, 50, 30, 256")
