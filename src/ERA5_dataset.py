@@ -8,6 +8,9 @@ from os import listdir
 from os.path import isfile, join
 import re
 from datetime import datetime
+import matplotlib.pyplot as plt
+import multiprocessing
+from multiprocessing import Pool
 
 
 class Dataset_ERA5(Dataset):
@@ -45,6 +48,7 @@ class Dataset_ERA5(Dataset):
                                                                                             dynamic_data_folder)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
+        self.calculate_statistics_on_data()
         self.y_std = y_std if y_std is not None else self.y_data.std()
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
         self.x_mean = x_means if x_means is not None else self.X_data.mean(axis=0)
@@ -79,24 +83,26 @@ class Dataset_ERA5(Dataset):
         X_data_list = []
         y_data_list = []
         all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
-        for station_file_name in all_station_files:
-            station_id = re.search(f"{self.prefix_dynamic_data_file}(\\d+)\\.csv", station_file_name).group(1)
-            if station_id in self.list_stations_static:
-                station_id_repeated, X_data_curr, y_data_curr = self.read_single_station_file(station_id)
-                list_stations_repeated.extend(station_id_repeated)
-                if X_data_curr.size > 0:
-                    X_data_list.append(X_data_curr)
-                    y_data_list.append(y_data_curr)
+        with Pool(5) as p:
+            list_returned = p.map(self.read_single_station_file, all_station_files)
+        for station_id_repeated, X_data_curr, y_data_curr in list_returned:
+            list_stations_repeated.extend(station_id_repeated)
+            if X_data_curr.size > 0:
+                X_data_list.append(X_data_curr)
+                y_data_list.append(y_data_curr)
         return list_stations_repeated, X_data_list, y_data_list
 
-    def read_single_station_file(self, station_id):
+    def read_single_station_file(self, station_file_name):
+        station_id = re.search(f"{self.prefix_dynamic_data_file}(\\d+)\\.csv", station_file_name).group(1)
+        if station_id not in self.list_stations_static:
+            return np.array([]), np.array([]), np.array([])
         station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         df_dynamic_data = pd.read_csv(station_data_file)
         df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:
-            return np.array([]), np.array([])
+            return np.array([]), np.array([]), np.array([])
         X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
         y_data = y_data.reshape(-1, 1)
         static_attrib_station = (self.df_attr[self.df_attr["gauge_id"] == station_id]).drop("gauge_id", axis=1) \
@@ -108,8 +114,9 @@ class Dataset_ERA5(Dataset):
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str] + ["date"]]
-        df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]] = \
-            df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str]].applymap(lambda x: float(x))
+        df_dynamic_data.loc[:, list(self.list_dynamic_attributes_names)] = \
+            df_dynamic_data.loc[:, list(self.list_dynamic_attributes_names)].astype(float)
+        df_dynamic_data.loc[self.discharge_str] = df_dynamic_data[self.discharge_str].apply(lambda x: float(x))
         df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
@@ -129,6 +136,22 @@ class Dataset_ERA5(Dataset):
             df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
+
+    def calculate_statistics_on_data(self):
+        all_attributes_names = self.list_static_attributes_names + self.list_dynamic_attributes_names
+        for i in range(self.X_data.shape[1]):
+            plt.boxplot(self.X_data[:i])
+        plt.gca().set_xticks(np.arange(0, len(all_attributes_names)))
+        plt.gca().set_xticklabels(all_attributes_names, fontsize=6, rotation=45)
+        plt.yticks(fontsize=6)
+        plt.gcf().tight_layout()
+        curr_datetime = datetime.now()
+        curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+        plt.grid()
+        plt.title(f"Box plots data - {self.stage}", fontsize=8)
+        plt.savefig(f"../data/images/data_box_plots_{self.stage}" +
+                    f"_{curr_datetime_str}" + ".png")
+        plt.show()
 
     def get_x_mean(self):
         return self.x_mean
