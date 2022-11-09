@@ -83,7 +83,7 @@ class Dataset_ERA5(Dataset):
         X_data_list = []
         y_data_list = []
         all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
-        with Pool(5) as p:
+        with Pool(multiprocessing.cpu_count() - 1) as p:
             list_returned = p.map(self.read_single_station_file, all_station_files)
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
             list_stations_repeated.extend(station_id_repeated)
@@ -113,9 +113,9 @@ class Dataset_ERA5(Dataset):
         return station_id_repeated, X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
-        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str] + ["date"]]
-        df_dynamic_data.loc[:, list(self.list_dynamic_attributes_names)] = \
-            df_dynamic_data.loc[:, list(self.list_dynamic_attributes_names)].astype(float)
+        df_dynamic_data = df_dynamic_data[self.list_dynamic_attributes_names + [self.discharge_str] + ["date"]].copy()
+        df_dynamic_data[self.list_dynamic_attributes_names] = \
+            df_dynamic_data[self.list_dynamic_attributes_names].astype(float)
         df_dynamic_data.loc[self.discharge_str] = df_dynamic_data[self.discharge_str].apply(lambda x: float(x))
         df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
@@ -139,10 +139,12 @@ class Dataset_ERA5(Dataset):
 
     def calculate_statistics_on_data(self):
         all_attributes_names = self.list_static_attributes_names + self.list_dynamic_attributes_names
+        dict_boxplots_data = {}
         for i in range(self.X_data.shape[1]):
-            plt.boxplot(self.X_data[:i])
+            dict_boxplots_data[all_attributes_names[i]] = self.X_data[:, i]
+        plt.boxplot(dict_boxplots_data.values(), showfliers=False)
         plt.gca().set_xticks(np.arange(0, len(all_attributes_names)))
-        plt.gca().set_xticklabels(all_attributes_names, fontsize=6, rotation=45)
+        plt.gca().set_xticklabels(dict_boxplots_data.keys(), rotation=45)
         plt.yticks(fontsize=6)
         plt.gcf().tight_layout()
         curr_datetime = datetime.now()
