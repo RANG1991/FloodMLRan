@@ -170,7 +170,7 @@ class Dataset_ERA5(Dataset):
         ax.set_xticks(np.arange(0, len(all_attributes_names)))
         plt.yticks(fontsize=6)
         plt.legend([box_plots['boxes'][i] for i in range(len(all_attributes_names))],
-                   [f"{i+1} :" + all_attributes_names[i] for i in range(len(all_attributes_names))],
+                   [f"{i+1} :" + ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]] for i in range(len(all_attributes_names))],
                    fontsize=6, handlelength=0, handletextpad=0)
         fig.tight_layout()
         curr_datetime = datetime.now()
