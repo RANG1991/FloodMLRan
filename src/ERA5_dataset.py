@@ -12,6 +12,29 @@ import matplotlib.pyplot as plt
 import multiprocessing
 from multiprocessing import Pool
 
+ATTRIBUTES_TO_TEXT_DESC = {"p_mean": "Mean daily precipitation",
+                           "pet_mean": "Mean daily potential evapotranspiration",
+                           "aridity": "Ratio of mean PET to mean precipitation",
+                           "seasonality": "Seasonality and timing of precipitation",
+                           "frac_snow": "Fraction of precipitation falling\non days with temperatures below 0 ◦C",
+                           "high_prec_freq": "Frequency of high-precipitation days",
+                           "high_prec_dur": "Average duration of high-precipitation events",
+                           "low_prec_freq": "Frequency of dry days",
+                           "low_prec_dur": "Average duration of dry periods",
+                           "ele_mt_sav": "Catchment mean elevation",
+                           "slp_dg_sav": "Catchment mean slope",
+                           "basin_area": "Catchment area",
+                           "for_pc_sse": "Forest fraction",
+                           "cly_pc_sav": "Clay fraction in soil",
+                           "slt_pc_sav": "Silt fraction in soil",
+                           "snd_pc_sav": "Sand fraction in soil",
+                           "soc_th_sav": "Organic carbon content in soil",
+                           "total_precipitation_sum": "total_precipitation_sum",
+                           "temperature_2m_min": "temperature_2m_min",
+                           "temperature_2m_max": "temperature_2m_max",
+                           "potential_evaporation_sum": "potential_evaporation_sum",
+                           "surface_net_solar_radiation_mean": "surface_net_solar_radiation_mean"}
+
 
 class Dataset_ERA5(Dataset):
 
@@ -142,11 +165,14 @@ class Dataset_ERA5(Dataset):
         dict_boxplots_data = {}
         for i in range(self.X_data.shape[1]):
             dict_boxplots_data[all_attributes_names[i]] = self.X_data[:, i]
-        plt.boxplot(dict_boxplots_data.values(), showfliers=False)
-        plt.gca().set_xticks(np.arange(0, len(all_attributes_names)))
-        plt.gca().set_xticklabels(dict_boxplots_data.keys(), rotation=45)
+        fig, ax = plt.subplots()
+        box_plots = ax.boxplot(dict_boxplots_data.values(), showfliers=False)
+        ax.set_xticks(np.arange(0, len(all_attributes_names)))
         plt.yticks(fontsize=6)
-        plt.gcf().tight_layout()
+        plt.legend([box_plots['boxes'][i] for i in range(len(all_attributes_names))],
+                   [f"{i+1} :" + all_attributes_names[i] for i in range(len(all_attributes_names))],
+                   fontsize=6, handlelength=0, handletextpad=0)
+        fig.tight_layout()
         curr_datetime = datetime.now()
         curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
         plt.grid()
