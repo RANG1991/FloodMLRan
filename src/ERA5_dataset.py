@@ -166,11 +166,14 @@ class Dataset_ERA5(Dataset):
         for i in range(self.X_data.shape[1]):
             dict_boxplots_data[all_attributes_names[i]] = self.X_data[:, i]
         fig, ax = plt.subplots()
-        box_plots = ax.boxplot(dict_boxplots_data.values(), showfliers=False)
-        ax.set_xticks(np.arange(0, len(all_attributes_names)))
+        box_plots = ax.boxplot(dict_boxplots_data.values(),
+                               showfliers=False,
+                               positions=list(range(1, len(all_attributes_names) + 1)))
+        ax.set_xticks(np.arange(1, len(all_attributes_names) + 1))
         plt.yticks(fontsize=6)
         plt.legend([box_plots['boxes'][i] for i in range(len(all_attributes_names))],
-                   [f"{i+1} :" + ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]] for i in range(len(all_attributes_names))],
+                   [f"{i+1} :" + ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]
+                    for i in range(len(all_attributes_names))],
                    fontsize=6, handlelength=0, handletextpad=0)
         fig.tight_layout()
         curr_datetime = datetime.now()
