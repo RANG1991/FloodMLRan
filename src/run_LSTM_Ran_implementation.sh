@@ -9,7 +9,7 @@
 #SBATCH -J jupyter
 
 # Uncomment and enter path of code
-cd /sci/labs/efratmorin/ranga/FloodMLRan/
+cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
 
 # virtual_env location
 virtual_env=/sci/labs/efratmorin/ranga/FloodsMLEnv/bin/activate
@@ -17,4 +17,4 @@ virtual_env=/sci/labs/efratmorin/ranga/FloodsMLEnv/bin/activate
 source $virtual_env
 # module load cuda/11.2
 
-python ./src/ERA5_train_test.py
+python ./ERA5_train_test.py
