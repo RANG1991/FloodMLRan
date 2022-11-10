@@ -4,7 +4,6 @@ from torch.utils.data import DataLoader
 from ERA5_dataset import Dataset_ERA5
 from tqdm import tqdm
 from ERA5_lstm import ERA5_LSTM
-from ERA5_transformer import ERA5_Transformer
 import torch.optim
 import torch.nn as nn
 from os import listdir
@@ -154,28 +153,13 @@ def read_basins_csv_files(folder_name, num_basins):
     return df
 
 
-def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_epochs, calc_nse_interval=1):
-    load_datasets_dynamically = False
-    use_Caravan_dataset = True
-    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
-                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
-                               "p_mean", "pet_mean",
-                               "aridity", "frac_snow",
-                               "high_prec_freq",
-                               "high_prec_dur",
-                               "low_prec_freq", "low_prec_dur"]
-    if use_Caravan_dataset:
-        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
-                                    "temperature_2m_max", "potential_evaporation_sum",
-                                    "surface_net_solar_radiation_mean"]
-        discharge_str = "streamflow"
-        dynamic_data_folder_train = "../data/ERA5/Caravan/timeseries/csv/us/train/"
-        dynamic_data_folder_test = "../data/ERA5/Caravan/timeseries/csv/us/test/"
-    else:
-        dynamic_attributes_names = ["precip"]
-        discharge_str = "flow"
-        dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
-        dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
+def prepare_training_data_and_test_data(sequence_length,
+                                        static_attributes_names,
+                                        dynamic_attributes_names,
+                                        discharge_str,
+                                        dynamic_data_folder_train,
+                                        dynamic_data_folder_test,
+                                        use_Caravan_dataset=True):
     training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_train,
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
@@ -192,8 +176,6 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                                  stage="train",
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
-    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, num_workers=2)
-
     test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
                              static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                              static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
@@ -214,6 +196,28 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
                              y_std=training_data.get_y_std(),
                              sequence_length=sequence_length,
                              use_Caravan_dataset=use_Caravan_dataset)
+    return training_data, test_data
+
+
+def run_training_and_test(learning_rate, sequence_length,
+                          num_hidden_units,
+                          num_epochs, training_data,
+                          test_data, calc_nse_interval=1):
+    use_Caravan_dataset = True
+    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
+                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
+                               "p_mean", "pet_mean",
+                               "aridity", "frac_snow",
+                               "high_prec_freq",
+                               "high_prec_dur",
+                               "low_prec_freq", "low_prec_dur"]
+    if use_Caravan_dataset:
+        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
+                                    "temperature_2m_max", "potential_evaporation_sum",
+                                    "surface_net_solar_radiation_mean"]
+    else:
+        dynamic_attributes_names = ["precip"]
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, num_workers=2)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = ERA5_LSTM(hidden_dim=num_hidden_units,
@@ -224,9 +228,6 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
     nse_list = []
     preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
-        if load_datasets_dynamically:
-            training_data.zero_out_accumulators()
-            test_data.zero_out_accumulators()
         loss_list_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
         loss_list.extend(loss_list_epoch)
         eval_model(model, test_dataloader, device, preds_obs_dict_per_basin)
@@ -240,20 +241,18 @@ def run_training_and_test(learning_rate, sequence_length, num_hidden_units, num_
     return nse_list
 
 
-def check_best_parameters():
+def check_best_parameters(learning_rates, sequence_lengths, num_hidden_units, num_epochs, training_data, test_data):
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=1).tolist()
-    sequence_length = np.linspace(30, 270, num=1, dtype=int).tolist()
-    num_hidden_units = np.linspace(20, 200, num=1, dtype=int).tolist()
-    num_epochs = [1]
     best_median_nse = -1
     list_nse_lists_basins = []
     list_plots_titles = []
-    all_parameters = list(itertools.product(learning_rates, sequence_length, num_hidden_units, num_epochs))
+    all_parameters = list(itertools.product(learning_rates, sequence_lengths, num_hidden_units, num_epochs))
     for learning_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
+        training_data.set_sequence_length(sequence_length_param)
+        test_data.set_sequence_length(sequence_length_param)
         nse_list = run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
-                                         num_epochs_param)
+                                         num_epochs_param, training_data, test_data)
         if len(nse_list) == 0:
             median_nse = -1
         else:
@@ -291,17 +290,43 @@ def check_best_parameters():
 
 
 def main():
-    best_parameters = check_best_parameters()
-    # list_nse = run_training_and_test(learning_rate=0.001, num_epochs=5, sequence_length=30, num_hidden_units=256,
-    #                                  calc_nse_interval=1)
-    # curr_datetime = datetime.now()
-    # curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    # plot_NSE_CDF(list_nse, "CDF with parameters: 0.001, 50, 30, 256")
-    # plt.grid()
-    # plt.legend()
-    # plt.savefig("../data/images/parameters_comparison" +
-    #             f"_{curr_datetime_str}" + ".png")
-    # plt.show()
+    use_Caravan_dataset = True
+    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
+                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
+                               "p_mean", "pet_mean",
+                               "aridity", "frac_snow",
+                               "high_prec_freq",
+                               "high_prec_dur",
+                               "low_prec_freq", "low_prec_dur"]
+    if use_Caravan_dataset:
+        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
+                                    "temperature_2m_max", "potential_evaporation_sum",
+                                    "surface_net_solar_radiation_mean"]
+        discharge_str = "streamflow"
+        dynamic_data_folder_train = "../data/ERA5/Caravan/timeseries/csv/us/train/"
+        dynamic_data_folder_test = "../data/ERA5/Caravan/timeseries/csv/us/test/"
+    else:
+        dynamic_attributes_names = ["precip"]
+        discharge_str = "flow"
+        dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
+        dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=2).tolist()
+    sequence_lengths = np.linspace(30, 270, num=1, dtype=int).tolist()
+    num_hidden_units = np.linspace(20, 200, num=1, dtype=int).tolist()
+    num_epochs = [1]
+    training_data, test_data = prepare_training_data_and_test_data(sequence_lengths[0],
+                                                                   static_attributes_names,
+                                                                   dynamic_attributes_names,
+                                                                   discharge_str,
+                                                                   dynamic_data_folder_train,
+                                                                   dynamic_data_folder_test,
+                                                                   use_Caravan_dataset)
+    best_parameters = check_best_parameters(learning_rates,
+                                            sequence_lengths,
+                                            num_hidden_units,
+                                            num_epochs,
+                                            training_data,
+                                            test_data)
 
 
 if __name__ == "__main__":

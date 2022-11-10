@@ -172,7 +172,7 @@ class Dataset_ERA5(Dataset):
         ax.set_xticks(np.arange(1, len(all_attributes_names) + 1))
         plt.yticks(fontsize=6)
         plt.legend([box_plots['boxes'][i] for i in range(len(all_attributes_names))],
-                   [f"{i+1} :" + ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]
+                   [f"{i + 1} :" + ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]
                     for i in range(len(all_attributes_names))],
                    fontsize=6, handlelength=0, handletextpad=0)
         fig.tight_layout()
@@ -183,6 +183,10 @@ class Dataset_ERA5(Dataset):
         plt.savefig(f"../data/images/data_box_plots_{self.stage}" +
                     f"_{curr_datetime_str}" + ".png")
         plt.show()
+
+    def set_sequence_length(self, sequence_length):
+        self.sequence_length = sequence_length
+        self.calculate_dataset_length(list(set(self.list_stations_repeated)))
 
     def get_x_mean(self):
         return self.x_mean
