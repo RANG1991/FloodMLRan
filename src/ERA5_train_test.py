@@ -310,9 +310,9 @@ def main():
         discharge_str = "flow"
         dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
         dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=2).tolist()
-    sequence_lengths = np.linspace(30, 270, num=1, dtype=int).tolist()
-    num_hidden_units = np.linspace(20, 200, num=1, dtype=int).tolist()
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=10).tolist()
+    sequence_lengths = np.linspace(30, 270, num=5, dtype=int).tolist()
+    num_hidden_units = np.linspace(20, 200, num=5, dtype=int).tolist()
     num_epochs = [1]
     training_data, test_data = prepare_training_data_and_test_data(sequence_lengths[0],
                                                                    static_attributes_names,

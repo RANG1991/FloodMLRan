@@ -1,3 +1,0 @@
-,learning rate,sequence length,num epochs,num hidden units,median NSE
-0,0.001,30,1,20,0.19503265619277954
-1,1e-05,30,1,20,-0.04393017292022705
