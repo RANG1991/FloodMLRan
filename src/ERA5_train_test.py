@@ -91,7 +91,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     ax.legend()
     ax.set_title(f"Basin {max_basin} - NSE: {max_nse:.3f}")
     plt.savefig(f"../data/images/Hydrography_of_{num_epoch}_epoch_{curr_datetime_str}.png")
-    plt.show()
+    # plt.show()
     return nse_list_basins
 
 
@@ -274,18 +274,18 @@ def check_best_parameters(learning_rates, sequence_lengths, num_hidden_units, nu
         dict_results["num hidden units"].append(num_hidden_units_param)
         dict_results["num epochs"].append(num_epochs_param)
         dict_results["median NSE"].append(median_nse)
-    curr_datetime = datetime.now()
-    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
-        plot_NSE_CDF(list_nse, title)
-    plt.grid()
-    plt.legend()
-    plt.savefig("../data/images/parameters_comparison" +
-                f"_{curr_datetime_str}" + ".png")
-    plt.show()
-    print(f"best parameters: {best_parameters}")
-    df_results = pd.DataFrame(data=dict_results)
-    df_results.to_csv(f"./results_{curr_datetime_str}.csv")
+        curr_datetime = datetime.now()
+        curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+        for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
+            plot_NSE_CDF(list_nse, title)
+        plt.grid()
+        plt.legend()
+        plt.savefig("../data/images/parameters_comparison" +
+                    f"_{curr_datetime_str}" + ".png")
+        # plt.show()
+        df_results = pd.DataFrame(data=dict_results)
+        df_results.to_csv(f"./results_{curr_datetime_str}.csv")
+        print(f"best parameters: {best_parameters}")
     return best_parameters
 
 
