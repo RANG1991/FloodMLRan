@@ -48,8 +48,12 @@ class Dataset_ERA5(Dataset):
                  test_start_date,
                  test_end_date,
                  stage,
-                 static_attributes_names=[], sequence_length=270,
-                 x_means=None, x_stds=None, y_mean=None, y_std=None, use_Caravan_dataset=True):
+                 all_station_files,
+                 static_attributes_names=[],
+                 sequence_length=270,
+                 x_means=None, x_stds=None,
+                 y_mean=None, y_std=None,
+                 use_Caravan_dataset=True):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_file_caravan = static_data_file_caravan
@@ -67,8 +71,8 @@ class Dataset_ERA5(Dataset):
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
-        list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_data_files(dynamic_data_folder=
-                                                                                            dynamic_data_folder)
+        list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_data_files(all_station_files=
+                                                                                            all_station_files)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
         self.create_boxplot_of_entire_dataset()
@@ -101,11 +105,10 @@ class Dataset_ERA5(Dataset):
         df_attr[self.list_static_attributes_names] = df_attr.drop(columns=['gauge_id']).to_numpy()
         return df_attr, df_attr['gauge_id'].values.tolist()
 
-    def read_all_dynamic_data_files(self, dynamic_data_folder):
+    def read_all_dynamic_data_files(self, all_station_files):
         list_stations_repeated = []
         X_data_list = []
         y_data_list = []
-        all_station_files = [f for f in listdir(self.dynamic_data_folder) if isfile(join(dynamic_data_folder, f))]
         with Pool(multiprocessing.cpu_count() - 1) as p:
             list_returned = p.map(self.read_single_station_file, all_station_files)
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:

@@ -16,6 +16,7 @@ import numpy as np
 import itertools
 from datetime import datetime
 import statistics
+from random import shuffle
 
 
 def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -155,6 +156,8 @@ def read_basins_csv_files(folder_name, num_basins):
 
 
 def prepare_training_data_and_test_data(sequence_length,
+                                        all_station_files_train,
+                                        all_station_files_test,
                                         static_attributes_names,
                                         dynamic_attributes_names,
                                         discharge_str,
@@ -175,6 +178,7 @@ def prepare_training_data_and_test_data(sequence_length,
                                  test_start_date='01/10/1989',
                                  test_end_date='30/09/1999',
                                  stage="train",
+                                 all_station_files=all_station_files_train,
                                  sequence_length=sequence_length,
                                  use_Caravan_dataset=use_Caravan_dataset)
     test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
@@ -191,17 +195,18 @@ def prepare_training_data_and_test_data(sequence_length,
                              test_start_date='01/10/1989',
                              test_end_date='30/09/1999',
                              stage="test",
+                             all_station_files=all_station_files_test,
                              x_means=training_data.get_x_mean(),
                              x_stds=training_data.get_x_std(),
                              y_mean=training_data.get_y_mean(),
                              y_std=training_data.get_y_std(),
-                             sequence_length=sequence_length,
-                             use_Caravan_dataset=use_Caravan_dataset)
+                             sequence_length=sequence_length)
     all_attributes_names = dynamic_attributes_names + static_attributes_names
     for i in range(test_data.X_data.shape[1]):
         dict_boxplots_data = {f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[:, i],
                               f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:, i]}
-        Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data, plot_title=f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
+        Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data,
+                                            plot_title=f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
     return training_data, test_data
 
 
@@ -247,7 +252,17 @@ def run_training_and_test(learning_rate, sequence_length,
     return nse_list
 
 
-def check_best_parameters(learning_rates, sequence_lengths, num_hidden_units, num_epochs, training_data, test_data):
+def choose_hyper_parameters_validation(static_attributes_names,
+                                       dynamic_attributes_names,
+                                       discharge_str,
+                                       dynamic_data_folder_train,
+                                       dynamic_data_folder_test,
+                                       use_Caravan_dataset):
+    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=4).tolist()
+    dropout_rates = [0.0, 0.25, 0.4, 0.5]
+    sequence_lengths = [90, 180, 270, 365]
+    num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
+    num_epochs = [1]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
@@ -257,10 +272,28 @@ def check_best_parameters(learning_rates, sequence_lengths, num_hidden_units, nu
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     for learning_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
-        training_data.set_sequence_length(sequence_length_param)
-        test_data.set_sequence_length(sequence_length_param)
-        nse_list = run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
-                                         num_epochs_param, training_data, test_data)
+        all_stations_for_validation = [f for f in listdir(dynamic_data_folder_train) if
+                                       isfile(join(dynamic_data_folder_train, f))]
+        shuffle(all_stations_for_validation)
+        split_stations_list = [all_stations_for_validation[i:i + len(all_stations_for_validation) // 4]
+                               for i in
+                               range(0, len(all_stations_for_validation), len(all_stations_for_validation) // 4)]
+        nse_list = []
+        for i in range(len(split_stations_list)):
+            train_stations_list = list(itertools.chain(split_stations_list[:i] + split_stations_list[:i + 1]))[0]
+            training_data, test_data = prepare_training_data_and_test_data(sequence_length_param,
+                                                                           train_stations_list,
+                                                                           split_stations_list[i],
+                                                                           static_attributes_names,
+                                                                           dynamic_attributes_names,
+                                                                           discharge_str,
+                                                                           dynamic_data_folder_train,
+                                                                           dynamic_data_folder_train,
+                                                                           use_Caravan_dataset)
+            training_data.set_sequence_length(sequence_length_param)
+            test_data.set_sequence_length(sequence_length_param)
+            nse_list.extend(run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
+                                                  num_epochs_param, training_data, test_data))
         if len(nse_list) == 0:
             median_nse = -1
         else:
@@ -317,24 +350,13 @@ def main():
         discharge_str = "flow"
         dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
         dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=10).tolist()
-    dropout_rates = [0.0, 0.25, 0.4, 0.5]
-    sequence_lengths = [90, 180, 270, 365]
-    num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [1]
-    training_data, test_data = prepare_training_data_and_test_data(sequence_lengths[0],
-                                                                   static_attributes_names,
-                                                                   dynamic_attributes_names,
-                                                                   discharge_str,
-                                                                   dynamic_data_folder_train,
-                                                                   dynamic_data_folder_test,
-                                                                   use_Caravan_dataset)
-    best_parameters = check_best_parameters(learning_rates,
-                                            sequence_lengths,
-                                            num_hidden_units,
-                                            num_epochs,
-                                            training_data,
-                                            test_data)
+
+    choose_hyper_parameters_validation(static_attributes_names,
+                                       dynamic_attributes_names,
+                                       discharge_str,
+                                       dynamic_data_folder_train,
+                                       dynamic_data_folder_test,
+                                       use_Caravan_dataset)
 
 
 if __name__ == "__main__":
