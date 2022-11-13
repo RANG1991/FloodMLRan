@@ -24,10 +24,10 @@ ATTRIBUTES_TO_TEXT_DESC = {"p_mean": "Mean daily precipitation",
                            "ele_mt_sav": "Catchment mean elevation",
                            "slp_dg_sav": "Catchment mean slope",
                            "basin_area": "Catchment area",
-                           "for_pc_sse": "Forest fraction",
-                           "cly_pc_sav": "Clay fraction in soil",
-                           "slt_pc_sav": "Silt fraction in soil",
-                           "snd_pc_sav": "Sand fraction in soil",
+                           "for_pc_sse": "for_pc_sse",
+                           "cly_pc_sav": "cly_pc_sav",
+                           "slt_pc_sav": "slt_pc_sav",
+                           "snd_pc_sav": "snd_pc_sav",
                            "soc_th_sav": "Organic carbon content in soil",
                            "total_precipitation_sum": "total_precipitation_sum",
                            "temperature_2m_min": "temperature_2m_min",
@@ -71,7 +71,7 @@ class Dataset_ERA5(Dataset):
                                                                                             dynamic_data_folder)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
-        self.calculate_statistics_on_data()
+        self.create_boxplot_of_entire_dataset()
         self.y_std = y_std if y_std is not None else self.y_data.std()
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
         self.x_mean = x_means if x_means is not None else self.X_data.mean(axis=0)
@@ -160,27 +160,33 @@ class Dataset_ERA5(Dataset):
             count += (len(df_dynamic_data.index) - self.sequence_length)
         return count
 
-    def calculate_statistics_on_data(self):
+    def create_boxplot_of_entire_dataset(self):
         all_attributes_names = self.list_static_attributes_names + self.list_dynamic_attributes_names
         dict_boxplots_data = {}
         for i in range(self.X_data.shape[1]):
-            dict_boxplots_data[all_attributes_names[i]] = self.X_data[:, i]
+            dict_boxplots_data[ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]] = self.X_data[:, i]
+        Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data, plot_title=f"{self.stage}")
+
+
+    @staticmethod
+    def create_boxplot_on_data(dict_boxplots_data, plot_title=""):
         fig, ax = plt.subplots()
+        dict_boxplots_data = {k: v for k, v in sorted(dict_boxplots_data.items(), key=lambda item: item[0])}
         box_plots = ax.boxplot(dict_boxplots_data.values(),
                                showfliers=False,
-                               positions=list(range(1, len(all_attributes_names) + 1)))
-        ax.set_xticks(np.arange(1, len(all_attributes_names) + 1))
+                               positions=list(range(1, len(dict_boxplots_data.keys()) + 1)))
+        ax.set_xticks(np.arange(1, len(dict_boxplots_data.keys()) + 1))
         plt.yticks(fontsize=6)
-        plt.legend([box_plots['boxes'][i] for i in range(len(all_attributes_names))],
-                   [f"{i + 1} :" + ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]
-                    for i in range(len(all_attributes_names))],
+        plt.legend([box_plots['boxes'][i] for i in range(len(dict_boxplots_data.keys()))],
+                   [f"{i + 1} :" + k
+                    for i, k in enumerate(dict_boxplots_data.keys())],
                    fontsize=6, handlelength=0, handletextpad=0)
         fig.tight_layout()
         curr_datetime = datetime.now()
         curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
         plt.grid()
-        plt.title(f"Box plots data - {self.stage}", fontsize=8)
-        plt.savefig(f"../data/images/data_box_plots_{self.stage}" +
+        plt.title(f"Box plots data - {plot_title}", fontsize=8)
+        plt.savefig(f"../data/images/data_box_plots_{plot_title}" +
                     f"_{curr_datetime_str}" + ".png")
         plt.show()
 

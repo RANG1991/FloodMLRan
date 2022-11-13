@@ -2,6 +2,7 @@ import os
 import sys
 from torch.utils.data import DataLoader
 from ERA5_dataset import Dataset_ERA5
+from ERA5_dataset import ATTRIBUTES_TO_TEXT_DESC
 from tqdm import tqdm
 from ERA5_lstm import ERA5_LSTM
 import torch.optim
@@ -91,7 +92,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     ax.legend()
     ax.set_title(f"Basin {max_basin} - NSE: {max_nse:.3f}")
     plt.savefig(f"../data/images/Hydrography_of_{num_epoch}_epoch_{curr_datetime_str}.png")
-    # plt.show()
+    plt.close()
     return nse_list_basins
 
 
@@ -196,6 +197,11 @@ def prepare_training_data_and_test_data(sequence_length,
                              y_std=training_data.get_y_std(),
                              sequence_length=sequence_length,
                              use_Caravan_dataset=use_Caravan_dataset)
+    all_attributes_names = dynamic_attributes_names + static_attributes_names
+    for i in range(test_data.X_data.shape[1]):
+        dict_boxplots_data = {f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[:, i],
+                              f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:, i]}
+        Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data, plot_title=f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
     return training_data, test_data
 
 
@@ -248,6 +254,8 @@ def check_best_parameters(learning_rates, sequence_lengths, num_hidden_units, nu
     list_nse_lists_basins = []
     list_plots_titles = []
     all_parameters = list(itertools.product(learning_rates, sequence_lengths, num_hidden_units, num_epochs))
+    curr_datetime = datetime.now()
+    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     for learning_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
         training_data.set_sequence_length(sequence_length_param)
         test_data.set_sequence_length(sequence_length_param)
@@ -274,17 +282,16 @@ def check_best_parameters(learning_rates, sequence_lengths, num_hidden_units, nu
         dict_results["num hidden units"].append(num_hidden_units_param)
         dict_results["num epochs"].append(num_epochs_param)
         dict_results["median NSE"].append(median_nse)
-        curr_datetime = datetime.now()
-        curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
         for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
             plot_NSE_CDF(list_nse, title)
         plt.grid()
         plt.legend()
         plt.savefig("../data/images/parameters_comparison" +
                     f"_{curr_datetime_str}" + ".png")
-        # plt.show()
+        plt.close()
         df_results = pd.DataFrame(data=dict_results)
-        df_results.to_csv(f"./results_{curr_datetime_str}.csv")
+        df_results.to_csv(f"./results_{curr_datetime_str}.csv", mode='a',
+                          header=not os.path.exists(f"./results_{curr_datetime_str}.csv"))
         print(f"best parameters: {best_parameters}")
     return best_parameters
 
@@ -311,8 +318,9 @@ def main():
         dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
         dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
     learning_rates = np.linspace(10 ** -3, 10 ** -5, num=10).tolist()
-    sequence_lengths = np.linspace(30, 270, num=5, dtype=int).tolist()
-    num_hidden_units = np.linspace(20, 200, num=5, dtype=int).tolist()
+    dropout_rates = [0.0, 0.25, 0.4, 0.5]
+    sequence_lengths = [90, 180, 270, 365]
+    num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
     num_epochs = [1]
     training_data, test_data = prepare_training_data_and_test_data(sequence_lengths[0],
                                                                    static_attributes_names,
