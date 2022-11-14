@@ -18,6 +18,8 @@ from datetime import datetime
 import statistics
 from random import shuffle
 
+K_VALUE_CROSS_VALIDATION = 4
+
 
 def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
@@ -163,7 +165,8 @@ def prepare_training_data_and_test_data(sequence_length,
                                         discharge_str,
                                         dynamic_data_folder_train,
                                         dynamic_data_folder_test,
-                                        use_Caravan_dataset=True):
+                                        use_Caravan_dataset=True,
+                                        create_boxplots=False):
     training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_train,
                                  static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
                                  static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
@@ -201,12 +204,15 @@ def prepare_training_data_and_test_data(sequence_length,
                              y_mean=training_data.get_y_mean(),
                              y_std=training_data.get_y_std(),
                              sequence_length=sequence_length)
-    all_attributes_names = dynamic_attributes_names + static_attributes_names
-    for i in range(test_data.X_data.shape[1]):
-        dict_boxplots_data = {f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[:, i],
-                              f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:, i]}
-        Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data,
-                                            plot_title=f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
+    if create_boxplots:
+        training_data.create_boxplot_of_entire_dataset()
+        test_data.create_boxplot_of_entire_dataset()
+        all_attributes_names = dynamic_attributes_names + static_attributes_names
+        for i in range(test_data.X_data.shape[1]):
+            dict_boxplots_data = {f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[:, i],
+                                  f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:, i]}
+            Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data,
+                                                plot_title=f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
     return training_data, test_data
 
 
@@ -275,9 +281,9 @@ def choose_hyper_parameters_validation(static_attributes_names,
         all_stations_for_validation = [f for f in listdir(dynamic_data_folder_train) if
                                        isfile(join(dynamic_data_folder_train, f))]
         shuffle(all_stations_for_validation)
-        split_stations_list = [all_stations_for_validation[i:i + len(all_stations_for_validation) // 4]
+        split_stations_list = [all_stations_for_validation[i:i + len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION]
                                for i in
-                               range(0, len(all_stations_for_validation), len(all_stations_for_validation) // 4)]
+                               range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
         nse_list = []
         for i in range(len(split_stations_list)):
             train_stations_list = list(itertools.chain(split_stations_list[:i] + split_stations_list[:i + 1]))[0]

@@ -75,7 +75,6 @@ class Dataset_ERA5(Dataset):
                                                                                             all_station_files)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
-        self.create_boxplot_of_entire_dataset()
         self.y_std = y_std if y_std is not None else self.y_data.std()
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
         self.x_mean = x_means if x_means is not None else self.X_data.mean(axis=0)
