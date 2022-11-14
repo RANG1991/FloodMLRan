@@ -305,10 +305,10 @@ def choose_hyper_parameters_validation(static_attributes_names,
         else:
             median_nse = statistics.median(nse_list)
         if len(nse_list) > 0:
-            list_plots_titles.append(f"learning_rate={learning_rate_param}\n"
-                                     f"sequence_length={sequence_length_param}\n"
-                                     f"num_hidden_units={num_hidden_units_param}\n"
-                                     f"num_epochs={num_epochs_param}")
+            list_plots_titles.append(f"{learning_rate_param};"
+                                     f"{sequence_length_param};"
+                                      f"{num_hidden_units_param};"
+                                     f"{num_epochs_param}")
             list_nse_lists_basins.append(nse_list)
         if median_nse > best_median_nse or best_median_nse == -1:
             best_median_nse = median_nse
