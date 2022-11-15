@@ -257,7 +257,7 @@ def run_training_and_test(learning_rate, sequence_length,
     plt.title(f"loss in {num_epochs} epochs for the parameters: {learning_rate};{sequence_length};{num_hidden_units}")
     plt.plot(loss_list)
     plt.savefig(f"../data/images/loss_in_{num_epochs}_with_parameters: "
-                f"{learning_rate};{sequence_length};{num_hidden_units}")
+                f"{learning_rate.replace('.', '_')};{sequence_length};{num_hidden_units}")
     plt.close()
     if len(nse_list) > 0:
         print(f"parameters are: learning_rate={learning_rate} sequence_length={sequence_length} "
