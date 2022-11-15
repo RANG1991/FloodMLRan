@@ -8,6 +8,8 @@ from os import listdir
 from os.path import isfile, join
 import re
 from datetime import datetime
+import matplotlib
+matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 import multiprocessing
 from multiprocessing import Pool

@@ -10,6 +10,8 @@ import torch.nn as nn
 from os import listdir
 from os.path import isfile, join
 import pandas as pd
+import matplotlib
+matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
