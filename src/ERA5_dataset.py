@@ -9,7 +9,7 @@ from os.path import isfile, join
 import re
 from datetime import datetime
 import matplotlib
-matplotlib.use('pdf')
+matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 import multiprocessing
 from multiprocessing import Pool

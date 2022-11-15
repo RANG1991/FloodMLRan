@@ -11,7 +11,7 @@ from os import listdir
 from os.path import isfile, join
 import pandas as pd
 import matplotlib
-matplotlib.use('pdf')
+matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
@@ -31,6 +31,10 @@ def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.T
 
     :return: Two torch Tensors, containing the observations and
         model predictions
+
+    Parameters
+    ----------
+    preds_obs_dict_per_basin
     """
     # set model to eval mode (important for dropout)
     model.eval()
