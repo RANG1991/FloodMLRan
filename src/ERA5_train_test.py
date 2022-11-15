@@ -254,6 +254,11 @@ def run_training_and_test(learning_rate, sequence_length,
             nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
+    plt.title(f"loss in {num_epochs} epochs for the parameters: {learning_rate};{sequence_length};{num_hidden_units}")
+    plt.plot(loss_list)
+    plt.savefig(f"../data/images/loss_in_{num_epochs}_with_parameters: "
+                f"{learning_rate};{sequence_length};{num_hidden_units}")
+    plt.close()
     if len(nse_list) > 0:
         print(f"parameters are: learning_rate={learning_rate} sequence_length={sequence_length} "
               f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}")
