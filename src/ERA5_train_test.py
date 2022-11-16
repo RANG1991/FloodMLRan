@@ -275,7 +275,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_data_folder_train,
                                        dynamic_data_folder_test,
                                        use_Caravan_dataset):
-    learning_rates = np.linspace(10 ** -3, 10 ** -5, num=4).tolist()
+    learning_rates = np.linspace(10 ** -4, 10 ** -5, num=4).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
