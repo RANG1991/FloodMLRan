@@ -132,7 +132,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         running_loss += loss.item()
         if i % 200 == 199:  # print every 2000 mini-batches
             print(f'[{epoch}] loss: {running_loss / 200:.3f}')
-            loss_list.append(running_loss)
+            loss_list.append(running_loss / 200)
             running_loss = 0.0
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
         i += 1
