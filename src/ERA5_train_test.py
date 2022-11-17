@@ -239,7 +239,8 @@ def run_training_and_test(learning_rate, sequence_length,
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = ERA5_LSTM(hidden_dim=num_hidden_units,
-                      input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
+                      input_dim=len(static_attributes_names) + len(dynamic_attributes_names),
+                      sequence_length=sequence_length).to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list = []
