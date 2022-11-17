@@ -111,10 +111,8 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     pbar = tqdm(loader, file=sys.stdout)
     print(f"Epoch {epoch}")
     pbar.set_description(f"Epoch {epoch}")
-    loss_list = []
     # request mini-batch of data from the loader
     running_loss = 0.0
-    i = 0
     for _, xs, ys in pbar:
         # delete previously stored gradients from the model
         optimizer.zero_grad()
@@ -130,14 +128,10 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         optimizer.step()
         # write current loss in the progress bar
         running_loss += loss.item()
-        if i % 200 == 199:  # print every 2000 mini-batches
-            print(f'[{epoch}] loss: {running_loss / 200:.3f}')
-            loss_list.append(running_loss / 200)
-            running_loss = 0.0
         print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
-        i += 1
-    return loss_list
+    print(f"Loss on the entire epoch: {(running_loss / len(loader)):.4f}")
+    return running_loss / (len(loader))
 
 
 def plot_NSE_CDF(nse_losses, title_for_legend):
@@ -241,8 +235,8 @@ def run_training_and_test(learning_rate, sequence_length,
                                     "surface_net_solar_radiation_mean"]
     else:
         dynamic_attributes_names = ["precip"]
-    train_dataloader = DataLoader(training_data, batch_size=128, shuffle=True, num_workers=2)
-    test_dataloader = DataLoader(test_data, batch_size=128, shuffle=False, num_workers=2)
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
+    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = ERA5_LSTM(hidden_dim=num_hidden_units,
                       input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
@@ -252,8 +246,8 @@ def run_training_and_test(learning_rate, sequence_length,
     nse_list = []
     preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
-        loss_list_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
-        loss_list.extend(loss_list_epoch)
+        loss_on_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
+        loss_list.append(loss_on_epoch)
         eval_model(model, test_dataloader, device, preds_obs_dict_per_basin)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
@@ -280,7 +274,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [5]
+    num_epochs = [50]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
