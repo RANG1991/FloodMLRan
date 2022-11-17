@@ -124,6 +124,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         loss = loss_func(y_hat.squeeze(0), ys)
         # calculate gradients
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
@@ -271,7 +272,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_data_folder_train,
                                        dynamic_data_folder_test,
                                        use_Caravan_dataset):
-    learning_rates = np.linspace(10 ** -5, 10 ** -5, num=1).tolist()
+    learning_rates = np.linspace(5*(10**-3), 5*(10**-3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
