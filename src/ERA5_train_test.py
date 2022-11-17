@@ -134,6 +134,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
             print(f'[{epoch}] loss: {running_loss / 200:.3f}')
             loss_list.append(running_loss / 200)
             running_loss = 0.0
+        print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
         i += 1
     return loss_list
@@ -277,7 +278,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        use_Caravan_dataset):
     learning_rates = np.linspace(10 ** -5, 10 ** -5, num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
-    sequence_lengths = [90, 180, 270, 365]
+    sequence_lengths = [30, 90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
     num_epochs = [5]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
@@ -297,7 +298,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
         nse_list = []
         for i in range(len(split_stations_list)):
-            train_stations_list = list(itertools.chain(split_stations_list[:i] + split_stations_list[:i + 1]))[0]
+            train_stations_list = list(itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))
             training_data, test_data = prepare_training_data_and_test_data(sequence_length_param,
                                                                            train_stations_list,
                                                                            split_stations_list[i],
