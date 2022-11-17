@@ -240,12 +240,12 @@ def run_training_and_test(learning_rate, sequence_length,
                                     "surface_net_solar_radiation_mean"]
     else:
         dynamic_attributes_names = ["precip"]
-    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, num_workers=2)
-    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
+    train_dataloader = DataLoader(training_data, batch_size=128, shuffle=True, num_workers=2)
+    test_dataloader = DataLoader(test_data, batch_size=128, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = ERA5_LSTM(hidden_dim=num_hidden_units,
                       input_dim=len(static_attributes_names) + len(dynamic_attributes_names)).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list = []
     nse_list = []
@@ -275,11 +275,11 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_data_folder_train,
                                        dynamic_data_folder_test,
                                        use_Caravan_dataset):
-    learning_rates = np.linspace(10 ** -4, 10 ** -5, num=4).tolist()
+    learning_rates = np.linspace(10 ** -5, 10 ** -5, num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [10]
+    num_epochs = [5]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
@@ -318,7 +318,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
         if len(nse_list) > 0:
             list_plots_titles.append(f"{learning_rate_param};"
                                      f"{sequence_length_param};"
-                                      f"{num_hidden_units_param};"
+                                     f"{num_hidden_units_param};"
                                      f"{num_epochs_param}")
             list_nse_lists_basins.append(nse_list)
         if median_nse > best_median_nse or best_median_nse == -1:
