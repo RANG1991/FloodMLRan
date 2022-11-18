@@ -82,7 +82,7 @@ def eval_model(model, loader, device, preds_obs_dict_per_basin, loss_func) -> Tu
             xs = xs.to(device)
             # get model predictions
             y_hat = model(xs)
-            loss = loss_func(y_hat.squeeze(0), ys)
+            loss = loss_func(y_hat.squeeze(0), ys.to(device))
             running_loss += loss.item()
             preds_obs_dict_per_basin[station_id].append((ys, y_hat))
     print(f"Loss on test set: {(running_loss / len(loader)):.4f}")
@@ -261,7 +261,7 @@ def run_training_and_test(learning_rate,
     for i in range(num_epochs):
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
         loss_list_training.append(loss_on_training_epoch)
-        loss_on_test_epoch = (model, test_dataloader, device, preds_obs_dict_per_basin, loss_func)
+        loss_on_test_epoch = eval_model(model, test_dataloader, device, preds_obs_dict_per_basin, loss_func)
         loss_list_test.append(loss_on_test_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
