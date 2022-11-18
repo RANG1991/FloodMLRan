@@ -23,7 +23,37 @@ from random import shuffle
 K_VALUE_CROSS_VALIDATION = 4
 
 
-def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.Tensor, torch.Tensor]:
+def train_epoch(model, optimizer, loader, loss_func, epoch, device):
+    # # set model to train mode (important for dropout)
+    model.train()
+    pbar = tqdm(loader, file=sys.stdout)
+    print(f"Epoch {epoch}")
+    pbar.set_description(f"Epoch {epoch}")
+    # request mini-batch of data from the loader
+    running_loss = 0.0
+    for _, xs, ys in pbar:
+        # delete previously stored gradients from the model
+        optimizer.zero_grad()
+        # push data to GPU (if available)
+        xs, ys = xs.to(device), ys.to(device)
+        # get model predictions
+        y_hat = model(xs)
+        # calculate loss
+        loss = loss_func(y_hat.squeeze(0), ys)
+        # calculate gradients
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+        # update the weights
+        optimizer.step()
+        # write current loss in the progress bar
+        running_loss += loss.item()
+        print(f"Loss: {loss.item():.4f}")
+        pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
+    print(f"Loss on the entire epoch: {(running_loss / len(loader)):.4f}")
+    return running_loss / (len(loader))
+
+
+def eval_model(model, loader, device, preds_obs_dict_per_basin, loss_func) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
 
     :param model: A torch.nn.Module implementing the LSTM model
@@ -34,12 +64,14 @@ def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.T
 
     Parameters
     ----------
+    loss_func
+    device
     preds_obs_dict_per_basin
     """
     # set model to eval mode (important for dropout)
     model.eval()
-    # in inference mode, we don't need to store intermediate steps for
-    # backprob
+    # in inference mode, we don't need to store intermediate steps for backprob
+    running_loss = 0.0
     with torch.no_grad():
         # request mini-batch of data from the loader
         for station_id_batch, xs, ys in loader:
@@ -50,7 +82,11 @@ def eval_model(model, loader, device, preds_obs_dict_per_basin) -> Tuple[torch.T
             xs = xs.to(device)
             # get model predictions
             y_hat = model(xs)
+            loss = loss_func(y_hat.squeeze(0), ys)
+            running_loss += loss.item()
             preds_obs_dict_per_basin[station_id].append((ys, y_hat))
+    print(f"Loss on test set: {(running_loss / len(loader)):.4f}")
+    return running_loss / (len(loader))
 
 
 def calc_nse(obs: np.array, sim: np.array) -> float:
@@ -103,36 +139,6 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     plt.savefig(f"../data/images/Hydrography_of_{num_epoch}_epoch_{curr_datetime_str}.png")
     plt.close()
     return nse_list_basins
-
-
-def train_epoch(model, optimizer, loader, loss_func, epoch, device):
-    # # set model to train mode (important for dropout)
-    model.train()
-    pbar = tqdm(loader, file=sys.stdout)
-    print(f"Epoch {epoch}")
-    pbar.set_description(f"Epoch {epoch}")
-    # request mini-batch of data from the loader
-    running_loss = 0.0
-    for _, xs, ys in pbar:
-        # delete previously stored gradients from the model
-        optimizer.zero_grad()
-        # push data to GPU (if available)
-        xs, ys = xs.to(device), ys.to(device)
-        # get model predictions
-        y_hat = model(xs)
-        # calculate loss
-        loss = loss_func(y_hat.squeeze(0), ys)
-        # calculate gradients
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
-        # update the weights
-        optimizer.step()
-        # write current loss in the progress bar
-        running_loss += loss.item()
-        print(f"Loss: {loss.item():.4f}")
-        pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
-    print(f"Loss on the entire epoch: {(running_loss / len(loader)):.4f}")
-    return running_loss / (len(loader))
 
 
 def plot_NSE_CDF(nse_losses, title_for_legend):
@@ -248,24 +254,27 @@ def run_training_and_test(learning_rate,
                       dropout=dropout).to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
-    loss_list = []
+    loss_list_training = []
+    loss_list_test = []
     nse_list = []
     preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
-        loss_on_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
-        loss_list.append(loss_on_epoch)
-        eval_model(model, test_dataloader, device, preds_obs_dict_per_basin)
+        loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
+        loss_list_training.append(loss_on_training_epoch)
+        loss_on_test_epoch = (model, test_dataloader, device, preds_obs_dict_per_basin, loss_func)
+        loss_list_test.append(loss_on_test_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
-    plt.title(f"loss in {num_epochs} epochs for the parameters: {learning_rate};{sequence_length};{num_hidden_units}")
-    plt.plot(loss_list)
-    plt.savefig(f"../data/images/loss_in_{num_epochs}_with_parameters: "
-                f"{str(learning_rate).replace('.', '_')};{sequence_length};{num_hidden_units}")
+    plt.title(f"loss in {num_epochs} epochs for the parameters: {dropout};{sequence_length};{num_hidden_units}")
+    plt.plot(loss_list_training, label="training")
+    plt.plot(loss_list_test, label="validation")
+    plt.savefig(f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
+                f"{str(dropout).replace('.', '_')};{sequence_length};{num_hidden_units}")
     plt.close()
     if len(nse_list) > 0:
-        print(f"parameters are: learning_rate={learning_rate} sequence_length={sequence_length} "
+        print(f"parameters are: dropout={dropout} sequence_length={sequence_length} "
               f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}")
     return nse_list
 
