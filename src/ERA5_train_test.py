@@ -218,10 +218,14 @@ def prepare_training_data_and_test_data(sequence_length,
     return training_data, test_data
 
 
-def run_training_and_test(learning_rate, sequence_length,
+def run_training_and_test(learning_rate,
+                          sequence_length,
                           num_hidden_units,
-                          num_epochs, training_data,
-                          test_data, calc_nse_interval=1):
+                          num_epochs,
+                          training_data,
+                          test_data,
+                          dropout,
+                          calc_nse_interval=1):
     use_Caravan_dataset = True
     static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
                                "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
@@ -241,7 +245,7 @@ def run_training_and_test(learning_rate, sequence_length,
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = ERA5_LSTM(hidden_dim=num_hidden_units,
                       input_dim=len(static_attributes_names) + len(dynamic_attributes_names),
-                      sequence_length=sequence_length).to(device)
+                      dropout=dropout).to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list = []
@@ -282,10 +286,10 @@ def choose_hyper_parameters_validation(static_attributes_names,
     best_median_nse = -1
     list_nse_lists_basins = []
     list_plots_titles = []
-    all_parameters = list(itertools.product(learning_rates, sequence_lengths, num_hidden_units, num_epochs))
+    all_parameters = list(itertools.product(learning_rates, dropout_rates, sequence_lengths, num_hidden_units, num_epochs))
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    for learning_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
+    for learning_rate_param, dropout_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
         all_stations_for_validation = [f for f in listdir(dynamic_data_folder_train) if
                                        isfile(join(dynamic_data_folder_train, f))]
         shuffle(all_stations_for_validation)
@@ -307,7 +311,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
             training_data.set_sequence_length(sequence_length_param)
             test_data.set_sequence_length(sequence_length_param)
             nse_list.extend(run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
-                                                  num_epochs_param, training_data, test_data))
+                                                  num_epochs_param, training_data, test_data, dropout_rate_param))
         if len(nse_list) == 0:
             median_nse = -1
         else:
