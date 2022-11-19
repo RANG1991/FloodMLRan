@@ -286,7 +286,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [50]
+    num_epochs = [1]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
@@ -305,8 +305,8 @@ def choose_hyper_parameters_validation(static_attributes_names,
             for i in
             range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
         nse_list = []
-        training_loss_list = []
-        validation_loss_list = []
+        training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, 1))
+        validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, 1))
         for i in range(len(split_stations_list)):
             train_stations_list = list(
                 itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))
@@ -325,14 +325,14 @@ def choose_hyper_parameters_validation(static_attributes_names,
                 run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
                                       num_epochs_param, training_data, test_data, dropout_rate_param)
             nse_list.extend(nse_list_single_pass)
-            training_loss_list.extend(training_loss_list_single_pass)
-            validation_loss_list.extend(validation_loss_list_single_pass)
+            training_loss_list[i] = training_loss_list_single_pass
+            validation_loss_list[i] = validation_loss_list_single_pass
         plt.title(f"loss in {num_epochs_param} epochs for the parameters: "
                   f"{dropout_rate_param};"
                   f"{sequence_length_param};"
                   f"{num_hidden_units_param}")
-        plt.plot(training_loss_list, label="training")
-        plt.plot(validation_loss_list, label="validation")
+        plt.plot(training_loss_list.mean(axis=0), label="training")
+        plt.plot(validation_loss_list.mean(axis=0), label="validation")
         plt.savefig(f"../data/images/training_loss_in_{num_epochs_param}_with_parameters: "
                     f"{str(dropout_rate_param).replace('.', '_')};"
                     f"{sequence_length_param};"
