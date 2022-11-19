@@ -11,6 +11,7 @@ from os import listdir
 from os.path import isfile, join
 import pandas as pd
 import matplotlib
+
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 from typing import Tuple
@@ -218,7 +219,8 @@ def prepare_training_data_and_test_data(sequence_length,
         all_attributes_names = dynamic_attributes_names + static_attributes_names
         for i in range(test_data.X_data.shape[1]):
             dict_boxplots_data = {f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[:, i],
-                                  f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:, i]}
+                                  f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:,
+                                                                                               i]}
             Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data,
                                                 plot_title=f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
     return training_data, test_data
@@ -259,7 +261,8 @@ def run_training_and_test(learning_rate,
     nse_list = []
     preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
-        loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device)
+        loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, loss_func, epoch=(i + 1),
+                                             device=device)
         loss_list_training.append(loss_on_training_epoch)
         loss_on_test_epoch = eval_model(model, test_dataloader, device, preds_obs_dict_per_basin, loss_func)
         loss_list_test.append(loss_on_test_epoch)
@@ -267,16 +270,10 @@ def run_training_and_test(learning_rate,
             nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
-    plt.title(f"loss in {num_epochs} epochs for the parameters: {dropout};{sequence_length};{num_hidden_units}")
-    plt.plot(loss_list_training, label="training")
-    plt.plot(loss_list_test, label="validation")
-    plt.savefig(f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
-                f"{str(dropout).replace('.', '_')};{sequence_length};{num_hidden_units}")
-    plt.close()
     if len(nse_list) > 0:
         print(f"parameters are: dropout={dropout} sequence_length={sequence_length} "
               f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}")
-    return nse_list
+    return nse_list, loss_list_training, loss_list_test
 
 
 def choose_hyper_parameters_validation(static_attributes_names,
@@ -285,29 +282,34 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_data_folder_train,
                                        dynamic_data_folder_test,
                                        use_Caravan_dataset):
-    learning_rates = np.linspace(5*(10**-3), 5*(10**-3), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [50]
+    num_epochs = [1]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
     list_nse_lists_basins = []
     list_plots_titles = []
-    all_parameters = list(itertools.product(learning_rates, dropout_rates, sequence_lengths, num_hidden_units, num_epochs))
+    all_parameters = list(
+        itertools.product(learning_rates, dropout_rates, sequence_lengths, num_hidden_units, num_epochs))
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     for learning_rate_param, dropout_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
         all_stations_for_validation = [f for f in listdir(dynamic_data_folder_train) if
                                        isfile(join(dynamic_data_folder_train, f))]
         shuffle(all_stations_for_validation)
-        split_stations_list = [all_stations_for_validation[i:i + len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION]
-                               for i in
-                               range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
+        split_stations_list = [
+            all_stations_for_validation[i:i + len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION]
+            for i in
+            range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
         nse_list = []
+        training_loss_list = []
+        validation_loss_list = []
         for i in range(len(split_stations_list)):
-            train_stations_list = list(itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))
+            train_stations_list = list(
+                itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))
             training_data, test_data = prepare_training_data_and_test_data(sequence_length_param,
                                                                            train_stations_list,
                                                                            split_stations_list[i],
@@ -319,8 +321,23 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                                                            use_Caravan_dataset)
             training_data.set_sequence_length(sequence_length_param)
             test_data.set_sequence_length(sequence_length_param)
-            nse_list.extend(run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
-                                                  num_epochs_param, training_data, test_data, dropout_rate_param))
+            nse_list_single_pass, training_loss_list_single_pass, validation_loss_list_single_pass = \
+                run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
+                                      num_epochs_param, training_data, test_data, dropout_rate_param)
+            nse_list.extend(nse_list_single_pass)
+            training_loss_list.extend(training_loss_list_single_pass)
+            validation_loss_list.extend(validation_loss_list_single_pass)
+        plt.title(f"loss in {num_epochs_param} epochs for the parameters: "
+                  f"{dropout_rate_param};"
+                  f"{sequence_length_param};"
+                  f"{num_hidden_units_param}")
+        plt.plot(training_loss_list, label="training")
+        plt.plot(validation_loss_list, label="validation")
+        plt.savefig(f"../data/images/training_loss_in_{num_epochs_param}_with_parameters: "
+                    f"{str(dropout_rate_param).replace('.', '_')};"
+                    f"{sequence_length_param};"
+                    f"{num_hidden_units_param}")
+        plt.close()
         if len(nse_list) == 0:
             median_nse = -1
         else:
