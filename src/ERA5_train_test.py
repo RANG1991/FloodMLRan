@@ -286,7 +286,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [1]
+    num_epochs = [50]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
