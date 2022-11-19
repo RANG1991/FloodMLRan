@@ -305,8 +305,8 @@ def choose_hyper_parameters_validation(static_attributes_names,
             for i in
             range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
         nse_list = []
-        training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, 1))
-        validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, 1))
+        training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
+        validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
         for i in range(len(split_stations_list)):
             train_stations_list = list(
                 itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))

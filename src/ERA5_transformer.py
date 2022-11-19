@@ -30,6 +30,7 @@ class ERA5_Transformer(nn.Module):
         )
         self.out = nn.Linear(dim_model, num_tokens)
 
+    @staticmethod
     def get_tgt_mask(self, size) -> torch.tensor:
         # Generates a square matrix where each row allows one word more to be seen
         mask = torch.tril(torch.ones(size, size) == 1)  # Lower triangular matrix
@@ -46,7 +47,8 @@ class ERA5_Transformer(nn.Module):
 
         return mask
 
-    def create_pad_mask(self, matrix: torch.tensor, pad_token: int) -> torch.tensor:
+    @staticmethod
+    def create_pad_mask(matrix: torch.tensor, pad_token: int) -> torch.tensor:
         # If matrix = [1,2,3,0,0,0] where pad_token=0, the result mask is
         # [False, False, False, True, True, True]
         return matrix == pad_token
