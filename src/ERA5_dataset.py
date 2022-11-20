@@ -9,6 +9,7 @@ from os.path import isfile, join
 import re
 from datetime import datetime
 import matplotlib
+
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 import multiprocessing
@@ -171,7 +172,6 @@ class Dataset_ERA5(Dataset):
             dict_boxplots_data[ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]] = self.X_data[:, i]
         Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data, plot_title=f"{self.stage}")
 
-
     @staticmethod
     def create_boxplot_on_data(dict_boxplots_data, plot_title=""):
         fig, ax = plt.subplots()
@@ -192,7 +192,6 @@ class Dataset_ERA5(Dataset):
         plt.title(f"Box plots data - {plot_title}", fontsize=8)
         plt.savefig(f"../data/images/data_box_plots_{plot_title}" +
                     f"_{curr_datetime_str}" + ".png")
-
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length

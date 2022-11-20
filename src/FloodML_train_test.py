@@ -3,6 +3,7 @@ import sys
 from torch.utils.data import DataLoader
 from ERA5_dataset import Dataset_ERA5
 from ERA5_dataset import ATTRIBUTES_TO_TEXT_DESC
+from CAMELS_dataset import Dataset_CAMELS
 from tqdm import tqdm
 from FloodML_lstm import ERA5_LSTM
 import torch.optim
@@ -167,52 +168,49 @@ def read_basins_csv_files(folder_name, num_basins):
 
 
 def prepare_training_data_and_test_data(sequence_length,
-                                        all_station_files_train,
-                                        all_station_files_test,
+                                        all_station_ids_train,
+                                        all_station_ids_test,
                                         static_attributes_names,
                                         dynamic_attributes_names,
                                         discharge_str,
-                                        dynamic_data_folder_train,
-                                        dynamic_data_folder_test,
-                                        use_Caravan_dataset=True,
+                                        dynamic_data_folder,
+                                        static_data_folder,
+                                        discharge_data_folder,
                                         create_boxplots=False):
-    training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_train,
-                                 static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
-                                 static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
-                                                             "/attributes_hydroatlas_us.csv",
-                                 dynamic_attributes_names=dynamic_attributes_names,
-                                 discharge_str=discharge_str,
-                                 static_attributes_names=static_attributes_names,
-                                 train_start_date='01/10/1999',
-                                 train_end_date='30/09/2008',
-                                 validation_start_date='01/10/1989',
-                                 validation_end_date='30/09/1999',
-                                 test_start_date='01/10/1989',
-                                 test_end_date='30/09/1999',
-                                 stage="train",
-                                 all_station_files=all_station_files_train,
-                                 sequence_length=sequence_length,
-                                 use_Caravan_dataset=use_Caravan_dataset)
-    test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder_test,
-                             static_data_file_caravan="../data/ERA5/Caravan/attributes/attributes_caravan_us.csv",
-                             static_data_file_hydroatlas="../data/ERA5/Caravan/attributes"
-                                                         "/attributes_hydroatlas_us.csv",
-                             dynamic_attributes_names=dynamic_attributes_names,
-                             discharge_str=discharge_str,
-                             static_attributes_names=static_attributes_names,
-                             train_start_date='01/10/1999',
-                             train_end_date='30/09/2008',
-                             validation_start_date='01/10/1989',
-                             validation_end_date='30/09/1999',
-                             test_start_date='01/10/1989',
-                             test_end_date='30/09/1999',
-                             stage="test",
-                             all_station_files=all_station_files_test,
-                             x_means=training_data.get_x_mean(),
-                             x_stds=training_data.get_x_std(),
-                             y_mean=training_data.get_y_mean(),
-                             y_std=training_data.get_y_std(),
-                             sequence_length=sequence_length)
+    training_data = Dataset_CAMELS(dynamic_data_folder=dynamic_data_folder,
+                                   static_data_folder=static_data_folder,
+                                   discharge_data_folder=discharge_data_folder,
+                                   dynamic_attributes_names=dynamic_attributes_names,
+                                   static_attributes_names=static_attributes_names,
+                                   train_start_date='01/10/1999',
+                                   train_end_date='30/09/2008',
+                                   validation_start_date='01/10/1989',
+                                   validation_end_date='30/09/1999',
+                                   test_start_date='01/10/1989',
+                                   test_end_date='30/09/1999',
+                                   stage="train",
+                                   all_stations_ids=all_station_ids_train,
+                                   sequence_length=sequence_length,
+                                   discharge_str=discharge_str)
+    test_data = Dataset_CAMELS(dynamic_data_folder=dynamic_data_folder,
+                               static_data_folder=static_data_folder,
+                               discharge_data_folder=discharge_data_folder,
+                               dynamic_attributes_names=dynamic_attributes_names,
+                               static_attributes_names=static_attributes_names,
+                               train_start_date='01/10/1999',
+                               train_end_date='30/09/2008',
+                               validation_start_date='01/10/1989',
+                               validation_end_date='30/09/1999',
+                               test_start_date='01/10/1989',
+                               test_end_date='30/09/1999',
+                               stage="test",
+                               all_stations_ids=all_station_ids_test,
+                               sequence_length=sequence_length,
+                               discharge_str=discharge_str,
+                               x_means=training_data.get_x_mean(),
+                               x_stds=training_data.get_x_std(),
+                               y_mean=training_data.get_y_mean(),
+                               y_std=training_data.get_y_std())
     if create_boxplots:
         training_data.create_boxplot_of_entire_dataset()
         test_data.create_boxplot_of_entire_dataset()
@@ -234,7 +232,6 @@ def run_training_and_test(learning_rate,
                           test_data,
                           dropout,
                           calc_nse_interval=1):
-    use_Caravan_dataset = True
     static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
                                "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
                                "p_mean", "pet_mean",
@@ -242,12 +239,9 @@ def run_training_and_test(learning_rate,
                                "high_prec_freq",
                                "high_prec_dur",
                                "low_prec_freq", "low_prec_dur"]
-    if use_Caravan_dataset:
-        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
-                                    "temperature_2m_max", "potential_evaporation_sum",
-                                    "surface_net_solar_radiation_mean"]
-    else:
-        dynamic_attributes_names = ["precip"]
+    dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
+                                "temperature_2m_max", "potential_evaporation_sum",
+                                "surface_net_solar_radiation_mean"]
     train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -280,8 +274,14 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_attributes_names,
                                        discharge_str,
                                        dynamic_data_folder_train,
-                                       dynamic_data_folder_test,
-                                       use_Caravan_dataset):
+                                       static_data_folder,
+                                       discharge_data_folder):
+    all_stations_for_validation = open("data/CAMELS_US/train_basins.txt", "r").readlines()
+    shuffle(all_stations_for_validation)
+    split_stations_list = [
+        all_stations_for_validation[i:i + len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION]
+        for i in
+        range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4, 0.0, 0.25, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
@@ -297,13 +297,6 @@ def choose_hyper_parameters_validation(static_attributes_names,
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     for learning_rate_param, dropout_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
-        all_stations_for_validation = [f for f in listdir(dynamic_data_folder_train) if
-                                       isfile(join(dynamic_data_folder_train, f))]
-        shuffle(all_stations_for_validation)
-        split_stations_list = [
-            all_stations_for_validation[i:i + len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION]
-            for i in
-            range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
         nse_list = []
         training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
         validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
@@ -317,8 +310,9 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                                                            dynamic_attributes_names,
                                                                            discharge_str,
                                                                            dynamic_data_folder_train,
-                                                                           dynamic_data_folder_train,
-                                                                           use_Caravan_dataset)
+                                                                           static_data_folder,
+                                                                           discharge_data_folder)
+
             training_data.set_sequence_length(sequence_length_param)
             test_data.set_sequence_length(sequence_length_param)
             nse_list_single_pass, training_loss_list_single_pass, validation_loss_list_single_pass = \
@@ -374,33 +368,25 @@ def choose_hyper_parameters_validation(static_attributes_names,
 
 
 def main():
-    use_Caravan_dataset = True
-    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
-                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
-                               "p_mean", "pet_mean",
-                               "aridity", "frac_snow",
-                               "high_prec_freq",
-                               "high_prec_dur",
-                               "low_prec_freq", "low_prec_dur"]
-    if use_Caravan_dataset:
-        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
-                                    "temperature_2m_max", "potential_evaporation_sum",
-                                    "surface_net_solar_radiation_mean"]
-        discharge_str = "streamflow"
-        dynamic_data_folder_train = "../data/ERA5/Caravan/timeseries/csv/us/train/"
-        dynamic_data_folder_test = "../data/ERA5/Caravan/timeseries/csv/us/test/"
-    else:
-        dynamic_attributes_names = ["precip"]
-        discharge_str = "flow"
-        dynamic_data_folder_train = "../data/ERA5/all_data_daily/train/"
-        dynamic_data_folder_test = "../data/ERA5/all_data_daily/test/"
+    static_attributes_names = [- "elev_mean", "slope_mean", "area_gages2", "frac_forest", "lai_max", "lai_diff",
+                               "gvf_max", "gvf_diff", "soil_depth_pelletier", "soil_depth_statsgo", "soil_porosity",
+                               "soil_conductivity", "max_water_content", "sand_frac", "silt_frac", "clay_frac",
+                               "carbonate_rocks_frac", "geol_permeability", "p_mean", "pet_mean", "aridity",
+                               "frac_snow", "high_prec_freq", "high_prec_dur", "low_prec_freq", "low_prec_dur"]
 
+    dynamic_attributes_names = ["prcp(mm/day)", "srad(W/m2)", "tmax(C)", "tmin(C)", "vp(Pa)"]
+
+    discharge_str = "QObs(mm/d)"
+
+    dynamic_data_folder_train = "../data/CAMELS_US/basin_mean_forcing/maurer"
+    static_data_folder = "../data/CAMELS_US/camels_attributes_v2.0"
+    discharge_data_folder = "../data/CAMELS_US/usgs_streamflow"
     choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_attributes_names,
                                        discharge_str,
                                        dynamic_data_folder_train,
-                                       dynamic_data_folder_test,
-                                       use_Caravan_dataset)
+                                       static_data_folder,
+                                       discharge_data_folder)
 
 
 if __name__ == "__main__":
