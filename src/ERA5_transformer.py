@@ -31,7 +31,7 @@ class ERA5_Transformer(nn.Module):
         self.out = nn.Linear(dim_model, num_tokens)
 
     @staticmethod
-    def get_tgt_mask(self, size) -> torch.tensor:
+    def get_tgt_mask(size) -> torch.tensor:
         # Generates a square matrix where each row allows one word more to be seen
         mask = torch.tril(torch.ones(size, size) == 1)  # Lower triangular matrix
         mask = mask.float()
@@ -54,9 +54,6 @@ class ERA5_Transformer(nn.Module):
         return matrix == pad_token
 
     def forward(self, src, tgt, tgt_mask=None, src_pad_mask=None, tgt_pad_mask=None):
-        # Src size must be (batch_size, src sequence length)
-        # Tgt size must be (batch_size, tgt sequence length)
-
         # Embedding + positional encoding - Out size = (batch_size, sequence length, dim_model)
         src = self.embedding(src) * math.sqrt(self.dim_model)
         tgt = self.embedding(tgt) * math.sqrt(self.dim_model)

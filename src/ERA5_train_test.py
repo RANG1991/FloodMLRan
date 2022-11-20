@@ -283,10 +283,10 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_data_folder_test,
                                        use_Caravan_dataset):
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
-    dropout_rates = [0.0, 0.25, 0.4, 0.5]
+    dropout_rates = [0.4, 0.0, 0.25, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [50]
+    num_epochs = [10]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
