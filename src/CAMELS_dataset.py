@@ -32,8 +32,8 @@ class Dataset_CAMELS(Dataset):
                  all_stations_ids,
                  static_attributes_names=[],
                  sequence_length=270,
-                 x_means=None,
-                 x_stds=None,
+                 x_mins=None,
+                 x_maxs=None,
                  y_mean=None,
                  y_std=None):
         self.sequence_length = sequence_length
@@ -51,20 +51,22 @@ class Dataset_CAMELS(Dataset):
         self.test_end_date = test_end_date
         self.stage = stage
         self.df_attr, self.list_stations_static = self.read_static_attributes()
-        list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_and_discharge_data_files(all_stations_ids=
-                                                                                                          all_stations_ids)
+        self.dict_basin_records_count = {}
+        list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_and_discharge_data_files(
+            all_stations_ids=
+            all_stations_ids)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
         self.y_std = y_std if y_std is not None else self.y_data.std()
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
-        self.x_mean = x_means if x_means is not None else self.X_data.mean(axis=0)
-        self.x_std = x_stds if x_stds is not None else self.X_data.std(axis=0)
-        self.X_data = (self.X_data - self.x_mean) / self.x_std
+        self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
+        self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
+        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + 10**(-6))
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 
     def __len__(self):
-        return self.calculate_dataset_length(list(set(self.list_stations_repeated)))
+        return self.calculate_dataset_length()
 
     def __getitem__(self, index) -> T_co:
         X_data_tensor = torch.tensor(self.X_data[index: index + self.sequence_length]).to(torch.float32)
@@ -93,9 +95,10 @@ class Dataset_CAMELS(Dataset):
         X_data_list = []
         y_data_list = []
         list_returned = []
-        for station_id in all_stations_ids[:1]:
+        for station_id in all_stations_ids:
             list_returned.append(self.read_single_station_dynamic_and_discharge_file(station_id))
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
+            self.dict_basin_records_count[station_id_repeated[0]] = len(station_id_repeated)
             list_stations_repeated.extend(station_id_repeated)
             if X_data_curr.size > 0:
                 X_data_list.append(X_data_curr)
@@ -165,24 +168,21 @@ class Dataset_CAMELS(Dataset):
             (df_dynamic_data.index >= start_date) & (df_dynamic_data.index <= end_date)]
         return df_dynamic_data
 
-    def calculate_dataset_length(self, station_ids):
+    def calculate_dataset_length(self):
         count = 0
-        for station_id in station_ids:
-            station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
-            df_dynamic_data = pd.read_csv(station_data_file)
-            df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
-            count += (len(df_dynamic_data.index) - self.sequence_length)
+        for key in self.dict_basin_records_count.keys():
+            count += (self.dict_basin_records_count[key] - self.sequence_length)
         return count
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
-        self.calculate_dataset_length(list(set(self.list_stations_repeated)))
+        self.calculate_dataset_length()
 
-    def get_x_mean(self):
-        return self.x_mean
+    def get_x_mins(self):
+        return self.x_min
 
-    def get_x_std(self):
-        return self.x_std
+    def get_x_maxs(self):
+        return self.x_max
 
     def get_y_std(self):
         return self.y_std

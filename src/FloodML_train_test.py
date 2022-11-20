@@ -207,8 +207,8 @@ def prepare_training_data_and_test_data(sequence_length,
                                all_stations_ids=all_station_ids_test,
                                sequence_length=sequence_length,
                                discharge_str=discharge_str,
-                               x_means=training_data.get_x_mean(),
-                               x_stds=training_data.get_x_std(),
+                               x_mins=training_data.get_x_mins(),
+                               x_maxs=training_data.get_x_maxs(),
                                y_mean=training_data.get_y_mean(),
                                y_std=training_data.get_y_std())
     if create_boxplots:
