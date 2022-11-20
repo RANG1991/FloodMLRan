@@ -231,17 +231,9 @@ def run_training_and_test(learning_rate,
                           training_data,
                           test_data,
                           dropout,
+                          static_attributes_names,
+                          dynamic_attributes_names,
                           calc_nse_interval=1):
-    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
-                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
-                               "p_mean", "pet_mean",
-                               "aridity", "frac_snow",
-                               "high_prec_freq",
-                               "high_prec_dur",
-                               "low_prec_freq", "low_prec_dur"]
-    dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
-                                "temperature_2m_max", "potential_evaporation_sum",
-                                "surface_net_solar_radiation_mean"]
     train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -317,7 +309,8 @@ def choose_hyper_parameters_validation(static_attributes_names,
             test_data.set_sequence_length(sequence_length_param)
             nse_list_single_pass, training_loss_list_single_pass, validation_loss_list_single_pass = \
                 run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
-                                      num_epochs_param, training_data, test_data, dropout_rate_param)
+                                      num_epochs_param, training_data, test_data, dropout_rate_param,
+                                      static_attributes_names, dynamic_attributes_names)
             nse_list.extend(nse_list_single_pass)
             training_loss_list[i] = training_loss_list_single_pass
             validation_loss_list[i] = validation_loss_list_single_pass
@@ -374,9 +367,9 @@ def main():
                                "carbonate_rocks_frac", "geol_permeability", "p_mean", "pet_mean", "aridity",
                                "frac_snow", "high_prec_freq", "high_prec_dur", "low_prec_freq", "low_prec_dur"]
 
-    dynamic_attributes_names = ["prcp(mm/day)", "srad(W/m2)", "tmax(C)", "tmin(C)", "vp(Pa)"]
+    dynamic_attributes_names = ["prcp(mm/day)", "srad(w/m2)", "tmax(c)", "tmin(c)", "vp(pa)"]
 
-    discharge_str = "QObs(mm/d)"
+    discharge_str = "qobs"
 
     dynamic_data_folder_train = "../data/CAMELS_US/basin_mean_forcing/maurer"
     static_data_folder = "../data/CAMELS_US/camels_attributes_v2.0"
