@@ -276,7 +276,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_data_folder_train,
                                        static_data_folder,
                                        discharge_data_folder):
-    all_stations_for_validation = open("data/CAMELS_US/train_basins.txt", "r").readlines()
+    all_stations_for_validation = open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
     shuffle(all_stations_for_validation)
     split_stations_list = [
         all_stations_for_validation[i:i + len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION]
@@ -368,7 +368,7 @@ def choose_hyper_parameters_validation(static_attributes_names,
 
 
 def main():
-    static_attributes_names = [- "elev_mean", "slope_mean", "area_gages2", "frac_forest", "lai_max", "lai_diff",
+    static_attributes_names = ["elev_mean", "slope_mean", "area_gages2", "frac_forest", "lai_max", "lai_diff",
                                "gvf_max", "gvf_diff", "soil_depth_pelletier", "soil_depth_statsgo", "soil_porosity",
                                "soil_conductivity", "max_water_content", "sand_frac", "silt_frac", "clay_frac",
                                "carbonate_rocks_frac", "geol_permeability", "p_mean", "pet_mean", "aridity",

@@ -85,7 +85,7 @@ class Dataset_CAMELS(Dataset):
         # convert huc column to double-digit strings
         df['huc'] = df['huc_02'].apply(lambda x: str(x).zfill(2))
         df = df.drop('huc_02', axis=1)
-        return df, df["gauge_id"].to_list()
+        return df, df.index.to_list()
 
     def read_all_dynamic_and_discharge_data_files(self, all_stations_ids):
         list_stations_repeated = []
