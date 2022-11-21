@@ -5,13 +5,14 @@ from ERA5_dataset import Dataset_ERA5
 from ERA5_dataset import ATTRIBUTES_TO_TEXT_DESC
 from CAMELS_dataset import Dataset_CAMELS
 from tqdm import tqdm
-from FloodML_lstm import ERA5_LSTM
+from FloodML_lstm import FLOODML_LSTM
 import torch.optim
 import torch.nn as nn
 from os import listdir
 from os.path import isfile, join
 import pandas as pd
 import matplotlib
+import math
 
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
@@ -237,9 +238,9 @@ def run_training_and_test(learning_rate,
     train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = ERA5_LSTM(hidden_dim=num_hidden_units,
-                      input_dim=len(static_attributes_names) + len(dynamic_attributes_names),
-                      dropout=dropout).to(device)
+    model = FLOODML_LSTM(hidden_dim=num_hidden_units,
+                         input_dim=len(static_attributes_names) + len(dynamic_attributes_names),
+                         dropout=dropout).to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list_training = []
@@ -271,9 +272,9 @@ def choose_hyper_parameters_validation(static_attributes_names,
     all_stations_for_validation = open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
     shuffle(all_stations_for_validation)
     split_stations_list = [
-        all_stations_for_validation[i:i + len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION]
+        all_stations_for_validation[i:(i + math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
         for i in
-        range(0, len(all_stations_for_validation), len(all_stations_for_validation) // K_VALUE_CROSS_VALIDATION)]
+        range(0, len(all_stations_for_validation), math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4, 0.0, 0.25, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]

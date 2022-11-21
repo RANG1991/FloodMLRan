@@ -1,10 +1,10 @@
 import torch
 
 
-class ERA5_LSTM(torch.nn.Module):
+class FLOODML_LSTM(torch.nn.Module):
 
     def __init__(self, input_dim, hidden_dim, dropout):
-        super(ERA5_LSTM, self).__init__()
+        super(FLOODML_LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.dropout = dropout
