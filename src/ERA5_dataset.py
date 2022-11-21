@@ -41,9 +41,12 @@ ATTRIBUTES_TO_TEXT_DESC = {"p_mean": "Mean daily precipitation",
 
 class Dataset_ERA5(Dataset):
 
-    def __init__(self, dynamic_data_folder, static_data_file_caravan,
+    def __init__(self,
+                 dynamic_data_folder,
+                 static_data_file_caravan,
                  static_data_file_hydroatlas,
-                 dynamic_attributes_names, discharge_str,
+                 dynamic_attributes_names,
+                 discharge_str,
                  train_start_date,
                  train_end_date,
                  validation_start_date,
@@ -51,11 +54,13 @@ class Dataset_ERA5(Dataset):
                  test_start_date,
                  test_end_date,
                  stage,
-                 all_station_files,
+                 all_stations_ids,
                  static_attributes_names=[],
                  sequence_length=270,
-                 x_means=None, x_stds=None,
-                 y_mean=None, y_std=None,
+                 x_mins=None,
+                 x_maxs=None,
+                 y_mean=None,
+                 y_std=None,
                  use_Caravan_dataset=True):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
@@ -74,20 +79,21 @@ class Dataset_ERA5(Dataset):
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
-        list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_data_files(all_station_files=
-                                                                                            all_station_files)
+        self.dict_basin_records_count = {}
+        list_stations_repeated, X_data_list, y_data_list = self.read_all_dynamic_data_files(all_stations_ids=
+                                                                                            all_stations_ids)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
         self.y_std = y_std if y_std is not None else self.y_data.std()
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
-        self.x_mean = x_means if x_means is not None else self.X_data.mean(axis=0)
-        self.x_std = x_stds if x_stds is not None else self.X_data.std(axis=0)
-        self.X_data = (self.X_data - self.x_mean) / self.x_std
+        self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
+        self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
+        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + 10**(-6))
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 
     def __len__(self):
-        return self.calculate_dataset_length(list(set(self.list_stations_repeated)))
+        return self.calculate_dataset_length()
 
     def __getitem__(self, index) -> T_co:
         X_data_tensor = torch.tensor(self.X_data[index: index + self.sequence_length]).to(torch.float32)
@@ -107,21 +113,21 @@ class Dataset_ERA5(Dataset):
         df_attr[self.list_static_attributes_names] = df_attr.drop(columns=['gauge_id']).to_numpy()
         return df_attr, df_attr['gauge_id'].values.tolist()
 
-    def read_all_dynamic_data_files(self, all_station_files):
+    def read_all_dynamic_data_files(self, all_stations_ids):
         list_stations_repeated = []
         X_data_list = []
         y_data_list = []
         with Pool(multiprocessing.cpu_count() - 1) as p:
-            list_returned = p.map(self.read_single_station_file, all_station_files)
+            list_returned = p.map(self.read_single_station_file, all_stations_ids)
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
+            self.dict_basin_records_count[station_id_repeated[0]] = len(station_id_repeated)
             list_stations_repeated.extend(station_id_repeated)
             if X_data_curr.size > 0:
                 X_data_list.append(X_data_curr)
                 y_data_list.append(y_data_curr)
         return list_stations_repeated, X_data_list, y_data_list
 
-    def read_single_station_file(self, station_file_name):
-        station_id = re.search(f"{self.prefix_dynamic_data_file}(\\d+)\\.csv", station_file_name).group(1)
+    def read_single_station_file(self, station_id):
         if station_id not in self.list_stations_static:
             return np.array([]), np.array([]), np.array([])
         station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
@@ -156,13 +162,10 @@ class Dataset_ERA5(Dataset):
             (df_dynamic_data["date"] >= start_date) & (df_dynamic_data["date"] <= end_date)]
         return df_dynamic_data
 
-    def calculate_dataset_length(self, station_ids):
+    def calculate_dataset_length(self):
         count = 0
-        for station_id in station_ids:
-            station_data_file = Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
-            df_dynamic_data = pd.read_csv(station_data_file)
-            df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
-            count += (len(df_dynamic_data.index) - self.sequence_length)
+        for key in self.dict_basin_records_count.keys():
+            count += (self.dict_basin_records_count[key] - self.sequence_length)
         return count
 
     def create_boxplot_of_entire_dataset(self):
@@ -195,13 +198,13 @@ class Dataset_ERA5(Dataset):
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
-        self.calculate_dataset_length(list(set(self.list_stations_repeated)))
+        self.calculate_dataset_length()
 
-    def get_x_mean(self):
-        return self.x_mean
+    def get_x_mins(self):
+        return self.x_min
 
-    def get_x_std(self):
-        return self.x_std
+    def get_x_maxs(self):
+        return self.x_max
 
     def get_y_std(self):
         return self.y_std
