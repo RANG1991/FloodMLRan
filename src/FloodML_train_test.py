@@ -178,40 +178,38 @@ def prepare_training_data_and_test_data(sequence_length,
                                         static_data_folder,
                                         discharge_data_folder,
                                         create_boxplots=False):
-    training_data = Dataset_CAMELS(dynamic_data_folder=dynamic_data_folder,
-                                   static_data_folder=static_data_folder,
-                                   discharge_data_folder=discharge_data_folder,
-                                   dynamic_attributes_names=dynamic_attributes_names,
-                                   static_attributes_names=static_attributes_names,
-                                   train_start_date='01/10/1999',
-                                   train_end_date='30/09/2008',
-                                   validation_start_date='01/10/1989',
-                                   validation_end_date='30/09/1999',
-                                   test_start_date='01/10/1989',
-                                   test_end_date='30/09/1999',
-                                   stage="train",
-                                   all_stations_ids=all_station_ids_train,
-                                   sequence_length=sequence_length,
-                                   discharge_str=discharge_str)
-    test_data = Dataset_CAMELS(dynamic_data_folder=dynamic_data_folder,
-                               static_data_folder=static_data_folder,
-                               discharge_data_folder=discharge_data_folder,
-                               dynamic_attributes_names=dynamic_attributes_names,
-                               static_attributes_names=static_attributes_names,
-                               train_start_date='01/10/1999',
-                               train_end_date='30/09/2008',
-                               validation_start_date='01/10/1989',
-                               validation_end_date='30/09/1999',
-                               test_start_date='01/10/1989',
-                               test_end_date='30/09/1999',
-                               stage="test",
-                               all_stations_ids=all_station_ids_test,
-                               sequence_length=sequence_length,
-                               discharge_str=discharge_str,
-                               x_mins=training_data.get_x_mins(),
-                               x_maxs=training_data.get_x_maxs(),
-                               y_mean=training_data.get_y_mean(),
-                               y_std=training_data.get_y_std())
+    training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder,
+                                 static_data_folder=static_data_folder,
+                                 dynamic_attributes_names=dynamic_attributes_names,
+                                 static_attributes_names=static_attributes_names,
+                                 train_start_date='01/10/1999',
+                                 train_end_date='30/09/2008',
+                                 validation_start_date='01/10/1989',
+                                 validation_end_date='30/09/1999',
+                                 test_start_date='01/10/1989',
+                                 test_end_date='30/09/1999',
+                                 stage="train",
+                                 all_stations_ids=all_station_ids_train,
+                                 sequence_length=sequence_length,
+                                 discharge_str=discharge_str)
+    test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder,
+                             static_data_folder=static_data_folder,
+                             dynamic_attributes_names=dynamic_attributes_names,
+                             static_attributes_names=static_attributes_names,
+                             train_start_date='01/10/1999',
+                             train_end_date='30/09/2008',
+                             validation_start_date='01/10/1989',
+                             validation_end_date='30/09/1999',
+                             test_start_date='01/10/1989',
+                             test_end_date='30/09/1999',
+                             stage="test",
+                             all_stations_ids=all_station_ids_test,
+                             sequence_length=sequence_length,
+                             discharge_str=discharge_str,
+                             x_mins=training_data.get_x_mins(),
+                             x_maxs=training_data.get_x_maxs(),
+                             y_mean=training_data.get_y_mean(),
+                             y_std=training_data.get_y_std())
     if create_boxplots:
         training_data.create_boxplot_of_entire_dataset()
         test_data.create_boxplot_of_entire_dataset()
@@ -274,7 +272,8 @@ def choose_hyper_parameters_validation(static_attributes_names,
     split_stations_list = [
         all_stations_for_validation[i:(i + math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
         for i in
-        range(0, len(all_stations_for_validation), math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
+        range(0, len(all_stations_for_validation),
+              math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4, 0.0, 0.25, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]

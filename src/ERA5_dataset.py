@@ -43,8 +43,7 @@ class Dataset_ERA5(Dataset):
 
     def __init__(self,
                  dynamic_data_folder,
-                 static_data_file_caravan,
-                 static_data_file_hydroatlas,
+                 static_data_folder,
                  dynamic_attributes_names,
                  discharge_str,
                  train_start_date,
@@ -64,8 +63,7 @@ class Dataset_ERA5(Dataset):
                  use_Caravan_dataset=True):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
-        self.static_data_file_caravan = static_data_file_caravan
-        self.static_data_file_hydroatlas = static_data_file_hydroatlas
+        self.static_data_folder = static_data_folder
         self.list_static_attributes_names = static_attributes_names
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
@@ -102,8 +100,10 @@ class Dataset_ERA5(Dataset):
         return station_id, X_data_tensor, y_data_tensor
 
     def read_static_attributes(self):
-        df_attr_caravan = pd.read_csv(self.static_data_file_caravan, dtype={'gauge_id': str})
-        df_attr_hydroatlas = pd.read_csv(self.static_data_file_hydroatlas, dtype={'gauge_id': str})
+        df_attr_caravan = pd.read_csv(Path(self.static_data_folder) / "attributes_hydroatlas_us.csv",
+                                      dtype={'gauge_id': str})
+        df_attr_hydroatlas = pd.read_csv(Path(self.static_data_folder) / "attributes_caravan_us.csv",
+                                         dtype={'gauge_id': str})
         df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")
         df_attr['gauge_id'] = df_attr['gauge_id'].apply(lambda x: str(x).replace("us_", "")).values.tolist()
         df_attr = df_attr.dropna()
