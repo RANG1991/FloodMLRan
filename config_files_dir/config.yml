@@ -26,7 +26,7 @@ device: cuda:0
 allow_subsequent_nan_losses: 10
 
 # specify after how many epochs to perform validation
-validate_every: 3
+validate_every: 1
 
 # specify how many random basins to use for validation
 validate_n_random_basins: 10
@@ -84,7 +84,7 @@ learning_rate:
 batch_size: 256
 
 # Number of training epochs
-epochs: 50
+epochs: 10
 
 # If a value, clips the gradients during training to that norm.
 clip_gradient_norm: 2

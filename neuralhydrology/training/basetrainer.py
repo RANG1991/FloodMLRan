@@ -24,6 +24,8 @@ from neuralhydrology.training.logger import Logger
 from neuralhydrology.utils.config import Config
 from neuralhydrology.utils.logging_utils import setup_logging
 
+import matplotlib.pyplot as plt
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -198,6 +200,8 @@ class BaseTrainer(object):
         Train the model for the number of epochs specified in the run configuration, and perform validation after every
         ``validate_every`` epochs. Model and optimizer state are saved after every ``save_weights_every`` epochs.
         """
+        training_loss_list = []
+        validation_loss_list = []
         for epoch in range(self._epoch + 1, self._epoch + self.cfg.epochs + 1):
             if epoch in self.cfg.learning_rate.keys():
                 LOGGER.info(f"Setting learning rate to {self.cfg.learning_rate[epoch]}")
@@ -207,7 +211,7 @@ class BaseTrainer(object):
             self._train_epoch(epoch=epoch)
             avg_loss = self.experiment_logger.summarise()
             LOGGER.info(f"Epoch {epoch} average loss: {avg_loss}")
-
+            training_loss_list.append(avg_loss)
             if epoch % self.cfg.save_weights_every == 0:
                 self._save_weights_and_optimizer(epoch)
 
@@ -223,11 +227,14 @@ class BaseTrainer(object):
                                                                                        results[basin_id]["1D"]["NSE"]))
                 valid_metrics = self.experiment_logger.summarise()
                 print_msg = f"Epoch {epoch} average validation loss: {valid_metrics['avg_loss']:.5f}"
+                validation_loss_list.append(valid_metrics["avg_loss"])
                 if self.cfg.metrics:
                     print_msg += f" -- Median validation metrics: "
                     print_msg += ", ".join(f"{k}: {v:.5f}" for k, v in valid_metrics.items() if k != 'avg_loss')
                     LOGGER.info(print_msg)
-
+        plt.plot(training_loss_list, label="training")
+        plt.plot(validation_loss_list, label="validation")
+        plt.show()
         # make sure to close tensorboard to avoid losing the last epoch
         if self.cfg.log_tensorboard:
             self.experiment_logger.stop_tb()

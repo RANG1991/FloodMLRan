@@ -2,6 +2,7 @@
 import argparse
 import sys
 from pathlib import Path
+import sys
 
 # make sure code directory is in path, even if the package is not installed using the setup.py
 sys.path.append(str(Path(__file__).parent.parent))
@@ -89,7 +90,7 @@ def continue_run(run_dir: Path, config_file: Path = None, gpu: int = None):
 
     """
     # load config from base run and overwrite all elements with an optional new config
-    base_config = Config(run_dir / "config_local_cpu.yml")
+    base_config = Config(run_dir / "config.yml")
 
     if config_file is not None:
         base_config.update_config(config_file)
@@ -169,4 +170,5 @@ def eval_run(run_dir: Path, period: str, epoch: int = None, gpu: int = None):
 
 
 if __name__ == "__main__":
+    sys.argv = ["", "train", "--config-file", "/sci/labs/efratmorin/ranga/FloodMLRan/config_files_dir/config.yml"]
     _main()
