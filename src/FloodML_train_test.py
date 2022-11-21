@@ -361,23 +361,41 @@ def choose_hyper_parameters_validation(static_attributes_names,
 
 
 def main():
-    static_attributes_names = ["elev_mean", "slope_mean", "area_gages2", "frac_forest", "lai_max", "lai_diff",
-                               "gvf_max", "gvf_diff", "soil_depth_pelletier", "soil_depth_statsgo", "soil_porosity",
-                               "soil_conductivity", "max_water_content", "sand_frac", "silt_frac", "clay_frac",
-                               "carbonate_rocks_frac", "geol_permeability", "p_mean", "pet_mean", "aridity",
-                               "frac_snow", "high_prec_freq", "high_prec_dur", "low_prec_freq", "low_prec_dur"]
+    # static_attributes_names = ["elev_mean", "slope_mean", "area_gages2", "frac_forest", "lai_max", "lai_diff",
+    #                            "gvf_max", "gvf_diff", "soil_depth_pelletier", "soil_depth_statsgo", "soil_porosity",
+    #                            "soil_conductivity", "max_water_content", "sand_frac", "silt_frac", "clay_frac",
+    #                            "carbonate_rocks_frac", "geol_permeability", "p_mean", "pet_mean", "aridity",
+    #                            "frac_snow", "high_prec_freq", "high_prec_dur", "low_prec_freq", "low_prec_dur"]
+    #
+    # dynamic_attributes_names = ["prcp(mm/day)", "srad(w/m2)", "tmax(c)", "tmin(c)", "vp(pa)"]
+    #
+    # discharge_str = "qobs"
 
-    dynamic_attributes_names = ["prcp(mm/day)", "srad(w/m2)", "tmax(c)", "tmin(c)", "vp(pa)"]
+    use_Caravan_dataset = True
+    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
+                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
+                               "p_mean", "pet_mean",
+                               "aridity", "frac_snow",
+                               "high_prec_freq",
+                               "high_prec_dur",
+                               "low_prec_freq", "low_prec_dur"]
+    if use_Caravan_dataset:
+        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
+                                    "temperature_2m_max", "potential_evaporation_sum",
+                                    "surface_net_solar_radiation_mean"]
+        discharge_str = "streamflow"
+        dynamic_data_folder = "../data/ERA5/Caravan/timeseries/csv/us/"
+    else:
+        dynamic_attributes_names = ["precip"]
+        discharge_str = "flow"
+        dynamic_data_folder = "../data/ERA5/ERA_5_all_data"
 
-    discharge_str = "qobs"
-
-    dynamic_data_folder_train = "../data/CAMELS_US/basin_mean_forcing/maurer"
-    static_data_folder = "../data/CAMELS_US/camels_attributes_v2.0"
-    discharge_data_folder = "../data/CAMELS_US/usgs_streamflow"
+    static_data_folder = "../data/ERA5/Caravan/attributes"
+    discharge_data_folder = dynamic_data_folder
     choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_attributes_names,
                                        discharge_str,
-                                       dynamic_data_folder_train,
+                                       dynamic_data_folder,
                                        static_data_folder,
                                        discharge_data_folder)
 

@@ -120,11 +120,12 @@ class Dataset_ERA5(Dataset):
         with Pool(multiprocessing.cpu_count() - 1) as p:
             list_returned = p.map(self.read_single_station_file, all_stations_ids)
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
-            self.dict_basin_records_count[station_id_repeated[0]] = len(station_id_repeated)
-            list_stations_repeated.extend(station_id_repeated)
-            if X_data_curr.size > 0:
-                X_data_list.append(X_data_curr)
-                y_data_list.append(y_data_curr)
+            if len(station_id_repeated) > 0:
+                self.dict_basin_records_count[station_id_repeated[0]] = len(station_id_repeated)
+                list_stations_repeated.extend(station_id_repeated)
+                if X_data_curr.size > 0:
+                    X_data_list.append(X_data_curr)
+                    y_data_list.append(y_data_curr)
         return list_stations_repeated, X_data_list, y_data_list
 
     def read_single_station_file(self, station_id):
