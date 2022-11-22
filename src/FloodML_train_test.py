@@ -235,9 +235,10 @@ def run_training_and_test(learning_rate,
     train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = FLOODML_LSTM(hidden_dim=num_hidden_units,
-                         input_dim=len(static_attributes_names) + len(dynamic_attributes_names),
-                         dropout=dropout).to(device)
+    model = FloodML_transformer.ERA5_Transformer(input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+                                                 sequence_length=sequence_length, dim_model=512, num_heads=8,
+                                                 num_encoder_layers=6,
+                                                 dropout_p=dropout).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.005)
     loss_func = nn.MSELoss()
     loss_list_training = []
