@@ -1,9 +1,9 @@
 import os
 import sys
 from torch.utils.data import DataLoader
-from ERA5_dataset import Dataset_ERA5
-from ERA5_dataset import ATTRIBUTES_TO_TEXT_DESC
-from CAMELS_dataset import Dataset_CAMELS
+import ERA5_dataset
+import CAMELS_dataset
+import FloodML_transformer
 from tqdm import tqdm
 from FloodML_lstm import FLOODML_LSTM
 import torch.optim
@@ -147,7 +147,6 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
 def plot_NSE_CDF(nse_losses, title_for_legend):
     nse_losses_np = np.array(nse_losses)
     nse_losses_np = nse_losses_np[nse_losses_np >= 0]
-    # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     # evaluate the histogram
     values, base = np.histogram(nse_losses_np, bins=100)
     # evaluate the cumulative
@@ -177,49 +176,49 @@ def prepare_training_data_and_test_data(sequence_length,
                                         dynamic_data_folder,
                                         static_data_folder,
                                         discharge_data_folder,
-                                        create_boxplots=False):
-    training_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder,
-                                 static_data_folder=static_data_folder,
-                                 dynamic_attributes_names=dynamic_attributes_names,
-                                 static_attributes_names=static_attributes_names,
-                                 train_start_date='01/10/1999',
-                                 train_end_date='30/09/2008',
-                                 validation_start_date='01/10/1989',
-                                 validation_end_date='30/09/1999',
-                                 test_start_date='01/10/1989',
-                                 test_end_date='30/09/1999',
-                                 stage="train",
-                                 all_stations_ids=all_station_ids_train,
-                                 sequence_length=sequence_length,
-                                 discharge_str=discharge_str)
-    test_data = Dataset_ERA5(dynamic_data_folder=dynamic_data_folder,
-                             static_data_folder=static_data_folder,
-                             dynamic_attributes_names=dynamic_attributes_names,
-                             static_attributes_names=static_attributes_names,
-                             train_start_date='01/10/1999',
-                             train_end_date='30/09/2008',
-                             validation_start_date='01/10/1989',
-                             validation_end_date='30/09/1999',
-                             test_start_date='01/10/1989',
-                             test_end_date='30/09/1999',
-                             stage="test",
-                             all_stations_ids=all_station_ids_test,
-                             sequence_length=sequence_length,
-                             discharge_str=discharge_str,
-                             x_mins=training_data.get_x_mins(),
-                             x_maxs=training_data.get_x_maxs(),
-                             y_mean=training_data.get_y_mean(),
-                             y_std=training_data.get_y_std())
-    if create_boxplots:
+                                        create_box_plots=False):
+    training_data = ERA5_dataset.Dataset_ERA5(dynamic_data_folder=dynamic_data_folder,
+                                              static_data_folder=static_data_folder,
+                                              dynamic_attributes_names=dynamic_attributes_names,
+                                              static_attributes_names=static_attributes_names,
+                                              train_start_date='01/10/1999',
+                                              train_end_date='30/09/2008',
+                                              validation_start_date='01/10/1989',
+                                              validation_end_date='30/09/1999',
+                                              test_start_date='01/10/1989',
+                                              test_end_date='30/09/1999',
+                                              stage="train",
+                                              all_stations_ids=all_station_ids_train,
+                                              sequence_length=sequence_length,
+                                              discharge_str=discharge_str)
+    test_data = ERA5_dataset.Dataset_ERA5(dynamic_data_folder=dynamic_data_folder,
+                                          static_data_folder=static_data_folder,
+                                          dynamic_attributes_names=dynamic_attributes_names,
+                                          static_attributes_names=static_attributes_names,
+                                          train_start_date='01/10/1999',
+                                          train_end_date='30/09/2008',
+                                          validation_start_date='01/10/1989',
+                                          validation_end_date='30/09/1999',
+                                          test_start_date='01/10/1989',
+                                          test_end_date='30/09/1999',
+                                          stage="test",
+                                          all_stations_ids=all_station_ids_test,
+                                          sequence_length=sequence_length,
+                                          discharge_str=discharge_str,
+                                          x_mins=training_data.get_x_mins(),
+                                          x_maxs=training_data.get_x_maxs(),
+                                          y_mean=training_data.get_y_mean(),
+                                          y_std=training_data.get_y_std())
+    if create_box_plots:
         training_data.create_boxplot_of_entire_dataset()
         test_data.create_boxplot_of_entire_dataset()
         all_attributes_names = dynamic_attributes_names + static_attributes_names
         for i in range(test_data.X_data.shape[1]):
-            dict_boxplots_data = {f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[:, i],
-                                  f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:,
-                                                                                               i]}
-            Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data,
-                                                plot_title=f"{ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
+            dict_boxplots_data = {
+                f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[:, i],
+                f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[:, i]}
+            ERA5_dataset.Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data,
+                                                             plot_title=f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
     return training_data, test_data
 
 
@@ -288,7 +287,8 @@ def choose_hyper_parameters_validation(static_attributes_names,
         itertools.product(learning_rates, dropout_rates, sequence_lengths, num_hidden_units, num_epochs))
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    for learning_rate_param, dropout_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param in all_parameters:
+    for learning_rate_param, dropout_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param \
+            in all_parameters:
         nse_list = []
         training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
         validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
@@ -361,49 +361,12 @@ def choose_hyper_parameters_validation(static_attributes_names,
 
 
 def main():
-    # static_attributes_names = ["elev_mean", "slope_mean", "area_gages2", "frac_forest", "lai_max", "lai_diff",
-    #                            "gvf_max", "gvf_diff", "soil_depth_pelletier", "soil_depth_statsgo", "soil_porosity",
-    #                            "soil_conductivity", "max_water_content", "sand_frac", "silt_frac", "clay_frac",
-    #                            "carbonate_rocks_frac", "geol_permeability", "p_mean", "pet_mean", "aridity",
-    #                            "frac_snow", "high_prec_freq", "high_prec_dur", "low_prec_freq", "low_prec_dur"]
-    #
-    # dynamic_attributes_names = ["prcp(mm/day)", "srad(w/m2)", "tmax(c)", "tmin(c)", "vp(pa)"]
-    # discharge_str = "qobs"
-    #
-    # dynamic_data_folder = "../data/CAMELS_US/basin_mean_forcing"
-    # static_data_folder = "../data/CAMELS_US/camels_attributes_v2.0"
-    # discharge_data_folder = "../data/CAMELS_US/usgs_streamflow"
-
-    use_Caravan_dataset = True
-    static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
-                               "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
-                               "p_mean", "pet_mean",
-                               "aridity", "frac_snow",
-                               "high_prec_freq",
-                               "high_prec_dur",
-                               "low_prec_freq", "low_prec_dur"]
-    if use_Caravan_dataset:
-        dynamic_attributes_names = ["total_precipitation_sum", "temperature_2m_min",
-                                    "temperature_2m_max", "potential_evaporation_sum",
-                                    "surface_net_solar_radiation_mean"]
-        discharge_str = "streamflow"
-        dynamic_data_folder = "../data/ERA5/Caravan/timeseries/csv/us/"
-        discharge_data_folder = "../data/ERA5/Caravan/timeseries/csv/us/"
-
-    else:
-        dynamic_attributes_names = ["precip"]
-        discharge_str = "flow"
-        dynamic_data_folder = "../data/ERA5/ERA_5_all_data"
-        discharge_data_folder = "../data/ERA5/ERA_5_all_data"
-
-    static_data_folder = "../data/ERA5/Caravan/attributes"
-
-    choose_hyper_parameters_validation(static_attributes_names,
-                                       dynamic_attributes_names,
-                                       discharge_str,
-                                       dynamic_data_folder,
-                                       static_data_folder,
-                                       discharge_data_folder)
+    choose_hyper_parameters_validation(ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
+                                       ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
+                                       ERA5_dataset.DISCHARGE_STR_CARAVAN,
+                                       ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
+                                       ERA5_dataset.STATIC_DATA_FOLDER,
+                                       ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN)
 
 
 if __name__ == "__main__":

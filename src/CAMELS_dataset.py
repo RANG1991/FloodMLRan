@@ -13,6 +13,17 @@ from multiprocessing import Pool
 
 matplotlib.use('AGG')
 
+STATIC_ATTRIBUTES_NAMES = ["elev_mean", "slope_mean", "area_gages2", "frac_forest", "lai_max", "lai_diff",
+                           "gvf_max", "gvf_diff", "soil_depth_pelletier", "soil_depth_statsgo", "soil_porosity",
+                           "soil_conductivity", "max_water_content", "sand_frac", "silt_frac", "clay_frac",
+                           "carbonate_rocks_frac", "geol_permeability", "p_mean", "pet_mean", "aridity",
+                           "frac_snow", "high_prec_freq", "high_prec_dur", "low_prec_freq", "low_prec_dur"]
+DYNAMIC_ATTRIBUTES_NAMES = ["prcp(mm/day)", "srad(w/m2)", "tmax(c)", "tmin(c)", "vp(pa)"]
+DISCHARGE_STR = "qobs"
+DYNAMIC_DATA_FOLDER = "../data/CAMELS_US/basin_mean_forcing"
+STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
+DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
+
 
 class Dataset_CAMELS(Dataset):
 
@@ -61,7 +72,7 @@ class Dataset_CAMELS(Dataset):
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
         self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
         self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
-        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + 10**(-6))
+        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + 10 ** (-6))
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 

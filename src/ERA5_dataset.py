@@ -38,6 +38,34 @@ ATTRIBUTES_TO_TEXT_DESC = {"p_mean": "Mean daily precipitation",
                            "potential_evaporation_sum": "potential_evaporation_sum",
                            "surface_net_solar_radiation_mean": "surface_net_solar_radiation_mean"}
 
+STATIC_ATTRIBUTES_NAMES = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
+                           "cly_pc_sav", "slt_pc_sav", "snd_pc_sav", "soc_th_sav",
+                           "p_mean", "pet_mean",
+                           "aridity", "frac_snow",
+                           "high_prec_freq",
+                           "high_prec_dur",
+                           "low_prec_freq", "low_prec_dur"]
+
+DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = ["total_precipitation_sum", "temperature_2m_min",
+                                    "temperature_2m_max", "potential_evaporation_sum",
+                                    "surface_net_solar_radiation_mean"]
+
+DISCHARGE_STR_CARAVAN = "streamflow"
+
+DYNAMIC_DATA_FOLDER_CARAVAN = "../data/ERA5/Caravan/timeseries/csv/us/"
+
+DISCHARGE_DATA_FOLDER_CARAVAN = "../data/ERA5/Caravan/timeseries/csv/us/"
+
+DYNAMIC_ATTRIBUTES_NAMES_ERA5 = ["precip"]
+
+DISCHARGE_STR_ERA5 = "flow"
+
+DYNAMIC_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
+
+DISCHARGE_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
+
+STATIC_DATA_FOLDER = "../data/ERA5/Caravan/attributes"
+
 
 class Dataset_ERA5(Dataset):
 
@@ -86,7 +114,7 @@ class Dataset_ERA5(Dataset):
         self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
         self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
         self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
-        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + 10**(-6))
+        self.X_data = (self.X_data - self.x_min) / ((self.x_max - self.x_min) + 10 ** (-6))
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 

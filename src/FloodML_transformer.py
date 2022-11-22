@@ -4,22 +4,16 @@ import math
 
 
 class ERA5_Transformer(nn.Module):
-    """
-    Model from "A detailed guide to Pytorch's nn.Transformer() module.", by
-    Daniel Melchor: https://medium.com/p/c80afbc9ffb1/
-    """
-
-    # Constructor
-    def __init__(self, num_tokens, dim_model, num_heads, num_encoder_layers, dropout_p):
+    def __init__(self, sequence_length, dim_model, num_heads, num_encoder_layers, dropout_p):
         super().__init__()
 
         self.dim_model = dim_model
-        self.positional_encoder = PositionalEncoding(max_seq_length=num_tokens, encodings_dim=dim_model,
+        self.positional_encoder = PositionalEncoding(max_seq_length=sequence_length, encodings_dim=dim_model,
                                                      dropout=dropout_p)
-        self.embedding = nn.Embedding(num_tokens, dim_model)
+        self.embedding = nn.Embedding(sequence_length, dim_model)
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=dim_model, nhead=num_heads)
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_encoder_layers)
-        self.out = nn.Linear(dim_model, num_tokens)
+        self.out = nn.Linear(dim_model * sequence_length, 1)
 
     @staticmethod
     def get_tgt_mask(size) -> torch.tensor:
@@ -45,13 +39,14 @@ class ERA5_Transformer(nn.Module):
         return matrix == pad_token
 
     def forward(self, src):
-        # Embedding + positional encoding - Out size = (batch_size, sequence length, dim_model)
+        # embedding + positional encoding - out size = (batch_size, sequence_length, dim_model)
         src = self.embedding(src) * math.sqrt(self.dim_model)
         src = self.positional_encoder(src)
-        # we permute to obtain size (sequence length, batch_size, dim_model),
-        src = src.permute(1, 0, 2)
-        # Transformer blocks - Out size = (sequence length, batch_size, num_tokens)
+        # we permute to obtain size (sequence length, batch_size, dim_model)
+        src = src.permute((1, 0, 2))
+        # Transformer blocks - out size = (sequence length, batch_size, sequence_length)
         transformer_encoder_out = self.transformer_encoder(src)
+        transformer_encoder_out = transformer_encoder_out.permute((1, 0, 2)).reshape()
         out = self.out(transformer_encoder_out)
         return out
 
