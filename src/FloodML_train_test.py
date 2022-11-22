@@ -23,7 +23,7 @@ from datetime import datetime
 import statistics
 from random import shuffle
 
-K_VALUE_CROSS_VALIDATION = 4
+K_VALUE_CROSS_VALIDATION = 2
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
@@ -274,10 +274,10 @@ def choose_hyper_parameters_validation(static_attributes_names,
         for i in
         range(0, len(all_stations_for_validation),
               math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
-    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
-    dropout_rates = [0.4, 0.0, 0.25, 0.5]
-    sequence_lengths = [30, 90, 180, 270, 365]
-    num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
+    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    dropout_rates = [0.4]
+    sequence_lengths = [270]
+    num_hidden_units = [256]
     num_epochs = [10]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
@@ -368,8 +368,11 @@ def main():
     #                            "frac_snow", "high_prec_freq", "high_prec_dur", "low_prec_freq", "low_prec_dur"]
     #
     # dynamic_attributes_names = ["prcp(mm/day)", "srad(w/m2)", "tmax(c)", "tmin(c)", "vp(pa)"]
-    #
     # discharge_str = "qobs"
+    #
+    # dynamic_data_folder = "../data/CAMELS_US/basin_mean_forcing"
+    # static_data_folder = "../data/CAMELS_US/camels_attributes_v2.0"
+    # discharge_data_folder = "../data/CAMELS_US/usgs_streamflow"
 
     use_Caravan_dataset = True
     static_attributes_names = ["ele_mt_sav", "slp_dg_sav", "basin_area", "for_pc_sse",
@@ -385,13 +388,16 @@ def main():
                                     "surface_net_solar_radiation_mean"]
         discharge_str = "streamflow"
         dynamic_data_folder = "../data/ERA5/Caravan/timeseries/csv/us/"
+        discharge_data_folder = "../data/ERA5/Caravan/timeseries/csv/us/"
+
     else:
         dynamic_attributes_names = ["precip"]
         discharge_str = "flow"
         dynamic_data_folder = "../data/ERA5/ERA_5_all_data"
+        discharge_data_folder = "../data/ERA5/ERA_5_all_data"
 
     static_data_folder = "../data/ERA5/Caravan/attributes"
-    discharge_data_folder = dynamic_data_folder
+
     choose_hyper_parameters_validation(static_attributes_names,
                                        dynamic_attributes_names,
                                        discharge_str,
