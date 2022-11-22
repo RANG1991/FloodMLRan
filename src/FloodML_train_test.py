@@ -274,11 +274,11 @@ def choose_hyper_parameters_validation(static_attributes_names,
         for i in
         range(0, len(all_stations_for_validation),
               math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
-    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4]
-    sequence_lengths = [270]
-    num_hidden_units = [256]
-    num_epochs = [10]
+    sequence_lengths = [365]
+    num_hidden_units = [20]
+    num_epochs = [50]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
     best_median_nse = -1
