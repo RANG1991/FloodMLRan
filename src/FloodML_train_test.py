@@ -239,7 +239,7 @@ def run_training_and_test(learning_rate,
     model = FLOODML_LSTM(hidden_dim=num_hidden_units,
                          input_dim=len(static_attributes_names) + len(dynamic_attributes_names),
                          dropout=dropout).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.005)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -275,9 +275,9 @@ def choose_hyper_parameters_validation(static_attributes_names,
         range(0, len(all_stations_for_validation),
               math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
-    dropout_rates = [0.4]
-    sequence_lengths = [365]
-    num_hidden_units = [20]
+    dropout_rates = [0.0, 0.25, 0.4, 0.5]
+    sequence_lengths = [90, 180, 270, 365]
+    num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
     num_epochs = [50]
     dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
                     "median NSE": []}
