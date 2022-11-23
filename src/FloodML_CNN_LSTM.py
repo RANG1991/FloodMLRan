@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 
 class ERA5_CNN_LSTM(torch.nn.Module):
@@ -19,8 +20,8 @@ class ERA5_CNN_LSTM(torch.nn.Module):
     def forward(self, x):
         for i in range(self.sequence_length):
             x = self.pool(F.relu(self.conv1(x[:, i, :])))
-            x = self.pool(F.relu(self.conv2(x)))
-            output, h_i, c_i = self.lstm_cell()
+            output = self.pool(F.relu(self.conv2(x)))
+            output, h_i, c_i = self.lstm_cell()(output)
         output = torch.nn.Dropout(0.4)(output)
         return self.head(output[:, -1, :])
 
