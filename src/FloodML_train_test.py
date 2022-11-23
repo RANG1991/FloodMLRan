@@ -132,7 +132,7 @@ def calc_validation_basins_nse(
         obs = np.array([single_obs.cpu().numpy() for single_obs in obs])
         preds = np.array([single_pred.cpu().numpy() for single_pred in preds])
         nse = calc_nse(obs, preds)
-        print(f"station with id: {stations_id} has nse of: {nse}")
+        # print(f"station with id: {stations_id} has nse of: {nse}")
         nse_list_basins.append(nse)
         if nse > max_nse or max_nse == -1:
             max_nse = nse
@@ -365,6 +365,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
     )
     plt.plot(training_loss_list.mean(axis=0), label="training")
     plt.plot(validation_loss_list.mean(axis=0), label="validation")
+    plt.legend()
     plt.savefig(
         f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
         f"{str(dropout_rate).replace('.', '_')};"
@@ -393,8 +394,8 @@ def run_single_parameters_check_with_val_on_years(
 ):
     training_data, test_data = prepare_datasets(
         sequence_length,
-        all_stations_list,
-        all_stations_list,
+        all_stations_list[: int(0.8 * len(all_stations_list))],
+        all_stations_list[int(0.8 * len(all_stations_list)) :],
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -475,9 +476,7 @@ def run_training_and_test(
             hidden_dim=num_hidden_units,
             dropout=dropout,
         ).to(device)
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=learning_rate, weight_decay=0.005
-    )
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -520,10 +519,10 @@ def choose_hyper_parameters_validation(
         open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
     )
     shuffle(all_stations_list)
-    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4, 0.25, 0.0, 0.5]
-    sequence_lengths = [90, 180, 270, 365]
-    num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
+    sequence_lengths = [30, 90, 180, 270, 365]
+    num_hidden_units = [96, 128, 156, 196, 224, 64, 256]
     num_epochs = [10]
     dict_results = {
         "learning rate": [],
@@ -660,5 +659,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--dataset", "CAMELS"]
+    sys.argv = ["", "--dataset", "ERA5"]
     main()

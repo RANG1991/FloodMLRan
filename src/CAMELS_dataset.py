@@ -107,7 +107,7 @@ class Dataset_CAMELS(Dataset):
         self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
         self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
         self.X_data = (self.X_data - self.x_min) / (
-            (self.x_max - self.x_min) + 10 ** (-6)
+            (self.x_max - self.x_min) + (10 ** (-6))
         )
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
