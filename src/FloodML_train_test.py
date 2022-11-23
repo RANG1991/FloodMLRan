@@ -202,7 +202,7 @@ def prepare_datasets(sequence_length,
                                           validation_end_date='30/09/1989',
                                           test_start_date='01/10/1989',
                                           test_end_date='30/09/1999',
-                                          stage="test",
+                                          stage="validation",
                                           all_stations_ids=all_station_ids_test,
                                           sequence_length=sequence_length,
                                           discharge_str=discharge_str,
@@ -221,6 +221,106 @@ def prepare_datasets(sequence_length,
             ERA5_dataset.Dataset_ERA5.create_boxplot_on_data(dict_boxplots_data,
                                                              plot_title=f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}")
     return training_data, test_data
+
+
+def run_single_parameters_check_with_cross_val_on_basins(all_stations_list,
+                                                         sequence_length,
+                                                         learning_rate,
+                                                         num_hidden_units,
+                                                         num_epochs,
+                                                         dropout_rate,
+                                                         static_attributes,
+                                                         dynamic_attributes,
+                                                         use_Transformer,
+                                                         static_attributes_names,
+                                                         dynamic_attributes_names,
+                                                         discharge_str,
+                                                         dynamic_data_folder_train,
+                                                         static_data_folder,
+                                                         discharge_data_folder):
+    split_stations_list = [all_stations_list[i:(i + math.ceil(len(all_stations_list) / K_VALUE_CROSS_VALIDATION))]
+                           for i in range(0, len(all_stations_list),
+                                          math.ceil(len(all_stations_list) / K_VALUE_CROSS_VALIDATION))]
+    training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs))
+    validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs))
+    nse_list_single_cross_val = []
+    for i in range(len(split_stations_list)):
+        train_stations_list = list(
+            itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))
+        training_data, test_data = prepare_datasets(sequence_length,
+                                                    train_stations_list,
+                                                    split_stations_list[i],
+                                                    static_attributes_names,
+                                                    dynamic_attributes_names,
+                                                    discharge_str,
+                                                    dynamic_data_folder_train,
+                                                    static_data_folder,
+                                                    discharge_data_folder)
+        training_data.set_sequence_length(sequence_length)
+        test_data.set_sequence_length(sequence_length)
+        nse_list_single_pass, training_loss_list_single_pass, validation_loss_list_single_pass = \
+            run_training_and_test(learning_rate, sequence_length, num_hidden_units,
+                                  num_epochs, training_data, test_data, dropout_rate,
+                                  static_attributes, dynamic_attributes,
+                                  use_Transformer=use_Transformer)
+        training_loss_list[i] = training_loss_list_single_pass
+        validation_loss_list[i] = validation_loss_list_single_pass
+        nse_list_single_cross_val.extend(nse_list_single_pass)
+    plt.title(f"loss in {num_epochs} epochs for the parameters: "
+              f"{dropout_rate};"
+              f"{sequence_length};"
+              f"{num_hidden_units}")
+    plt.plot(training_loss_list.mean(axis=0), label="training")
+    plt.plot(validation_loss_list.mean(axis=0), label="validation")
+    plt.savefig(f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
+                f"{str(dropout_rate).replace('.', '_')};"
+                f"{sequence_length};"
+                f"{num_hidden_units}")
+    plt.close()
+    return nse_list_single_cross_val
+
+
+def run_single_parameters_check_with_val_on_years(all_stations_list,
+                                                  sequence_length,
+                                                  learning_rate,
+                                                  num_hidden_units,
+                                                  num_epochs,
+                                                  dropout_rate,
+                                                  use_Transformer,
+                                                  static_attributes_names,
+                                                  dynamic_attributes_names,
+                                                  discharge_str,
+                                                  dynamic_data_folder_train,
+                                                  static_data_folder,
+                                                  discharge_data_folder):
+    training_data, test_data = prepare_datasets(sequence_length,
+                                                all_stations_list,
+                                                all_stations_list,
+                                                static_attributes_names,
+                                                dynamic_attributes_names,
+                                                discharge_str,
+                                                dynamic_data_folder_train,
+                                                static_data_folder,
+                                                discharge_data_folder)
+    training_data.set_sequence_length(sequence_length)
+    test_data.set_sequence_length(sequence_length)
+    nse_list_single_pass, training_loss_list_single_pass, validation_loss_list_single_pass = \
+        run_training_and_test(learning_rate, sequence_length, num_hidden_units,
+                              num_epochs, training_data, test_data, dropout_rate,
+                              static_attributes_names, dynamic_attributes_names,
+                              use_Transformer=use_Transformer)
+    plt.title(f"loss in {num_epochs} epochs for the parameters: "
+              f"{dropout_rate};"
+              f"{sequence_length};"
+              f"{num_hidden_units}")
+    plt.plot(training_loss_list_single_pass, label="training")
+    plt.plot(validation_loss_list_single_pass, label="validation")
+    plt.savefig(f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
+                f"{str(dropout_rate).replace('.', '_')};"
+                f"{sequence_length};"
+                f"{num_hidden_units}")
+    plt.close()
+    return nse_list_single_pass
 
 
 def run_training_and_test(learning_rate,
@@ -275,18 +375,13 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        static_data_folder,
                                        discharge_data_folder,
                                        use_Transformer):
-    all_stations_for_validation = open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
-    shuffle(all_stations_for_validation)
-    split_stations_list = [
-        all_stations_for_validation[i:(i + math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
-        for i in
-        range(0, len(all_stations_for_validation),
-              math.ceil(len(all_stations_for_validation) / K_VALUE_CROSS_VALIDATION))]
+    all_stations_list = open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
+    shuffle(all_stations_list)
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
-    dropout_rates = [0.0, 0.25, 0.4, 0.5]
+    dropout_rates = [0.4, 0.25, 0.0, 0.5]
     sequence_lengths = [90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [50]
+    num_epochs = [10]
     dict_results = {
         "learning rate": [],
         "sequence length": [],
@@ -304,41 +399,21 @@ def choose_hyper_parameters_validation(static_attributes_names,
     for learning_rate_param, dropout_rate_param, sequence_length_param, num_hidden_units_param, num_epochs_param \
             in all_parameters:
         nse_list = []
-        training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
-        validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs_param))
-        for i in range(len(split_stations_list)):
-            train_stations_list = list(
-                itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))
-            training_data, test_data = prepare_datasets(sequence_length_param,
-                                                        train_stations_list,
-                                                        split_stations_list[i],
-                                                        static_attributes_names,
-                                                        dynamic_attributes_names,
-                                                        discharge_str,
-                                                        dynamic_data_folder_train,
-                                                        static_data_folder,
-                                                        discharge_data_folder)
-            training_data.set_sequence_length(sequence_length_param)
-            test_data.set_sequence_length(sequence_length_param)
-            nse_list_single_pass, training_loss_list_single_pass, validation_loss_list_single_pass = \
-                run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
-                                      num_epochs_param, training_data, test_data, dropout_rate_param,
-                                      static_attributes_names, dynamic_attributes_names,
-                                      use_Transformer=use_Transformer)
-            nse_list.extend(nse_list_single_pass)
-            training_loss_list[i] = training_loss_list_single_pass
-            validation_loss_list[i] = validation_loss_list_single_pass
-        plt.title(f"loss in {num_epochs_param} epochs for the parameters: "
-                  f"{dropout_rate_param};"
-                  f"{sequence_length_param};"
-                  f"{num_hidden_units_param}")
-        plt.plot(training_loss_list.mean(axis=0), label="training")
-        plt.plot(validation_loss_list.mean(axis=0), label="validation")
-        plt.savefig(f"../data/images/training_loss_in_{num_epochs_param}_with_parameters: "
-                    f"{str(dropout_rate_param).replace('.', '_')};"
-                    f"{sequence_length_param};"
-                    f"{num_hidden_units_param}")
-        plt.close()
+        nse_list_single_pass = run_single_parameters_check_with_val_on_years(
+            all_stations_list,
+            sequence_length_param,
+            learning_rate_param,
+            num_hidden_units,
+            num_epochs,
+            dropout_rate_param,
+            use_Transformer,
+            static_attributes_names,
+            dynamic_attributes_names,
+            discharge_str,
+            dynamic_data_folder_train,
+            static_data_folder,
+            discharge_data_folder)
+        nse_list.extend(nse_list_single_pass)
         if len(nse_list) == 0:
             median_nse = -1
         else:
@@ -385,7 +460,8 @@ def main():
                         choices=["LSTM", "Transformer"],
                         default="LSTM")
     command_args = parser.parse_args()
-    use_Transformer = (command_args.use_Transformer == "Transformer")
+    use_Transformer = (command_args.model == "Transformer")
+    print(f"running with dataset: {command_args.dataset} and with model: {command_args.model}")
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
                                            CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
