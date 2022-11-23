@@ -5,7 +5,7 @@ import ERA5_dataset
 import CAMELS_dataset
 import FloodML_transformer
 from tqdm import tqdm
-from FloodML_lstm import FLOODML_LSTM
+import FloodML_lstm
 import torch.optim
 import torch.nn as nn
 from os import listdir
@@ -13,8 +13,6 @@ from os.path import isfile, join
 import pandas as pd
 import matplotlib
 import math
-
-matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
@@ -22,12 +20,15 @@ import itertools
 from datetime import datetime
 import statistics
 from random import shuffle
+import argparse
+
+matplotlib.use('AGG')
 
 K_VALUE_CROSS_VALIDATION = 2
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
-    # # set model to train mode (important for dropout)
+    # set model to train mode (important for dropout)
     model.train()
     pbar = tqdm(loader, file=sys.stdout)
     print(f"Epoch {epoch}")
@@ -167,24 +168,24 @@ def read_basins_csv_files(folder_name, num_basins):
     return df
 
 
-def prepare_training_data_and_test_data(sequence_length,
-                                        all_station_ids_train,
-                                        all_station_ids_test,
-                                        static_attributes_names,
-                                        dynamic_attributes_names,
-                                        discharge_str,
-                                        dynamic_data_folder,
-                                        static_data_folder,
-                                        discharge_data_folder,
-                                        create_box_plots=False):
+def prepare_datasets(sequence_length,
+                     all_station_ids_train,
+                     all_station_ids_test,
+                     static_attributes_names,
+                     dynamic_attributes_names,
+                     discharge_str,
+                     dynamic_data_folder,
+                     static_data_folder,
+                     discharge_data_folder,
+                     create_box_plots=False):
     training_data = ERA5_dataset.Dataset_ERA5(dynamic_data_folder=dynamic_data_folder,
                                               static_data_folder=static_data_folder,
                                               dynamic_attributes_names=dynamic_attributes_names,
                                               static_attributes_names=static_attributes_names,
                                               train_start_date='01/10/1999',
                                               train_end_date='30/09/2008',
-                                              validation_start_date='01/10/1989',
-                                              validation_end_date='30/09/1999',
+                                              validation_start_date='01/10/1980',
+                                              validation_end_date='30/09/1989',
                                               test_start_date='01/10/1989',
                                               test_end_date='30/09/1999',
                                               stage="train",
@@ -197,8 +198,8 @@ def prepare_training_data_and_test_data(sequence_length,
                                           static_attributes_names=static_attributes_names,
                                           train_start_date='01/10/1999',
                                           train_end_date='30/09/2008',
-                                          validation_start_date='01/10/1989',
-                                          validation_end_date='30/09/1999',
+                                          validation_start_date='01/10/1980',
+                                          validation_end_date='30/09/1989',
                                           test_start_date='01/10/1989',
                                           test_end_date='30/09/1999',
                                           stage="test",
@@ -231,14 +232,20 @@ def run_training_and_test(learning_rate,
                           dropout,
                           static_attributes_names,
                           dynamic_attributes_names,
+                          use_Transformer,
                           calc_nse_interval=1):
     train_dataloader = DataLoader(training_data, batch_size=256, shuffle=True, num_workers=2)
     test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, num_workers=2)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = FloodML_transformer.ERA5_Transformer(input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
-                                                 sequence_length=sequence_length, dim_model=512, num_heads=8,
-                                                 num_encoder_layers=6,
-                                                 dropout_p=dropout).to(device)
+    if use_Transformer:
+        model = FloodML_transformer.ERA5_Transformer(
+            input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+            sequence_length=sequence_length, dim_model=512, num_heads=8,
+            num_encoder_layers=6,
+            dropout_p=dropout).to(device)
+    else:
+        model = FloodML_lstm.FLOODML_LSTM(input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+                                          hidden_dim=num_hidden_units, dropout=dropout).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.005)
     loss_func = nn.MSELoss()
     loss_list_training = []
@@ -266,7 +273,8 @@ def choose_hyper_parameters_validation(static_attributes_names,
                                        discharge_str,
                                        dynamic_data_folder_train,
                                        static_data_folder,
-                                       discharge_data_folder):
+                                       discharge_data_folder,
+                                       use_Transformer):
     all_stations_for_validation = open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
     shuffle(all_stations_for_validation)
     split_stations_list = [
@@ -279,8 +287,13 @@ def choose_hyper_parameters_validation(static_attributes_names,
     sequence_lengths = [90, 180, 270, 365]
     num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
     num_epochs = [50]
-    dict_results = {"learning rate": [], "sequence length": [], "num epochs": [], "num hidden units": [],
-                    "median NSE": []}
+    dict_results = {
+        "learning rate": [],
+        "sequence length": [],
+        "num epochs": [],
+        "num hidden units": [],
+        "median NSE": []
+    }
     best_median_nse = -1
     list_nse_lists_basins = []
     list_plots_titles = []
@@ -296,22 +309,22 @@ def choose_hyper_parameters_validation(static_attributes_names,
         for i in range(len(split_stations_list)):
             train_stations_list = list(
                 itertools.chain.from_iterable(split_stations_list[:i] + split_stations_list[i + 1:]))
-            training_data, test_data = prepare_training_data_and_test_data(sequence_length_param,
-                                                                           train_stations_list,
-                                                                           split_stations_list[i],
-                                                                           static_attributes_names,
-                                                                           dynamic_attributes_names,
-                                                                           discharge_str,
-                                                                           dynamic_data_folder_train,
-                                                                           static_data_folder,
-                                                                           discharge_data_folder)
-
+            training_data, test_data = prepare_datasets(sequence_length_param,
+                                                        train_stations_list,
+                                                        split_stations_list[i],
+                                                        static_attributes_names,
+                                                        dynamic_attributes_names,
+                                                        discharge_str,
+                                                        dynamic_data_folder_train,
+                                                        static_data_folder,
+                                                        discharge_data_folder)
             training_data.set_sequence_length(sequence_length_param)
             test_data.set_sequence_length(sequence_length_param)
             nse_list_single_pass, training_loss_list_single_pass, validation_loss_list_single_pass = \
                 run_training_and_test(learning_rate_param, sequence_length_param, num_hidden_units_param,
                                       num_epochs_param, training_data, test_data, dropout_rate_param,
-                                      static_attributes_names, dynamic_attributes_names)
+                                      static_attributes_names, dynamic_attributes_names,
+                                      use_Transformer=use_Transformer)
             nse_list.extend(nse_list_single_pass)
             training_loss_list[i] = training_loss_list_single_pass
             validation_loss_list[i] = validation_loss_list_single_pass
@@ -362,12 +375,33 @@ def choose_hyper_parameters_validation(static_attributes_names,
 
 
 def main():
-    choose_hyper_parameters_validation(ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
-                                       ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
-                                       ERA5_dataset.DISCHARGE_STR_CARAVAN,
-                                       ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
-                                       ERA5_dataset.STATIC_DATA_FOLDER,
-                                       ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset',
+                        help='which dataset to train and test on - the options are CAMELS or ERA5',
+                        choices=['CAMELS', 'ERA5'],
+                        default="ERA5")
+    parser.add_argument('--model',
+                        help='which model to use - the options are LSTM or Transformer',
+                        choices=["LSTM", "Transformer"],
+                        default="LSTM")
+    command_args = parser.parse_args()
+    use_Transformer = (command_args.use_Transformer == "Transformer")
+    if command_args.dataset == "CAMELS":
+        choose_hyper_parameters_validation(CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
+                                           CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
+                                           CAMELS_dataset.DISCHARGE_STR,
+                                           CAMELS_dataset.DYNAMIC_DATA_FOLDER,
+                                           CAMELS_dataset.STATIC_DATA_FOLDER,
+                                           CAMELS_dataset.DISCHARGE_DATA_FOLDER,
+                                           use_Transformer=use_Transformer)
+    elif command_args.dataset == "ERA5":
+        choose_hyper_parameters_validation(ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
+                                           ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
+                                           ERA5_dataset.DISCHARGE_STR_CARAVAN,
+                                           ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
+                                           ERA5_dataset.STATIC_DATA_FOLDER,
+                                           ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
+                                           use_Transformer=use_Transformer)
 
 
 if __name__ == "__main__":
