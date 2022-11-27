@@ -456,10 +456,10 @@ def run_training_and_test(
     calc_nse_interval=1,
 ):
     train_dataloader = DataLoader(
-        training_data, batch_size=256, shuffle=True, num_workers=2
+        training_data, batch_size=256, shuffle=True, num_workers=1
     )
     test_dataloader = DataLoader(
-        test_data, batch_size=256, shuffle=False, num_workers=2
+        test_data, batch_size=256, shuffle=False, num_workers=1
     )
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if use_Transformer:
@@ -477,9 +477,7 @@ def run_training_and_test(
             hidden_dim=num_hidden_units,
             dropout=dropout,
         ).to(device)
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=learning_rate, weight_decay=0.005
-    )
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.5)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -525,7 +523,10 @@ def choose_hyper_parameters_validation(
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
-    num_hidden_units = [96, 128, 156, 196, 224, 64, 256]
+    if use_transformer:
+        num_hidden_units = [1]
+    else:
+        num_hidden_units = [96, 128, 156, 196, 224, 64, 256]
     num_epochs = [10]
     dict_results = {
         "learning rate": [],
@@ -662,5 +663,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--dataset", "ERA5"]
+    sys.argv = ["", "--model", "Transformer", "--dataset", "ERA5"]
     main()

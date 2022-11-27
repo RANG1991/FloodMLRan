@@ -53,15 +53,18 @@ class ERA5_Transformer(nn.Module):
         return matrix == pad_token
 
     def forward(self, src):
-        # embedding + positional encoding - out size = (batch_size, sequence_length, dim_model)
+        # embedding + positional encoding - we get size (batch_size, sequence_length, dim_model)
         src = self.linear_1(src) * math.sqrt(self.dim_model)
         src = self.positional_encoder(src)
         # we permute to obtain size (sequence length, batch_size, dim_model)
         src = src.permute((1, 0, 2))
         transformer_encoder_out = self.transformer_encoder(src)
+        # we permute again to obtain size (batch_size, sequence length, dim_model) and then reshape to get size of
+        # (batch_size, sequence_length * dim_model)
         transformer_encoder_out = transformer_encoder_out.permute((1, 0, 2)).reshape(
             -1, self.dim_model * self.sequence_length
         )
+        # we use linear transformation to get size of (batch_size, 1)
         out = self.linear_2(transformer_encoder_out)
         return out
 
@@ -86,5 +89,5 @@ class PositionalEncoding(nn.Module):
         # Residual connection + pos encoding
         return self.dropout(
             input_sequence
-            + self.pos_encodings_matrix[: input_sequence.size(0), :].unsqueeze(0)
+            + self.pos_encodings_matrix[: input_sequence.size(1), :].unsqueeze(0)
         )
