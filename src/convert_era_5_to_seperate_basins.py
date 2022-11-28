@@ -6,6 +6,7 @@ import numpy as np
 import datetime
 from shapely.geometry import Point
 from pathlib import Path
+import xarray as xr
 
 PATH_ROOT = "../../FloodMLRan/data/ERA5"
 
@@ -74,24 +75,34 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
     df_group.to_csv(filename)
 
 
-def create_and_write_precipitation_spatial(datetimes, ls_spatial, df_dis, ERA5_static_data_file_name,
-    station_id,
-    output_folder_name):
+def create_and_write_precipitation_spatial(
+    datetimes, ls_spatial, ERA5_static_data_file_name, station_id, output_folder_name
+):
+    data_vars = {"precipitation": (["datetime"], ls_spatial)}
 
+    # define coordinates
+    coords = {"datetime": (["datetime"], datetimes)}
 
+    # define global attributes
+    attrs = {
+        "creation_date": datetime.datetime.now(),
+        "author": "Ran Galun",
+    }
+    df_static_data = pd.read_csv(ERA5_static_data_file_name)
+    df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
+        lambda s: s.replce("us_", "")
+    )
+    basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
+    # create dataset
+    ds = xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
+    ds = ds.resample(time="1D")
+    ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id + ".csv")
 
 
 def create_and_write_precipitation_mean(
-    utc_offset,
-    datetimes,
-    ls,
-    ERA5_static_data_file_name,
-    station_id,
-    output_folder_name,
+    datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
 ):
     # convert the precipitation times from UTC (Grinch) to current timezone
-    print(utc_offset)
-    datetimes = [time + datetime.timedelta(hours=utc_offset) for time in datetimes]
     # create a dataframe from the precipitation data and the timedates
     df_percip = pd.DataFrame(data=ls, index=datetimes, columns=["precip"])
     # down sample the precipitation data into 1D (1 day) bins and sum the values falling into the same bin
@@ -207,8 +218,8 @@ def parse_single_basin_precipitation(
     # take the mean of the precipitation data spatially (along the latitude and longitude)
     precip_mean_lat_lon = np.mean(precip, axis=(1, 2))
     # create a dataframe from the datetimes
-    df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
-    datetimes = df_percip_times.index.to_pydatetime()
+    df_precip_times = pd.DataFrame(data=datetimes, index=datetimes)
+    datetimes = df_precip_times.index.to_pydatetime()
     # convert the precipitation data to the correct format by subtracting each hour from its previous hour
     # starting from 1 - this is because the precipitation data is cumulative
     precip_mean_lat_lon_new = []
@@ -224,10 +235,13 @@ def parse_single_basin_precipitation(
             precip_new.append(precip[i, :, :])
     ls = [[precip_mean_lat_lon_new[i]] for i in range(0, len(datetimes))]
     ls_precip_new = [[precip_new[i, :, :]] for i in range(0, len(datetimes))]
+    datetimes = [time + datetime.timedelta(hours=utc_offset) for time in datetimes]
     df_precip_one_day_non_spatial = create_and_write_precipitation_mean(
-        utc_offset,
+        datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
+    )
+    create_and_write_precipitation_spatial(
         datetimes,
-        ls,
+        ls_precip_new,
         ERA5_static_data_file_name,
         station_id,
         output_folder_name,
@@ -239,15 +253,15 @@ def parse_single_basin_precipitation(
     df_dis_one_day = df_dis_one_day[["date", "flow"]]
     print(df_dis_one_day)
     # join the two dataframes (precipitation and discharge) by date to get the final dataframe
-    df_joined_non_spatial = df_precip_one_day_non_spatial.merge(df_dis_one_day, on="date")
+    df_joined_non_spatial = df_precip_one_day_non_spatial.merge(
+        df_dis_one_day, on="date"
+    )
     df_dis_one_day.to_csv(
         output_folder_name + "/dis24_" + station_id + ".csv", float_format="%6.1f"
     )
     df_joined_non_spatial.to_csv(
         output_folder_name + "/data24_" + station_id + ".csv", float_format="%6.1f"
     )
-
-
 
     fn = output_folder_name + "/shape_" + station_id + ".csv"
     pd.DataFrame(
