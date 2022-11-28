@@ -90,7 +90,7 @@ def create_and_write_precipitation_spatial(
     }
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
-        lambda s: s.replce("us_", "")
+        lambda s: s.replace("us_", "")
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
     # create dataset
@@ -113,7 +113,7 @@ def create_and_write_precipitation_mean(
     print(df_percip_one_day)
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
-        lambda s: s.replce("us_", "")
+        lambda s: s.replace("us_", "")
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
     df_percip_one_day.to_csv(
@@ -131,10 +131,10 @@ def parse_single_basin_precipitation(
     ERA5_static_data_file_name,
     output_folder_name,
 ):
-    all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
-    if all_files_exist:
-        print("all precipitation file of the basin: {} exists".format(station_id))
-        return
+    # all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
+    # if all_files_exist:
+    #     print("all precipitation file of the basin: {} exists".format(station_id))
+    #     return
     bounds = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
     min_lon = np.squeeze(np.floor(bounds["minx"].values * 10) / 10)
@@ -234,7 +234,7 @@ def parse_single_basin_precipitation(
             precip_mean_lat_lon_new.append(precip_mean_lat_lon[i])
             precip_new.append(precip[i, :, :])
     ls = [[precip_mean_lat_lon_new[i]] for i in range(0, len(datetimes))]
-    ls_precip_new = [[precip_new[i, :, :]] for i in range(0, len(datetimes))]
+    ls_precip_new = [[precip_new[i]] for i in range(0, len(datetimes))]
     datetimes = [time + datetime.timedelta(hours=utc_offset) for time in datetimes]
     df_precip_one_day_non_spatial = create_and_write_precipitation_mean(
         datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
