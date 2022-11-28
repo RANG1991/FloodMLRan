@@ -74,11 +74,17 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
     df_group.to_csv(filename)
 
 
+def create_and_write_precipitation_spatial(datetimes, ls_spatial, df_dis, ERA5_static_data_file_name,
+    station_id,
+    output_folder_name):
+
+
+
+
 def create_and_write_precipitation_mean(
     utc_offset,
     datetimes,
     ls,
-    df_dis,
     ERA5_static_data_file_name,
     station_id,
     output_folder_name,
@@ -94,32 +100,15 @@ def create_and_write_precipitation_mean(
     df_percip_one_day = df_percip_one_day.rename(columns={"index": "date"})
     df_percip_one_day = df_percip_one_day[["date", "precip"]]
     print(df_percip_one_day)
-
-    # down sample the discharge data into 1D (1 day) bins and take the mean of the values falling into the same bin
-    df_dis_one_day = df_dis.resample("1D").mean()
-    df_dis_one_day = df_dis_one_day.reset_index()
-    df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
-    df_dis_one_day = df_dis_one_day[["date", "flow"]]
-    print(df_dis_one_day)
-
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
         lambda s: s.replce("us_", "")
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
-
-    # join the two dataframes (precipitation and discharge) by date to get the final dataframe
-    df_joined = df_percip_one_day.merge(df_dis_one_day, on="date")
-
     df_percip_one_day.to_csv(
         output_folder_name + "/precip24_" + station_id + ".csv", float_format="%6.1f"
     )
-    df_dis_one_day.to_csv(
-        output_folder_name + "/dis24_" + station_id + ".csv", float_format="%6.1f"
-    )
-    df_joined.to_csv(
-        output_folder_name + "/data24_" + station_id + ".csv", float_format="%6.1f"
-    )
+    return df_percip_one_day
 
 
 def parse_single_basin_precipitation(
@@ -215,35 +204,51 @@ def parse_single_basin_precipitation(
     datetimes = np.concatenate(list_of_dates_all_years, axis=0)
     # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations_all_years, axis=0)
-    # take the mean of the precipitation data spacially (along the latitude and longitude)
-    percip_mean_lat_lon = np.mean(precip, axis=(1, 2))
+    # take the mean of the precipitation data spatially (along the latitude and longitude)
+    precip_mean_lat_lon = np.mean(precip, axis=(1, 2))
     # create a dataframe from the datetimes
     df_percip_times = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df_percip_times.index.to_pydatetime()
     # convert the precipitation data to the correct format by subtracting each hour from its previous hour
     # starting from 1 - this is because the precipitation data is cumulative
-    percip_mean_lat_lon_new = []
+    precip_mean_lat_lon_new = []
     precip_new = []
-    for i in range(percip_mean_lat_lon.shape[0]):
+    for i in range(precip_mean_lat_lon.shape[0]):
         if datetimes[i].hour != 1 and i > 0:
-            percip_mean_lat_lon_new.append(
-                percip_mean_lat_lon[i] - percip_mean_lat_lon[i - 1]
+            precip_mean_lat_lon_new.append(
+                precip_mean_lat_lon[i] - precip_mean_lat_lon[i - 1]
             )
             precip_new.append(precip[i, :, :] - precip[i - 1, :, :])
         else:
-            percip_mean_lat_lon_new.append(percip_mean_lat_lon[i])
+            precip_mean_lat_lon_new.append(precip_mean_lat_lon[i])
             precip_new.append(precip[i, :, :])
-    ls = [[percip_mean_lat_lon_new[i]] for i in range(0, len(datetimes))]
+    ls = [[precip_mean_lat_lon_new[i]] for i in range(0, len(datetimes))]
     ls_precip_new = [[precip_new[i, :, :]] for i in range(0, len(datetimes))]
-    create_and_write_precipitation_mean(
+    df_precip_one_day_non_spatial = create_and_write_precipitation_mean(
         utc_offset,
         datetimes,
         ls,
-        df_dis,
         ERA5_static_data_file_name,
         station_id,
         output_folder_name,
     )
+    # down sample the discharge data into 1D (1 day) bins and take the mean of the values falling into the same bin
+    df_dis_one_day = df_dis.resample("1D").mean()
+    df_dis_one_day = df_dis_one_day.reset_index()
+    df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
+    df_dis_one_day = df_dis_one_day[["date", "flow"]]
+    print(df_dis_one_day)
+    # join the two dataframes (precipitation and discharge) by date to get the final dataframe
+    df_joined_non_spatial = df_precip_one_day_non_spatial.merge(df_dis_one_day, on="date")
+    df_dis_one_day.to_csv(
+        output_folder_name + "/dis24_" + station_id + ".csv", float_format="%6.1f"
+    )
+    df_joined_non_spatial.to_csv(
+        output_folder_name + "/data24_" + station_id + ".csv", float_format="%6.1f"
+    )
+
+
+
     fn = output_folder_name + "/shape_" + station_id + ".csv"
     pd.DataFrame(
         data=np.array([(len(datetimes),), (precip.shape[1],), (precip.shape[2],)]).T,

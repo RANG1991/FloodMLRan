@@ -162,6 +162,9 @@ def plot_NSE_CDF(nse_losses, title_for_legend):
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     # plot the cumulative function
+    plt.title("CDF of NSE of basins")
+    plt.xlabel("NSE")
+    plt.ylabel("CDF")
     plt.plot(base[:-1], cumulative, label=title_for_legend)
 
 
@@ -477,7 +480,7 @@ def run_training_and_test(
             hidden_dim=num_hidden_units,
             dropout=dropout,
         ).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.5)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -520,7 +523,7 @@ def choose_hyper_parameters_validation(
         open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
     )
     shuffle(all_stations_list)
-    learning_rates = np.linspace(5 * (10 ** -5), 5 * (10 ** -5), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [30, 90, 180, 270, 365]
     if use_transformer:
@@ -663,5 +666,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--model", "LSTM", "--dataset", "ERA5"]
+    sys.argv = ["", "--model", "Transformer", "--dataset", "ERA5"]
     main()
