@@ -16,7 +16,6 @@ from multiprocessing import Pool
 
 matplotlib.use("AGG")
 
-
 ATTRIBUTES_TO_TEXT_DESC = {
     "p_mean": "Mean daily precipitation",
     "pet_mean": "Mean daily potential evapotranspiration",
@@ -201,12 +200,18 @@ class Dataset_ERA5(Dataset):
     def read_single_station_file_spatial(self, station_id):
         if station_id not in self.list_stations_static:
             return np.array([]), np.array([]), np.array([])
-        station_data_file = (
+        station_data_file_spatial = (
             Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.csv"
         )
-        ds = nc.Dataset(station_data_file)
+        ds = nc.Dataset(station_data_file_spatial)
 
-    def read_and_filter_dynamic_data_spatial(self, dataset_xarray):
+    def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
+        df_dis_data.loc[self.discharge_str] = df_dis_data[self.discharge_str].apply(
+            lambda x: float(x)
+        )
+        df_dis_data = df_dis_data[df_dis_data[self.discharge_str] >= 0]
+        df_dis_data = df_dis_data.dropna()
+        df_dis_data["date"] = pd.to_datetime(df_dis_data.date)
         start_date = (
             self.train_start_date
             if self.stage == "train"
@@ -223,8 +228,11 @@ class Dataset_ERA5(Dataset):
             else self.validation_end_date
         )
         end_date = datetime.strptime(end_date, "%d/%m/%Y")
+        df_dis_data = df_dis_data[
+            (df_dis_data["date"] >= start_date) & (df_dis_data["date"] <= end_date)
+        ]
         dataset_xarray_filtered = dataset_xarray.sel(time=slice(start_date, end_date))
-        np.asarray(dataset_xarray_filtered["precipitation"])
+        X_data_spatial = np.asarray(dataset_xarray_filtered["precipitation"])
 
     def read_single_station_file(self, station_id):
         if station_id not in self.list_stations_static:
