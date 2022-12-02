@@ -203,7 +203,26 @@ class Dataset_ERA5(Dataset):
         station_data_file_spatial = (
             Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.csv"
         )
+        station_data_file_discharge = (
+            Path(self.dynamic_data_folder) / f"dis24_spatial_{station_id}.csv"
+        )
         ds = nc.Dataset(station_data_file_spatial)
+        df_dis_data = pd.read_csv(station_data_file_discharge)
+        (
+            dataset_xarray_filtered,
+            df_dis_data_filtered,
+        ) = self.read_and_filter_dynamic_data_spatial(ds, df_dis_data)
+        X_data_spatial = np.asarray(dataset_xarray_filtered["precipitation"])
+        y_data = df_dis_data_filtered[self.discharge_str].to_numpy().flatten()
+        y_data = y_data.reshape(-1, 1)
+        static_attrib_station = (
+            (self.df_attr[self.df_attr["gauge_id"] == station_id])
+            .drop("gauge_id", axis=1)
+            .to_numpy()
+            .reshape(1, -1)
+        )
+        station_id_repeated = [station_id] * X_data_spatial.shape[0]
+        return station_id_repeated, X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
         df_dis_data.loc[self.discharge_str] = df_dis_data[self.discharge_str].apply(
@@ -231,8 +250,10 @@ class Dataset_ERA5(Dataset):
         df_dis_data = df_dis_data[
             (df_dis_data["date"] >= start_date) & (df_dis_data["date"] <= end_date)
         ]
-        dataset_xarray_filtered = dataset_xarray.sel(time=slice(start_date, end_date))
-        X_data_spatial = np.asarray(dataset_xarray_filtered["precipitation"])
+        dataset_xarray_filtered = dataset_xarray.isel(
+            time=dataset_xarray.datetime.dt.isin(df_dis_data["date"].tolist())
+        )
+        return dataset_xarray_filtered, df_dis_data
 
     def read_single_station_file(self, station_id):
         if station_id not in self.list_stations_static:
