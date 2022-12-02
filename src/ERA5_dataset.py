@@ -206,7 +206,7 @@ class Dataset_ERA5(Dataset):
         )
         ds = nc.Dataset(station_data_file)
 
-    def read_and_filter_dynamic_data_spatial(self):
+    def read_and_filter_dynamic_data_spatial(self, dataset_xarray):
         start_date = (
             self.train_start_date
             if self.stage == "train"
@@ -223,6 +223,8 @@ class Dataset_ERA5(Dataset):
             else self.validation_end_date
         )
         end_date = datetime.strptime(end_date, "%d/%m/%Y")
+        dataset_xarray_filtered = dataset_xarray.sel(time=slice(start_date, end_date))
+        np.asarray(dataset_xarray_filtered["precipitation"])
 
     def read_single_station_file(self, station_id):
         if station_id not in self.list_stations_static:
