@@ -2,19 +2,19 @@
 
 # Change number of tasks, amount of memory and time limit according to your needs
 
-#SBATCH -n 1
+#SBATCH -n 3
 #SBATCH --time=50:0:0
 #SBATCH --mem=40G
 #SBATCH --gres gpu
 #SBATCH -J jupyter
 
 # Uncomment and enter path of code
-cd /sci/labs/efratmorin/ranga/FloodMLRan/
+cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
 
 # virtual_env location
-virtual_env=/sci/labs/efratmorin/ranga/FloodsMLEnv/bin/activate
+virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 
 source $virtual_env
 # module load cuda/11.2
 
-python ./src/convert_era_5_to_seperate_basins.py
+python ./convert_era_5_to_seperate_basins.py

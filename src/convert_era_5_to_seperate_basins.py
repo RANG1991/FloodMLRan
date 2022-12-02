@@ -78,25 +78,24 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
 def create_and_write_precipitation_spatial(
     datetimes, ls_spatial, ERA5_static_data_file_name, station_id, output_folder_name
 ):
-    data_vars = {"precipitation": (["datetime"], ls_spatial)}
+    ds = xr.Dataset(
+        {
+            "precipitation": xr.DataArray(
+                data=ls_spatial,
+                dims=["datetime", "lat", "lon"],
+                coords={"datetime": datetimes},
+            )
+        },
+        attrs={"creation_date": datetime.datetime.now()},
+    )
 
-    # define coordinates
-    coords = {"datetime": (["datetime"], datetimes)}
-
-    # define global attributes
-    attrs = {
-        "creation_date": datetime.datetime.now(),
-        "author": "Ran Galun",
-    }
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
         lambda s: s.replace("us_", "")
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
-    # create dataset
-    ds = xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
-    ds = ds.resample(time="1D")
-    ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id + ".csv")
+    ds = ds.resample(datetime="1D").sum()
+    ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id + ".nc")
 
 
 def create_and_write_precipitation_mean(
@@ -234,7 +233,7 @@ def parse_single_basin_precipitation(
             precip_mean_lat_lon_new.append(precip_mean_lat_lon[i])
             precip_new.append(precip[i, :, :])
     ls = [[precip_mean_lat_lon_new[i]] for i in range(0, len(datetimes))]
-    ls_precip_new = [[precip_new[i]] for i in range(0, len(datetimes))]
+    ls_precip_new = [precip_new[i] for i in range(0, len(datetimes))]
     datetimes = [time + datetime.timedelta(hours=utc_offset) for time in datetimes]
     df_precip_one_day_non_spatial = create_and_write_precipitation_mean(
         datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,

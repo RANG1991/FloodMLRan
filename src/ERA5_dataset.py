@@ -9,11 +9,13 @@ from os.path import isfile, join
 import re
 from datetime import datetime
 import matplotlib
-
-matplotlib.use("AGG")
+import netCDF4 as nc
 import matplotlib.pyplot as plt
 import multiprocessing
 from multiprocessing import Pool
+
+matplotlib.use("AGG")
+
 
 ATTRIBUTES_TO_TEXT_DESC = {
     "p_mean": "Mean daily precipitation",
@@ -195,6 +197,32 @@ class Dataset_ERA5(Dataset):
                     X_data_list.append(X_data_curr)
                     y_data_list.append(y_data_curr)
         return list_stations_repeated, X_data_list, y_data_list
+
+    def read_single_station_file_spatial(self, station_id):
+        if station_id not in self.list_stations_static:
+            return np.array([]), np.array([]), np.array([])
+        station_data_file = (
+            Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.csv"
+        )
+        ds = nc.Dataset(station_data_file)
+
+    def read_and_filter_dynamic_data_spatial(self):
+        start_date = (
+            self.train_start_date
+            if self.stage == "train"
+            else self.test_start_date
+            if self.stage == "test"
+            else self.validation_start_date
+        )
+        start_date = datetime.strptime(start_date, "%d/%m/%Y")
+        end_date = (
+            self.train_end_date
+            if self.stage == "train"
+            else self.test_end_date
+            if self.stage == "test"
+            else self.validation_end_date
+        )
+        end_date = datetime.strptime(end_date, "%d/%m/%Y")
 
     def read_single_station_file(self, station_id):
         if station_id not in self.list_stations_static:
