@@ -7,6 +7,7 @@ from pathlib import Path
 from glob import glob
 from datetime import datetime
 import matplotlib
+import os
 
 matplotlib.use("AGG")
 
@@ -15,7 +16,7 @@ import matplotlib.pyplot as plt
 import multiprocessing
 from multiprocessing import Pool
 import csv
-
+import xarray as xr
 
 ATTRIBUTES_TO_TEXT_DESC = {
     "p_mean": "Mean daily precipitation",
@@ -185,10 +186,13 @@ class Dataset_ERA5(Dataset):
         list_stations_repeated = []
         X_data_list = []
         y_data_list = []
-        with Pool(multiprocessing.cpu_count() - 1) as p:
-            list_returned = p.map(
-                self.read_single_station_file_spatial, all_stations_ids
-            )
+        list_returned = []
+        # with Pool(multiprocessing.cpu_count() - 1) as p:
+        #     list_returned = p.map(
+        #         self.read_single_station_file_spatial, all_stations_ids
+        #     )
+        for station_id in all_stations_ids:
+            list_returned.append(self.read_single_station_file_spatial(station_id))
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
             if len(station_id_repeated) > 0:
                 self.dict_basin_records_count[station_id_repeated[0]] = len(
@@ -201,15 +205,18 @@ class Dataset_ERA5(Dataset):
         return list_stations_repeated, X_data_list, y_data_list
 
     def read_single_station_file_spatial(self, station_id):
-        if station_id not in self.list_stations_static:
+        if station_id not in self.list_stations_static or not os.path.exists(
+            Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
+        ):
             return np.array([]), np.array([]), np.array([])
         station_data_file_spatial = (
-            Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.csv"
+            Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
         )
         station_data_file_discharge = (
-            Path(self.dynamic_data_folder) / f"dis24_spatial_{station_id}.csv"
+            Path(self.dynamic_data_folder) / f"dis24_{station_id}.csv"
         )
         ds = nc.Dataset(station_data_file_spatial)
+        ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
         df_dis_data = pd.read_csv(station_data_file_discharge)
         (
             dataset_xarray_filtered,
@@ -253,8 +260,9 @@ class Dataset_ERA5(Dataset):
         df_dis_data = df_dis_data[
             (df_dis_data["date"] >= start_date) & (df_dis_data["date"] <= end_date)
         ]
+        dataset_xarray["datetime"] = pd.DatetimeIndex(dataset_xarray["datetime"].values)
         dataset_xarray_filtered = dataset_xarray.isel(
-            time=dataset_xarray.datetime.dt.isin(df_dis_data["date"].tolist())
+            datetime=dataset_xarray.datetime.isin(df_dis_data["date"])
         )
         return dataset_xarray_filtered, df_dis_data
 

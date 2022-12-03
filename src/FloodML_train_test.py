@@ -209,6 +209,7 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
+            use_Caravan_dataset=False,
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -229,6 +230,7 @@ def prepare_datasets(
             x_maxs=training_data.get_x_maxs(),
             y_mean=training_data.get_y_mean(),
             y_std=training_data.get_y_std(),
+            use_Caravan_dataset=False,
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -655,11 +657,11 @@ def main():
     elif command_args.dataset == "ERA5":
         choose_hyper_parameters_validation(
             ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
-            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
-            ERA5_dataset.DISCHARGE_STR_CARAVAN,
-            ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
+            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_ERA5,
+            ERA5_dataset.DISCHARGE_STR_ERA5,
+            ERA5_dataset.DYNAMIC_DATA_FOLDER_ERA5,
             ERA5_dataset.STATIC_DATA_FOLDER,
-            ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
+            ERA5_dataset.DISCHARGE_DATA_FOLDER_ERA5,
             use_transformer=use_Transformer,
             dataset_to_use="ERA5",
         )
@@ -668,8 +670,8 @@ def main():
 
 
 if __name__ == "__main__":
-    ERA5_dataset.Dataset_ERA5.get_maximum_width_and_length_of_basin(
-        "../data/ERA5/ERA_5_all_data"
-    )
-    # sys.argv = ["", "--model", "Transformer", "--dataset", "ERA5"]
-    # main()
+    # ERA5_dataset.Dataset_ERA5.get_maximum_width_and_length_of_basin(
+    #     "../data/ERA5/ERA_5_all_data"
+    # )
+    sys.argv = ["", "--model", "LSTM", "--dataset", "ERA5"]
+    main()
