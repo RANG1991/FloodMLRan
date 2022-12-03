@@ -8,6 +8,7 @@ from glob import glob
 from datetime import datetime
 import matplotlib
 import os
+import math
 
 matplotlib.use("AGG")
 
@@ -133,6 +134,11 @@ class Dataset_ERA5(Dataset):
             X_data_list,
             y_data_list,
         ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids)
+        for index, X_data_single_basin in enumerate(X_data_list):
+            X_data_list[index] = self.pad_np_array_equally_from_sides(
+                X_data_single_basin
+            )
+            print(X_data_list[index].shape)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
         self.y_std = y_std if y_std is not None else self.y_data.std()
@@ -144,6 +150,25 @@ class Dataset_ERA5(Dataset):
         )
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
+
+    @staticmethod
+    def pad_np_array_equally_from_sides(X_data_single_basin):
+        return np.pad(
+            X_data_single_basin,
+            (
+                (0, 0),
+                (
+                    5 - int(X_data_single_basin.shape[1] / 2),
+                    6 - math.ceil(X_data_single_basin.shape[1] / 2),
+                ),
+                (
+                    6 - int(X_data_single_basin.shape[2] / 2),
+                    7 - math.ceil(X_data_single_basin.shape[2] / 2),
+                ),
+            ),
+            "constant",
+            constant_values=0,
+        )
 
     def __len__(self):
         return self.calculate_dataset_length()
