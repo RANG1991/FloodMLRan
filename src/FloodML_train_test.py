@@ -21,6 +21,7 @@ from datetime import datetime
 import statistics
 from random import shuffle
 import argparse
+from FloodML_CNN_LSTM import FloodML_CNN_LSTM
 
 matplotlib.use("AGG")
 
@@ -475,10 +476,11 @@ def run_training_and_test(
             dropout_p=dropout,
         ).to(device)
     else:
-        model = FloodML_lstm.FLOODML_LSTM(
-            input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
-            hidden_dim=num_hidden_units,
-            dropout=dropout,
+        model = FloodML_CNN_LSTM(
+            input_dim_lstm=len(dynamic_attributes_names) + len(static_attributes_names),
+            hidden_dim_lstm=num_hidden_units,
+            sequence_length=sequence_length,
+            in_channels_cnn=1,
         ).to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
@@ -666,5 +668,8 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--model", "Transformer", "--dataset", "ERA5"]
-    main()
+    ERA5_dataset.Dataset_ERA5.get_maximum_width_and_length_of_basin(
+        "../data/ERA5/ERA_5_all_data"
+    )
+    # sys.argv = ["", "--model", "Transformer", "--dataset", "ERA5"]
+    # main()

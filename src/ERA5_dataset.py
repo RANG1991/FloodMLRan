@@ -4,17 +4,18 @@ import numpy as np
 import pandas as pd
 import torch
 from pathlib import Path
-from os import listdir
-from os.path import isfile, join
-import re
+from glob import glob
 from datetime import datetime
 import matplotlib
+
+matplotlib.use("AGG")
+
 import netCDF4 as nc
 import matplotlib.pyplot as plt
 import multiprocessing
 from multiprocessing import Pool
+import csv
 
-matplotlib.use("AGG")
 
 ATTRIBUTES_TO_TEXT_DESC = {
     "p_mean": "Mean daily precipitation",
@@ -185,7 +186,9 @@ class Dataset_ERA5(Dataset):
         X_data_list = []
         y_data_list = []
         with Pool(multiprocessing.cpu_count() - 1) as p:
-            list_returned = p.map(self.read_single_station_file, all_stations_ids)
+            list_returned = p.map(
+                self.read_single_station_file_spatial, all_stations_ids
+            )
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
             if len(station_id_repeated) > 0:
                 self.dict_basin_records_count[station_id_repeated[0]] = len(
@@ -368,6 +371,26 @@ class Dataset_ERA5(Dataset):
             + f"_{curr_datetime_str}"
             + ".png"
         )
+
+    @staticmethod
+    def get_maximum_width_and_length_of_basin(shape_files_folder):
+        WIDTH_LOC_IN_ROW = 2
+        HEIGHT_LOC_IN_ROW = 3
+        max_height = -1
+        max_width = -1
+        file_names = glob(f"{shape_files_folder}/shape_*.csv")
+        for file_name in file_names:
+            with open(file_name, newline="\n") as csvfile:
+                shape_file_reader = csv.reader(csvfile, delimiter=",")
+                shape_file_rows_list = list(shape_file_reader)
+                width = int(shape_file_rows_list[1][WIDTH_LOC_IN_ROW])
+                height = int(shape_file_rows_list[1][HEIGHT_LOC_IN_ROW])
+                if width > max_width:
+                    max_width = width
+                if height > max_height:
+                    max_height = height
+        print(f"max width is: {max_width}")
+        print(f"max height is: {max_height}")
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
