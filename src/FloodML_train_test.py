@@ -479,7 +479,7 @@ def run_training_and_test(
         ).to(device)
     else:
         model = FloodML_CNN_LSTM(
-            input_dim_lstm=len(dynamic_attributes_names) + len(static_attributes_names),
+            input_dim_lstm=1,
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
             in_channels_cnn=1,
