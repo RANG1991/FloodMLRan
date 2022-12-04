@@ -209,7 +209,7 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            use_Caravan_dataset=False,
+            use_Caravan_dataset=True,
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -230,7 +230,7 @@ def prepare_datasets(
             x_maxs=training_data.get_x_maxs(),
             y_mean=training_data.get_y_mean(),
             y_std=training_data.get_y_std(),
-            use_Caravan_dataset=False,
+            use_Caravan_dataset=True,
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -400,8 +400,8 @@ def run_single_parameters_check_with_val_on_years(
 ):
     training_data, test_data = prepare_datasets(
         sequence_length,
-        all_stations_list,
-        all_stations_list,
+        all_stations_list[:int(0.8 * len(all_stations_list))],
+        all_stations_list[int(0.8 * len(all_stations_list)):],
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -490,7 +490,7 @@ def run_training_and_test(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.5)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -663,11 +663,11 @@ def main():
     elif command_args.dataset == "ERA5":
         choose_hyper_parameters_validation(
             ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
-            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_ERA5,
-            ERA5_dataset.DISCHARGE_STR_ERA5,
-            ERA5_dataset.DYNAMIC_DATA_FOLDER_ERA5,
+            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
+            ERA5_dataset.DISCHARGE_STR_CARAVAN,
+            ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
             ERA5_dataset.STATIC_DATA_FOLDER,
-            ERA5_dataset.DISCHARGE_DATA_FOLDER_ERA5,
+            ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
             use_transformer=use_Transformer,
             dataset_to_use="ERA5",
         )
