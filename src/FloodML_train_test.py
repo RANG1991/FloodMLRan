@@ -59,7 +59,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
 
 
 def eval_model(
-    model, loader, device, preds_obs_dict_per_basin, loss_func
+        model, loader, device, preds_obs_dict_per_basin, loss_func
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
 
@@ -119,7 +119,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
 
 
 def calc_validation_basins_nse(
-    preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10
+        preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10
 ):
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
@@ -181,17 +181,17 @@ def read_basins_csv_files(folder_name, num_basins):
 
 
 def prepare_datasets(
-    sequence_length,
-    all_station_ids_train,
-    all_station_ids_test,
-    static_attributes_names,
-    dynamic_attributes_names,
-    discharge_str,
-    dynamic_data_folder,
-    static_data_folder,
-    discharge_data_folder,
-    dataset_to_use,
-    create_box_plots=False,
+        sequence_length,
+        all_station_ids_train,
+        all_station_ids_test,
+        static_attributes_names,
+        dynamic_attributes_names,
+        discharge_str,
+        dynamic_data_folder,
+        static_data_folder,
+        discharge_data_folder,
+        dataset_to_use,
+        create_box_plots=False,
 ):
     if dataset_to_use == "ERA5":
         training_data = ERA5_dataset.Dataset_ERA5(
@@ -280,11 +280,11 @@ def prepare_datasets(
         for i in range(test_data.X_data.shape[1]):
             dict_boxplots_data = {
                 f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[
-                    :, i
-                ],
+                                                                                         :, i
+                                                                                         ],
                 f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-train": training_data.X_data[
-                    :, i
-                ],
+                                                                                          :, i
+                                                                                          ],
             }
             ERA5_dataset.Dataset_ERA5.create_boxplot_on_data(
                 dict_boxplots_data,
@@ -294,26 +294,26 @@ def prepare_datasets(
 
 
 def run_single_parameters_check_with_cross_val_on_basins(
-    all_stations_list,
-    sequence_length,
-    learning_rate,
-    num_hidden_units,
-    num_epochs,
-    dropout_rate,
-    static_attributes,
-    dynamic_attributes,
-    use_Transformer,
-    static_attributes_names,
-    dynamic_attributes_names,
-    discharge_str,
-    dynamic_data_folder_train,
-    static_data_folder,
-    discharge_data_folder,
-    dataset_to_use,
+        all_stations_list,
+        sequence_length,
+        learning_rate,
+        num_hidden_units,
+        num_epochs,
+        dropout_rate,
+        static_attributes,
+        dynamic_attributes,
+        use_Transformer,
+        static_attributes_names,
+        dynamic_attributes_names,
+        discharge_str,
+        dynamic_data_folder_train,
+        static_data_folder,
+        discharge_data_folder,
+        dataset_to_use,
 ):
     split_stations_list = [
         all_stations_list[
-            i : (i + math.ceil(len(all_stations_list) / K_VALUE_CROSS_VALIDATION))
+        i: (i + math.ceil(len(all_stations_list) / K_VALUE_CROSS_VALIDATION))
         ]
         for i in range(
             0,
@@ -327,7 +327,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
     for i in range(len(split_stations_list)):
         train_stations_list = list(
             itertools.chain.from_iterable(
-                split_stations_list[:i] + split_stations_list[i + 1 :]
+                split_stations_list[:i] + split_stations_list[i + 1:]
             )
         )
         training_data, test_data = prepare_datasets(
@@ -383,20 +383,20 @@ def run_single_parameters_check_with_cross_val_on_basins(
 
 
 def run_single_parameters_check_with_val_on_years(
-    all_stations_list,
-    sequence_length,
-    learning_rate,
-    num_hidden_units,
-    num_epochs,
-    dropout_rate,
-    use_Transformer,
-    static_attributes_names,
-    dynamic_attributes_names,
-    discharge_str,
-    dynamic_data_folder_train,
-    static_data_folder,
-    discharge_data_folder,
-    dataset_to_use,
+        all_stations_list,
+        sequence_length,
+        learning_rate,
+        num_hidden_units,
+        num_epochs,
+        dropout_rate,
+        use_Transformer,
+        static_attributes_names,
+        dynamic_attributes_names,
+        discharge_str,
+        dynamic_data_folder_train,
+        static_data_folder,
+        discharge_data_folder,
+        dataset_to_use,
 ):
     training_data, test_data = prepare_datasets(
         sequence_length,
@@ -449,17 +449,18 @@ def run_single_parameters_check_with_val_on_years(
 
 
 def run_training_and_test(
-    learning_rate,
-    sequence_length,
-    num_hidden_units,
-    num_epochs,
-    training_data,
-    test_data,
-    dropout,
-    static_attributes_names,
-    dynamic_attributes_names,
-    use_Transformer,
-    calc_nse_interval=1,
+        learning_rate,
+        sequence_length,
+        num_hidden_units,
+        num_epochs,
+        training_data,
+        test_data,
+        dropout,
+        static_attributes_names,
+        dynamic_attributes_names,
+        use_Transformer,
+        calc_nse_interval=1,
+        use_CNN_LSTM=False
 ):
     train_dataloader = DataLoader(
         training_data, batch_size=256, shuffle=True, num_workers=1
@@ -477,13 +478,18 @@ def run_training_and_test(
             num_encoder_layers=6,
             dropout_p=dropout,
         ).to(device)
-    else:
+    elif use_CNN_LSTM:
         model = FloodML_CNN_LSTM(
             input_dim_lstm=1,
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
             in_channels_cnn=1,
         ).to(device)
+    else:
+        model = FloodML_lstm.FLOODML_LSTM(
+            input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+            hidden_dim=num_hidden_units,
+            dropout=dropout).to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list_training = []
@@ -514,14 +520,14 @@ def run_training_and_test(
 
 
 def choose_hyper_parameters_validation(
-    static_attributes_names,
-    dynamic_attributes_names,
-    discharge_str,
-    dynamic_data_folder_train,
-    static_data_folder,
-    discharge_data_folder,
-    use_transformer,
-    dataset_to_use,
+        static_attributes_names,
+        dynamic_attributes_names,
+        discharge_str,
+        dynamic_data_folder_train,
+        static_data_folder,
+        discharge_data_folder,
+        use_transformer,
+        dataset_to_use,
 ):
     all_stations_list = (
         open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
@@ -557,11 +563,11 @@ def choose_hyper_parameters_validation(
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     for (
-        learning_rate_param,
-        dropout_rate_param,
-        sequence_length_param,
-        num_hidden_units_param,
-        num_epochs_param,
+            learning_rate_param,
+            dropout_rate_param,
+            sequence_length_param,
+            num_hidden_units_param,
+            num_epochs_param,
     ) in all_parameters:
         nse_list = []
         nse_list_single_pass = run_single_parameters_check_with_val_on_years(

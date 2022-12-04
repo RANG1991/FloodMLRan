@@ -304,7 +304,9 @@ class Dataset_ERA5(Dataset):
         return dataset_xarray_filtered, df_dis_data
 
     def read_single_station_file(self, station_id):
-        if station_id not in self.list_stations_static:
+        if station_id not in self.list_stations_static or not os.path.exists(
+                Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
+        ):
             return np.array([]), np.array([]), np.array([])
         station_data_file = (
                 Path(self.dynamic_data_folder)
