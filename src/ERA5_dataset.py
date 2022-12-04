@@ -90,26 +90,27 @@ STATIC_DATA_FOLDER = "../data/ERA5/Caravan/attributes"
 
 class Dataset_ERA5(Dataset):
     def __init__(
-        self,
-        dynamic_data_folder,
-        static_data_folder,
-        dynamic_attributes_names,
-        discharge_str,
-        train_start_date,
-        train_end_date,
-        validation_start_date,
-        validation_end_date,
-        test_start_date,
-        test_end_date,
-        stage,
-        all_stations_ids,
-        static_attributes_names=[],
-        sequence_length=270,
-        x_mins=None,
-        x_maxs=None,
-        y_mean=None,
-        y_std=None,
-        use_Caravan_dataset=True,
+            self,
+            dynamic_data_folder,
+            static_data_folder,
+            dynamic_attributes_names,
+            discharge_str,
+            train_start_date,
+            train_end_date,
+            validation_start_date,
+            validation_end_date,
+            test_start_date,
+            test_end_date,
+            stage,
+            all_stations_ids,
+            static_attributes_names=[],
+            sequence_length=270,
+            x_mins=None,
+            x_maxs=None,
+            y_mean=None,
+            y_std=None,
+            use_Caravan_dataset=True,
+            use_spatial_data=False,
     ):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
@@ -124,7 +125,7 @@ class Dataset_ERA5(Dataset):
         self.test_start_date = test_start_date
         self.test_end_date = test_end_date
         self.stage = stage
-
+        self.use_spatial_data = use_spatial_data
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
@@ -134,11 +135,15 @@ class Dataset_ERA5(Dataset):
             X_data_list,
             y_data_list,
         ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids)
-        for index, X_data_single_basin in enumerate(X_data_list):
-            X_data_list[index] = self.pad_np_array_equally_from_sides(
-                X_data_single_basin
+        if use_spatial_data:
+            max_width, max_height = self.get_maximum_width_and_length_of_basin(
+                "../data/ERA5/ERA_5_all_data"
             )
-            print(X_data_list[index].shape)
+            for index, X_data_single_basin in enumerate(X_data_list):
+                X_data_list[index] = self.pad_np_array_equally_from_sides(
+                    X_data_single_basin, max_width, max_height
+                )
+                print(X_data_list[index].shape)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
         self.y_std = y_std if y_std is not None else self.y_data.std()
@@ -146,24 +151,28 @@ class Dataset_ERA5(Dataset):
         self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
         self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
         self.X_data = (self.X_data - self.x_min) / (
-            (self.x_max - self.x_min) + 10 ** (-6)
+                (self.x_max - self.x_min) + 10 ** (-6)
         )
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 
     @staticmethod
-    def pad_np_array_equally_from_sides(X_data_single_basin):
+    def pad_np_array_equally_from_sides(X_data_single_basin, max_width, max_height):
+        max_width_right = int(max_width / 2)
+        max_width_left = math.ceil(max_width / 2)
+        max_height_right = int(max_height / 2)
+        max_height_left = math.ceil(max_height / 2)
         return np.pad(
             X_data_single_basin,
             (
                 (0, 0),
                 (
-                    5 - int(X_data_single_basin.shape[1] / 2),
-                    6 - math.ceil(X_data_single_basin.shape[1] / 2),
+                    max_width_right - int(X_data_single_basin.shape[1] / 2),
+                    max_width_left - math.ceil(X_data_single_basin.shape[1] / 2),
                 ),
                 (
-                    6 - int(X_data_single_basin.shape[2] / 2),
-                    7 - math.ceil(X_data_single_basin.shape[2] / 2),
+                    max_height_right - int(X_data_single_basin.shape[2] / 2),
+                    max_height_left - math.ceil(X_data_single_basin.shape[2] / 2),
                 ),
             ),
             "constant",
@@ -175,7 +184,7 @@ class Dataset_ERA5(Dataset):
 
     def __getitem__(self, index) -> T_co:
         X_data_tensor = torch.tensor(
-            self.X_data[index : index + self.sequence_length]
+            self.X_data[index: index + self.sequence_length]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(
             torch.float32
@@ -217,7 +226,10 @@ class Dataset_ERA5(Dataset):
         #         self.read_single_station_file_spatial, all_stations_ids
         #     )
         for station_id in all_stations_ids:
-            list_returned.append(self.read_single_station_file_spatial(station_id))
+            if self.use_spatial_data:
+                list_returned.append(self.read_single_station_file_spatial(station_id))
+            else:
+                list_returned.append(self.read_single_station_file(station_id))
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
             if len(station_id_repeated) > 0:
                 self.dict_basin_records_count[station_id_repeated[0]] = len(
@@ -231,14 +243,14 @@ class Dataset_ERA5(Dataset):
 
     def read_single_station_file_spatial(self, station_id):
         if station_id not in self.list_stations_static or not os.path.exists(
-            Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
+                Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
         ):
             return np.array([]), np.array([]), np.array([])
         station_data_file_spatial = (
-            Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
+                Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
         )
         station_data_file_discharge = (
-            Path(self.dynamic_data_folder) / f"dis24_{station_id}.csv"
+                Path(self.dynamic_data_folder) / f"dis24_{station_id}.csv"
         )
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
@@ -284,7 +296,7 @@ class Dataset_ERA5(Dataset):
         end_date = datetime.strptime(end_date, "%d/%m/%Y")
         df_dis_data = df_dis_data[
             (df_dis_data["date"] >= start_date) & (df_dis_data["date"] <= end_date)
-        ]
+            ]
         dataset_xarray["datetime"] = pd.DatetimeIndex(dataset_xarray["datetime"].values)
         dataset_xarray_filtered = dataset_xarray.isel(
             datetime=dataset_xarray.datetime.isin(df_dis_data["date"])
@@ -295,8 +307,8 @@ class Dataset_ERA5(Dataset):
         if station_id not in self.list_stations_static:
             return np.array([]), np.array([]), np.array([])
         station_data_file = (
-            Path(self.dynamic_data_folder)
-            / f"{self.prefix_dynamic_data_file}{station_id}.csv"
+                Path(self.dynamic_data_folder)
+                / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         )
         df_dynamic_data = pd.read_csv(station_data_file)
         df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
@@ -322,7 +334,7 @@ class Dataset_ERA5(Dataset):
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[
             self.list_dynamic_attributes_names + [self.discharge_str] + ["date"]
-        ].copy()
+            ].copy()
         df_dynamic_data[self.list_dynamic_attributes_names] = df_dynamic_data[
             self.list_dynamic_attributes_names
         ].astype(float)
@@ -351,7 +363,7 @@ class Dataset_ERA5(Dataset):
         df_dynamic_data = df_dynamic_data[
             (df_dynamic_data["date"] >= start_date)
             & (df_dynamic_data["date"] <= end_date)
-        ]
+            ]
         return df_dynamic_data
 
     def calculate_dataset_length(self):
@@ -362,7 +374,7 @@ class Dataset_ERA5(Dataset):
 
     def create_boxplot_of_entire_dataset(self):
         all_attributes_names = (
-            self.list_static_attributes_names + self.list_dynamic_attributes_names
+                self.list_static_attributes_names + self.list_dynamic_attributes_names
         )
         dict_boxplots_data = {}
         for i in range(self.X_data.shape[1]):
@@ -424,6 +436,7 @@ class Dataset_ERA5(Dataset):
                     max_height = height
         print(f"max width is: {max_width}")
         print(f"max height is: {max_height}")
+        return int(max_width), int(max_height)
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length

@@ -400,8 +400,8 @@ def run_single_parameters_check_with_val_on_years(
 ):
     training_data, test_data = prepare_datasets(
         sequence_length,
-        all_stations_list[: int(0.8 * len(all_stations_list))],
-        all_stations_list[int(0.8 * len(all_stations_list)) :],
+        all_stations_list,
+        all_stations_list,
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -670,8 +670,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # ERA5_dataset.Dataset_ERA5.get_maximum_width_and_length_of_basin(
-    #     "../data/ERA5/ERA_5_all_data"
-    # )
     sys.argv = ["", "--model", "LSTM", "--dataset", "ERA5"]
     main()
