@@ -535,11 +535,11 @@ def choose_hyper_parameters_validation(
     shuffle(all_stations_list)
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
-    sequence_lengths = [30, 90, 180, 270, 365]
+    sequence_lengths = [10, 30, 90, 180, 270, 365]
     if use_transformer:
         num_hidden_units = [1]
     else:
-        num_hidden_units = [96, 128, 156, 196, 224, 64, 256]
+        num_hidden_units = [32, 96, 128, 156, 196, 224, 64, 256]
     num_epochs = [10]
     dict_results = {
         "learning rate": [],
@@ -607,7 +607,7 @@ def choose_hyper_parameters_validation(
                 num_hidden_units_param,
                 num_epochs_param,
             )
-        dict_results["learning rate"].append(learning_rate_param)
+        dict_results["dropout rate"].append(dropout_rate_param)
         dict_results["sequence length"].append(sequence_length_param)
         dict_results["num hidden units"].append(num_hidden_units_param)
         dict_results["num epochs"].append(num_epochs_param)
