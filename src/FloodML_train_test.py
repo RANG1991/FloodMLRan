@@ -3,9 +3,9 @@ import sys
 from torch.utils.data import DataLoader
 import ERA5_dataset
 import CAMELS_dataset
-import FloodML_Transformer
 from tqdm import tqdm
-import FloodML_LSTM
+from FloodML_LSTM import LSTM
+from FloodML_Transformer import ERA5_Transformer
 import torch.optim
 import torch.nn as nn
 from os import listdir
@@ -21,7 +21,7 @@ from datetime import datetime
 import statistics
 from random import shuffle
 import argparse
-from FloodML_Conv_LSTM import FloodML_CNN_LSTM
+from FloodML_Conv_LSTM import Conv_LSTM
 
 matplotlib.use("AGG")
 
@@ -470,7 +470,7 @@ def run_training_and_test(
     )
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if use_Transformer:
-        model = FloodML_transformer.ERA5_Transformer(
+        model = ERA5_Transformer(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             sequence_length=sequence_length,
             dim_model=512,
@@ -479,14 +479,14 @@ def run_training_and_test(
             dropout_p=dropout,
         ).to(device)
     elif use_CNN_LSTM:
-        model = FloodML_CNN_LSTM(
+        model = Conv_LSTM(
             input_dim_lstm=1,
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
             in_channels_cnn=1,
         ).to(device)
     else:
-        model = FloodML_lstm.FLOODML_LSTM(
+        model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout).to(device)

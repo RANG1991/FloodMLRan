@@ -3,11 +3,11 @@ import torch.nn.functional as F
 import numpy as np
 
 
-class FloodML_CNN_LSTM(torch.nn.Module):
+class Conv_LSTM(torch.nn.Module):
     def __init__(
-        self, input_dim_lstm, hidden_dim_lstm, sequence_length=270, in_channels_cnn=3
+            self, input_dim_lstm, hidden_dim_lstm, sequence_length=270, in_channels_cnn=3
     ):
-        super(FloodML_CNN_LSTM, self).__init__()
+        super(Conv_LSTM, self).__init__()
         self.input_dim_lstm = input_dim_lstm
         self.hidden_dim_lstm = hidden_dim_lstm
         self.sequence_length = sequence_length

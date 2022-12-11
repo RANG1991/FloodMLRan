@@ -1,9 +1,9 @@
 import torch
 
 
-class FLOODML_LSTM(torch.nn.Module):
+class LSTM(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, dropout):
-        super(FLOODML_LSTM, self).__init__()
+        super(LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
 
