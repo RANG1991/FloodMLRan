@@ -3,9 +3,9 @@ import sys
 from torch.utils.data import DataLoader
 import ERA5_dataset
 import CAMELS_dataset
-import FloodML_transformer
+import FloodML_Transformer
 from tqdm import tqdm
-import FloodML_lstm
+import FloodML_LSTM
 import torch.optim
 import torch.nn as nn
 from os import listdir
@@ -21,7 +21,7 @@ from datetime import datetime
 import statistics
 from random import shuffle
 import argparse
-from FloodML_CNN_LSTM import FloodML_CNN_LSTM
+from FloodML_Conv_LSTM import FloodML_CNN_LSTM
 
 matplotlib.use("AGG")
 
