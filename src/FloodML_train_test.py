@@ -542,7 +542,7 @@ def choose_hyper_parameters_validation(
         num_hidden_units = [32, 96, 128, 156, 196, 224, 64, 256]
     num_epochs = [10]
     dict_results = {
-        "learning rate": [],
+        "dropout rate": [],
         "sequence length": [],
         "num epochs": [],
         "num hidden units": [],
