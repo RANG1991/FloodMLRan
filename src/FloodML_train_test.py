@@ -490,7 +490,7 @@ def run_training_and_test(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.5)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
