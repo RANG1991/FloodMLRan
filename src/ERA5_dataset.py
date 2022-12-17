@@ -219,13 +219,13 @@ class Dataset_ERA5(Dataset):
             "../data/ERA5/ERA_5_all_data"
         )
         for station_id in all_stations_ids:
-            if specific_model_type.lower() == "CONV":
+            if specific_model_type.lower() == "conv":
                 X_data_single_basin = self.read_single_station_file_spatial(station_id)
                 X_data_single_basin = self.pad_np_array_equally_from_sides(
                     X_data_single_basin, max_width, max_height
                 )
                 list_returned.append(X_data_single_basin)
-            elif specific_model_type.lower() == "CNN":
+            elif specific_model_type.lower() == "cnn":
                 X_data_single_basin = self.read_single_station_file_spatial(station_id)
                 X_data_single_basin = self.pad_np_array_equally_from_sides(
                     X_data_single_basin, max_width, max_height

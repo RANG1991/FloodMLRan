@@ -192,6 +192,7 @@ def prepare_datasets(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
+        specific_model_type,
         create_box_plots=False,
 ):
     print(f"running with dataset: {dataset_to_use}")
@@ -208,6 +209,7 @@ def prepare_datasets(
             test_start_date="01/10/1989",
             test_end_date="30/09/1999",
             stage="train",
+            specific_model_type=specific_model_type,
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
@@ -400,6 +402,7 @@ def run_single_parameters_check_with_val_on_years(
         model_name,
         dataset_to_use,
 ):
+    specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else ""
     training_data, test_data = prepare_datasets(
         sequence_length,
         all_stations_list[:int(0.8 * len(all_stations_list))],
@@ -411,6 +414,7 @@ def run_single_parameters_check_with_val_on_years(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
+        specific_model_type=specific_model_type
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
@@ -681,5 +685,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--model", "LSTM", "--dataset", "ERA5"]
+    sys.argv = ["", "--model", "CNN_LSTM", "--dataset", "ERA5"]
     main()
