@@ -103,6 +103,7 @@ class Dataset_ERA5(Dataset):
             test_end_date,
             stage,
             all_stations_ids,
+            specific_model_type="",
             static_attributes_names=[],
             sequence_length=270,
             x_mins=None,
@@ -110,7 +111,6 @@ class Dataset_ERA5(Dataset):
             y_mean=None,
             y_std=None,
             use_Caravan_dataset=True,
-            use_spatial_data=False,
     ):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
@@ -125,7 +125,6 @@ class Dataset_ERA5(Dataset):
         self.test_start_date = test_start_date
         self.test_end_date = test_end_date
         self.stage = stage
-        self.use_spatial_data = use_spatial_data
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
@@ -134,16 +133,7 @@ class Dataset_ERA5(Dataset):
             list_stations_repeated,
             X_data_list,
             y_data_list,
-        ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids)
-        if use_spatial_data:
-            max_width, max_height = self.get_maximum_width_and_length_of_basin(
-                "../data/ERA5/ERA_5_all_data"
-            )
-            for index, X_data_single_basin in enumerate(X_data_list):
-                X_data_list[index] = self.pad_np_array_equally_from_sides(
-                    X_data_single_basin, max_width, max_height
-                )
-                print(X_data_list[index].shape)
+        ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids, specific_model_type=specific_model_type)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
         self.y_std = y_std if y_std is not None else self.y_data.std()
@@ -216,7 +206,7 @@ class Dataset_ERA5(Dataset):
         ).to_numpy()
         return df_attr, df_attr["gauge_id"].values.tolist()
 
-    def read_all_dynamic_data_files(self, all_stations_ids):
+    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type):
         list_stations_repeated = []
         X_data_list = []
         y_data_list = []
@@ -225,11 +215,31 @@ class Dataset_ERA5(Dataset):
         #     list_returned = p.map(
         #         self.read_single_station_file_spatial, all_stations_ids
         #     )
+        max_width, max_height = self.get_maximum_width_and_length_of_basin(
+            "../data/ERA5/ERA_5_all_data"
+        )
         for station_id in all_stations_ids:
-            if self.use_spatial_data:
-                list_returned.append(self.read_single_station_file_spatial(station_id))
-            else:
-                list_returned.append(self.read_single_station_file(station_id))
+            if self.check_is_valid_station_id(station_id):
+                if specific_model_type.lower() == "conv":
+                    station_id_repeated, X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
+                    X_data_spatial = self.pad_np_array_equally_from_sides(
+                        X_data_spatial, max_width, max_height
+                    ).flatten()
+                    list_returned.append((station_id_repeated, X_data_spatial, y_data))
+                elif specific_model_type.lower() == "cnn":
+                    station_id_repeated, X_data_spatial, y_data_spatial = self.read_single_station_file_spatial(
+                        station_id)
+                    _, X_data_non_spatial, _ = self.read_single_station_file(station_id)
+                    if len(X_data_non_spatial) > 0 and len(X_data_non_spatial) > 0:
+                        X_data_spatial = self.pad_np_array_equally_from_sides(
+                            X_data_spatial, max_width, max_height
+                        )
+                        X_data_all = np.concatenate(
+                            [X_data_spatial.reshape(len(X_data_non_spatial), max_height * max_width),
+                             np.stack(X_data_non_spatial)], axis=1)
+                        list_returned.append((station_id_repeated, X_data_all, y_data_spatial))
+                else:
+                    list_returned.append(self.read_single_station_file(station_id))
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
             if len(station_id_repeated) > 0:
                 self.dict_basin_records_count[station_id_repeated[0]] = len(
@@ -241,11 +251,13 @@ class Dataset_ERA5(Dataset):
                     y_data_list.append(y_data_curr)
         return list_stations_repeated, X_data_list, y_data_list
 
+    def check_is_valid_station_id(self, station_id):
+        return (station_id in self.list_stations_static
+                and os.path.exists(Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc")
+                and os.path.exists(
+                    Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"))
+
     def read_single_station_file_spatial(self, station_id):
-        if station_id not in self.list_stations_static or not os.path.exists(
-                Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
-        ):
-            return np.array([]), np.array([]), np.array([])
         station_data_file_spatial = (
                 Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
         )
@@ -304,10 +316,6 @@ class Dataset_ERA5(Dataset):
         return dataset_xarray_filtered, df_dis_data
 
     def read_single_station_file(self, station_id):
-        if station_id not in self.list_stations_static or not os.path.exists(
-                Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
-        ):
-            return np.array([]), np.array([]), np.array([])
         station_data_file = (
                 Path(self.dynamic_data_folder)
                 / f"{self.prefix_dynamic_data_file}{station_id}.csv"

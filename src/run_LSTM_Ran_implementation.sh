@@ -6,7 +6,6 @@
 #SBATCH --time=50:0:0
 #SBATCH --mem=40G
 #SBATCH --gres gpu
-#SBATCH -J jupyter
 
 # Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/src/

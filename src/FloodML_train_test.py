@@ -4,8 +4,6 @@ from torch.utils.data import DataLoader
 import ERA5_dataset
 import CAMELS_dataset
 from tqdm import tqdm
-from FloodML_LSTM import LSTM
-from FloodML_Transformer import ERA5_Transformer
 import torch.optim
 import torch.nn as nn
 from os import listdir
@@ -21,7 +19,10 @@ from datetime import datetime
 import statistics
 from random import shuffle
 import argparse
+from FloodML_LSTM import LSTM
+from FloodML_Transformer import ERA5_Transformer
 from FloodML_Conv_LSTM import Conv_LSTM
+from FloodML_CNN_LSTM import CNN_LSTM
 
 matplotlib.use("AGG")
 
@@ -191,8 +192,10 @@ def prepare_datasets(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
+        specific_model_type,
         create_box_plots=False,
 ):
+    print(f"running with dataset: {dataset_to_use}")
     if dataset_to_use == "ERA5":
         training_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -206,10 +209,11 @@ def prepare_datasets(
             test_start_date="01/10/1989",
             test_end_date="30/09/1999",
             stage="train",
+            specific_model_type=specific_model_type,
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            use_Caravan_dataset=True,
+            use_Caravan_dataset=False,
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -226,11 +230,12 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
+            specific_model_type=specific_model_type,
             x_mins=training_data.get_x_mins(),
             x_maxs=training_data.get_x_maxs(),
             y_mean=training_data.get_y_mean(),
             y_std=training_data.get_y_std(),
-            use_Caravan_dataset=True,
+            use_Caravan_dataset=False,
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -302,7 +307,6 @@ def run_single_parameters_check_with_cross_val_on_basins(
         dropout_rate,
         static_attributes,
         dynamic_attributes,
-        use_Transformer,
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -310,6 +314,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
+        model_name
 ):
     split_stations_list = [
         all_stations_list[
@@ -358,7 +363,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
             dropout_rate,
             static_attributes,
             dynamic_attributes,
-            use_Transformer=use_Transformer,
+            model_name=model_name
         )
         training_loss_list[i] = training_loss_list_single_pass
         validation_loss_list[i] = validation_loss_list_single_pass
@@ -389,15 +394,16 @@ def run_single_parameters_check_with_val_on_years(
         num_hidden_units,
         num_epochs,
         dropout_rate,
-        use_Transformer,
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
         dynamic_data_folder_train,
         static_data_folder,
         discharge_data_folder,
+        model_name,
         dataset_to_use,
 ):
+    specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else ""
     training_data, test_data = prepare_datasets(
         sequence_length,
         all_stations_list[:int(0.8 * len(all_stations_list))],
@@ -409,6 +415,7 @@ def run_single_parameters_check_with_val_on_years(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
+        specific_model_type=specific_model_type
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
@@ -426,7 +433,7 @@ def run_single_parameters_check_with_val_on_years(
         dropout_rate,
         static_attributes_names,
         dynamic_attributes_names,
-        use_Transformer=use_Transformer,
+        model_name=model_name
     )
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -458,9 +465,8 @@ def run_training_and_test(
         dropout,
         static_attributes_names,
         dynamic_attributes_names,
-        use_Transformer,
-        calc_nse_interval=1,
-        use_CNN_LSTM=False
+        model_name,
+        calc_nse_interval=1
 ):
     train_dataloader = DataLoader(
         training_data, batch_size=256, shuffle=True, num_workers=1
@@ -468,8 +474,9 @@ def run_training_and_test(
     test_dataloader = DataLoader(
         test_data, batch_size=256, shuffle=False, num_workers=1
     )
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if use_Transformer:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"running with model: {model_name}")
+    if model_name.lower() == "transformer":
         model = ERA5_Transformer(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             sequence_length=sequence_length,
@@ -478,18 +485,25 @@ def run_training_and_test(
             num_encoder_layers=6,
             dropout_p=dropout,
         ).to(device)
-    elif use_CNN_LSTM:
+    elif model_name.lower() == "conv_lstm":
         model = Conv_LSTM(
             input_dim_lstm=1,
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
             in_channels_cnn=1,
         ).to(device)
-    else:
+    elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout).to(device)
+    elif model_name.lower() == "cnn_lstm":
+        model = CNN_LSTM(lat=11, lon=13, hidden_size=num_hidden_units, num_channels=1,
+                         dropout_rate=dropout,
+                         num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
+                         image_input_size=(11, 13)).to(device)
+    else:
+        raise Exception(f"model with name {model_name} is not recognized")
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list_training = []
@@ -526,7 +540,7 @@ def choose_hyper_parameters_validation(
         dynamic_data_folder_train,
         static_data_folder,
         discharge_data_folder,
-        use_transformer,
+        model_name,
         dataset_to_use,
 ):
     all_stations_list = (
@@ -536,7 +550,7 @@ def choose_hyper_parameters_validation(
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [10, 30, 90, 180, 270, 365]
-    if use_transformer:
+    if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
         num_hidden_units = [32, 96, 128, 156, 196, 224, 64, 256]
@@ -577,13 +591,13 @@ def choose_hyper_parameters_validation(
             num_hidden_units_param,
             num_epochs_param,
             dropout_rate_param,
-            use_transformer,
             static_attributes_names,
             dynamic_attributes_names,
             discharge_str,
             dynamic_data_folder_train,
             static_data_folder,
             discharge_data_folder,
+            model_name=model_name,
             dataset_to_use=dataset_to_use,
         )
         nse_list.extend(nse_list_single_pass)
@@ -641,14 +655,10 @@ def main():
     parser.add_argument(
         "--model",
         help="which model to use - the options are LSTM or Transformer",
-        choices=["LSTM", "Transformer"],
+        choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM"],
         default="LSTM",
     )
     command_args = parser.parse_args()
-    use_Transformer = command_args.model == "Transformer"
-    print(
-        f"running with dataset: {command_args.dataset} and with model: {command_args.model}"
-    )
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
             CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
@@ -657,18 +667,18 @@ def main():
             CAMELS_dataset.DYNAMIC_DATA_FOLDER,
             CAMELS_dataset.STATIC_DATA_FOLDER,
             CAMELS_dataset.DISCHARGE_DATA_FOLDER,
-            use_transformer=use_Transformer,
+            model_name=command_args.model,
             dataset_to_use="CAMELS",
         )
     elif command_args.dataset == "ERA5":
         choose_hyper_parameters_validation(
             ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
-            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
-            ERA5_dataset.DISCHARGE_STR_CARAVAN,
-            ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
+            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_ERA5,
+            ERA5_dataset.DISCHARGE_STR_ERA5,
+            ERA5_dataset.DYNAMIC_DATA_FOLDER_ERA5,
             ERA5_dataset.STATIC_DATA_FOLDER,
-            ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
-            use_transformer=use_Transformer,
+            ERA5_dataset.DISCHARGE_DATA_FOLDER_ERA5,
+            model_name=command_args.model,
             dataset_to_use="ERA5",
         )
     else:
@@ -676,5 +686,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--model", "LSTM", "--dataset", "ERA5"]
+    sys.argv = ["", "--model", "CNN_LSTM", "--dataset", "ERA5"]
     main()

@@ -1,6 +1,7 @@
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 
 
 # convolution has 3 parameters:
@@ -61,12 +62,12 @@ class CNN(nn.Module):
         width = input_image_shape[0]
         height = input_image_shape[1]
         new_dims = np.zeros(2)
-        new_dims[0] = ((width - filter_size) / stride) + 1
-        new_dims[1] = ((height - filter_size) / stride) + 1
+        new_dims[0] = ((width - filter_size) // stride) + 1
+        new_dims[1] = ((height - filter_size) // stride) + 1
         return new_dims
 
     def calc_dims_after_all_conv_op(self, input_image_shape: [int], ops_list: [str]):
-        image_dims = (input_image_shape[1], input_image_shape[2])
+        image_dims = (input_image_shape[-2], input_image_shape[-1])
         for op in ops_list:
             if op[0] == "conv":
                 image_dims = CNN.calc_dims_after_filter(image_dims,
@@ -82,7 +83,6 @@ class CNN(nn.Module):
 class CNN_LSTM(nn.Module):
 
     def __init__(self, lat, lon,
-                 input_size: int,
                  hidden_size: int,
                  num_channels: int,
                  dropout_rate: float = 0.0,
@@ -100,6 +100,7 @@ class CNN_LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
+        input_size = (image_input_size[0] * image_input_size[1] * num_channels) + num_attributes
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=(input_size - num_attributes),
                        image_input_size=image_input_size)
         # create required layer
