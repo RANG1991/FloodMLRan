@@ -82,7 +82,6 @@ class CNN(nn.Module):
 class CNN_LSTM(nn.Module):
 
     def __init__(self, lat, lon,
-                 input_size: int,
                  hidden_size: int,
                  num_channels: int,
                  dropout_rate: float = 0.0,
@@ -100,6 +99,7 @@ class CNN_LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
+        input_size = (image_input_size[0] * image_input_size[1] * num_channels) + num_attributes
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=(input_size - num_attributes),
                        image_input_size=image_input_size)
         # create required layer
