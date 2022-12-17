@@ -406,8 +406,8 @@ def run_single_parameters_check_with_val_on_years(
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else ""
     training_data, test_data = prepare_datasets(
         sequence_length,
-        all_stations_list[:int(0.8 * len(all_stations_list))],
-        all_stations_list[int(0.8 * len(all_stations_list)):],
+        all_stations_list,
+        all_stations_list,
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -504,7 +504,7 @@ def run_training_and_test(
                          image_input_size=(11, 13)).to(device)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.005)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -547,13 +547,13 @@ def choose_hyper_parameters_validation(
         open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
     )
     shuffle(all_stations_list)
-    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
-    dropout_rates = [0.0, 0.25, 0.4, 0.5]
-    sequence_lengths = [10, 30, 90, 180, 270, 365]
+    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    dropout_rates = [0.4]
+    sequence_lengths = [270]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [32, 96, 128, 156, 196, 224, 64, 256]
+        num_hidden_units = [256]
     num_epochs = [10]
     dict_results = {
         "dropout rate": [],
@@ -686,5 +686,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--model", "CNN_LSTM", "--dataset", "ERA5"]
+    sys.argv = ["", "--model", "LSTM", "--dataset", "CAMELS"]
     main()
