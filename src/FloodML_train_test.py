@@ -504,7 +504,7 @@ def run_training_and_test(
                          image_input_size=(11, 13)).to(device)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.005)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -686,5 +686,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--model", "LSTM", "--dataset", "CAMELS"]
+    sys.argv = ["", "--model", "LSTM", "--dataset", "ERA5"]
     main()
