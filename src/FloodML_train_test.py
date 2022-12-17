@@ -304,7 +304,6 @@ def run_single_parameters_check_with_cross_val_on_basins(
         dropout_rate,
         static_attributes,
         dynamic_attributes,
-        use_Transformer,
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -312,6 +311,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
+        model_name
 ):
     split_stations_list = [
         all_stations_list[
@@ -360,7 +360,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
             dropout_rate,
             static_attributes,
             dynamic_attributes,
-            use_Transformer=use_Transformer,
+            model_name=model_name
         )
         training_loss_list[i] = training_loss_list_single_pass
         validation_loss_list[i] = validation_loss_list_single_pass
