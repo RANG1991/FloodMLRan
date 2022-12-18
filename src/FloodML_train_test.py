@@ -408,12 +408,13 @@ def run_single_parameters_check_with_val_on_years(
         shared_model
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else "LSTM"
+    shuffle(all_stations_list)
     if shared_model:
-        training_stations_list = shuffle(all_stations_list)[:int(len(all_stations_list) * 0.8)]
-        val_stations_list = shuffle(all_stations_list)[int(len(all_stations_list) * 0.8):]
+        training_stations_list = all_stations_list[:int(len(all_stations_list) * 0.8)]
+        val_stations_list = all_stations_list[int(len(all_stations_list) * 0.8):]
     else:
-        training_stations_list = shuffle(all_stations_list)[:]
-        val_stations_list = shuffle(all_stations_list)[:]
+        training_stations_list = all_stations_list[:]
+        val_stations_list = all_stations_list[:]
     training_data, test_data = prepare_datasets(
         sequence_length,
         training_stations_list,
@@ -601,7 +602,6 @@ def choose_hyper_parameters_validation(
             num_hidden_units_param,
             num_epochs_param,
     ) in all_parameters:
-        nse_list = []
         nse_list_single_pass = run_single_parameters_check_with_val_on_years(
             all_stations_list,
             sequence_length_param,
@@ -620,19 +620,18 @@ def choose_hyper_parameters_validation(
             optim_name=optim_name,
             shared_model=shared_model
         )
-        nse_list.extend(nse_list_single_pass)
-        if len(nse_list) == 0:
+        if len(nse_list_single_pass) == 0:
             median_nse = -1
         else:
-            median_nse = statistics.median(nse_list)
-        if len(nse_list) > 0:
+            median_nse = statistics.median(nse_list_single_pass)
+        if len(nse_list_single_pass) > 0:
             list_plots_titles.append(
                 f"{learning_rate_param};"
                 f"{sequence_length_param};"
                 f"{num_hidden_units_param};"
                 f"{num_epochs_param}"
             )
-            list_nse_lists_basins.append(nse_list)
+            list_nse_lists_basins.append(nse_list_single_pass)
         if median_nse > best_median_nse or best_median_nse == -1:
             best_median_nse = median_nse
             best_parameters = (
@@ -644,7 +643,7 @@ def choose_hyper_parameters_validation(
         dict_results["dropout rate"].append(dropout_rate_param)
         dict_results["sequence length"].append(sequence_length_param)
         dict_results["num hidden units"].append(num_hidden_units_param)
-        dict_results["num epochs"].append(num_epochs_param)
+        # dict_results["num epochs"].append(num_epochs_param)
         dict_results["median NSE"].append(median_nse)
         for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
             plot_NSE_CDF(list_nse, title)
@@ -687,7 +686,7 @@ def main():
     parser.add_argument("--shared_model",
                         help="whether to run in shared model scenario - when the "
                              "training and validation stations are not the same",
-                        choices=[True, False], default=False)
+                        choices=["True", "False"], default="False")
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -700,7 +699,7 @@ def main():
             model_name=command_args.model,
             dataset_to_use="CAMELS",
             optim_name=command_args.optim,
-            shared_model=command_args.shared_model
+            shared_model=bool(command_args.shared_model)
         )
     elif command_args.dataset == "ERA5":
         choose_hyper_parameters_validation(
@@ -713,7 +712,7 @@ def main():
             model_name=command_args.model,
             dataset_to_use="ERA5",
             optim_name=command_args.optim,
-            shared_model=command_args.shared_model
+            shared_model=bool(command_args.shared_model)
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
@@ -725,7 +724,8 @@ def main():
             ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
             model_name=command_args.model,
             dataset_to_use="CARAVAN",
-            optim_name=command_args.optim
+            optim_name=command_args.optim,
+            shared_model=bool(command_args.shared_model)
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
