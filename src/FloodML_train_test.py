@@ -402,6 +402,8 @@ def run_single_parameters_check_with_val_on_years(
         discharge_data_folder,
         model_name,
         dataset_to_use,
+        optim_name
+
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else ""
     training_data, test_data = prepare_datasets(
@@ -433,7 +435,8 @@ def run_single_parameters_check_with_val_on_years(
         dropout_rate,
         static_attributes_names,
         dynamic_attributes_names,
-        model_name=model_name
+        model_name=model_name,
+        optim_name=optim_name
     )
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -466,7 +469,8 @@ def run_training_and_test(
         static_attributes_names,
         dynamic_attributes_names,
         model_name,
-        calc_nse_interval=1
+        calc_nse_interval=1,
+        optim_name="SGD"
 ):
     train_dataloader = DataLoader(
         training_data, batch_size=256, shuffle=True, num_workers=1
@@ -504,7 +508,10 @@ def run_training_and_test(
                          image_input_size=(11, 13)).to(device)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+    if optim_name.lower() == "SGD":
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+    else:
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     loss_list_training = []
     loss_list_test = []
@@ -542,6 +549,7 @@ def choose_hyper_parameters_validation(
         discharge_data_folder,
         model_name,
         dataset_to_use,
+        optim_name
 ):
     all_stations_list = (
         open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
@@ -599,6 +607,7 @@ def choose_hyper_parameters_validation(
             discharge_data_folder,
             model_name=model_name,
             dataset_to_use=dataset_to_use,
+            optim_name=optim_name
         )
         nse_list.extend(nse_list_single_pass)
         if len(nse_list) == 0:
@@ -648,15 +657,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
-        help="which dataset to train and test on - the options are CAMELS or ERA5",
+        help="which dataset to train and test on",
         choices=["CAMELS", "ERA5"],
         default="ERA5",
     )
     parser.add_argument(
         "--model",
-        help="which model to use - the options are LSTM or Transformer",
+        help="which model to use",
         choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM"],
         default="LSTM",
+    )
+    parser.add_argument(
+        "--optim",
+        help="which optimizer to use",
+        choices=["SGD", "Adam"],
+        default="SGD",
     )
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
@@ -669,6 +684,7 @@ def main():
             CAMELS_dataset.DISCHARGE_DATA_FOLDER,
             model_name=command_args.model,
             dataset_to_use="CAMELS",
+            optim_name=command_args.optim
         )
     elif command_args.dataset == "ERA5":
         choose_hyper_parameters_validation(
@@ -680,11 +696,11 @@ def main():
             ERA5_dataset.DISCHARGE_DATA_FOLDER_ERA5,
             model_name=command_args.model,
             dataset_to_use="ERA5",
+            optim_name=command_args.optim
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
 
 
 if __name__ == "__main__":
-    sys.argv = ["", "--model", "LSTM", "--dataset", "ERA5"]
     main()
