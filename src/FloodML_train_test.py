@@ -23,6 +23,7 @@ from FloodML_LSTM import LSTM
 from FloodML_Transformer import ERA5_Transformer
 from FloodML_Conv_LSTM import Conv_LSTM
 from FloodML_CNN_LSTM import CNN_LSTM
+from pathlib import Path
 
 matplotlib.use("AGG")
 
@@ -179,6 +180,26 @@ def read_basins_csv_files(folder_name, num_basins):
             df_temp = pd.read_csv(folder_name + os.sep + data_file)
             df = pd.concat([df, df_temp])
     return df
+
+
+def sort_basins_by_static_attributes(static_data_folder):
+    df_attr_caravan = pd.read_csv(
+        Path(static_data_folder) / "attributes_hydroatlas_us.csv",
+        dtype={"gauge_id": str},
+    )
+    df_attr_hydroatlas = pd.read_csv(
+        Path(static_data_folder) / "attributes_caravan_us.csv",
+        dtype={"gauge_id": str},
+    )
+    df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")
+    df_attr["gauge_id"] = (
+        df_attr["gauge_id"]
+        .apply(lambda x: str(x).replace("us_", ""))
+        .values.tolist()
+    )
+    df_attr = df_attr.dropna()
+    df_attr = df_attr[["gauge_id", "basin_area"]].sort_values(["basin_area"], ascending=False)
+    return df_attr["gauge_id"].to_list()
 
 
 def prepare_datasets(
@@ -390,7 +411,8 @@ def run_single_parameters_check_with_cross_val_on_basins(
 
 
 def run_single_parameters_check_with_val_on_years(
-        all_stations_list,
+        train_stations_list,
+        val_stations_list,
         sequence_length,
         learning_rate,
         num_hidden_units,
@@ -408,16 +430,9 @@ def run_single_parameters_check_with_val_on_years(
         shared_model
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else "LSTM"
-    shuffle(all_stations_list)
-    if shared_model:
-        training_stations_list = all_stations_list[:int(len(all_stations_list) * 0.8)]
-        val_stations_list = all_stations_list[int(len(all_stations_list) * 0.8):]
-    else:
-        training_stations_list = all_stations_list[:]
-        val_stations_list = all_stations_list[:]
     training_data, test_data = prepare_datasets(
         sequence_length,
-        training_stations_list,
+        train_stations_list,
         val_stations_list,
         static_attributes_names,
         dynamic_attributes_names,
@@ -562,10 +577,14 @@ def choose_hyper_parameters_validation(
         optim_name,
         shared_model
 ):
-    all_stations_list = (
-        open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
-    )
-    shuffle(all_stations_list)
+    train_stations_list = []
+    val_stations_list = []
+    all_stations_list_sorted = sort_basins_by_static_attributes(static_data_folder)
+    for i in range(len(all_stations_list_sorted)):
+        if i % 5 != 0:
+            train_stations_list.append(all_stations_list_sorted[i])
+        else:
+            val_stations_list.append(all_stations_list_sorted[i])
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [10, 30, 90, 180, 270, 365]
@@ -577,7 +596,7 @@ def choose_hyper_parameters_validation(
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
-        "num epochs": [],
+        # "num epochs": [],
         "num hidden units": [],
         "median NSE": [],
     }
@@ -603,7 +622,8 @@ def choose_hyper_parameters_validation(
             num_epochs_param,
     ) in all_parameters:
         nse_list_single_pass = run_single_parameters_check_with_val_on_years(
-            all_stations_list,
+            train_stations_list,
+            val_stations_list,
             sequence_length_param,
             learning_rate_param,
             num_hidden_units_param,
@@ -655,9 +675,9 @@ def choose_hyper_parameters_validation(
         plt.close()
         df_results = pd.DataFrame(data=dict_results)
         df_results.to_csv(
-            f"./results_{curr_datetime_str}.csv",
+            f"../data/images/results_{curr_datetime_str}.csv",
             mode="a",
-            header=not os.path.exists(f"./results_{curr_datetime_str}.csv"),
+            header=not os.path.exists(f"../data/images/results_{curr_datetime_str}.csv"),
         )
         print(f"best parameters: {best_parameters}")
     return best_parameters
