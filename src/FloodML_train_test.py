@@ -193,7 +193,7 @@ def prepare_datasets(
         discharge_data_folder,
         dataset_to_use,
         specific_model_type,
-        create_box_plots=False,
+        create_box_plots=False
 ):
     print(f"running with dataset: {dataset_to_use}")
     if dataset_to_use == "ERA5" or dataset_to_use == "CARAVAN":
@@ -404,14 +404,20 @@ def run_single_parameters_check_with_val_on_years(
         discharge_data_folder,
         model_name,
         dataset_to_use,
-        optim_name
-
+        optim_name,
+        shared_model
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else "LSTM"
+    if shared_model:
+        training_stations_list = shuffle(all_stations_list)[:int(len(all_stations_list) * 0.8)]
+        val_stations_list = shuffle(all_stations_list)[int(len(all_stations_list) * 0.8):]
+    else:
+        training_stations_list = shuffle(all_stations_list)[:]
+        val_stations_list = shuffle(all_stations_list)[:]
     training_data, test_data = prepare_datasets(
         sequence_length,
-        all_stations_list,
-        all_stations_list,
+        training_stations_list,
+        val_stations_list,
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -419,7 +425,7 @@ def run_single_parameters_check_with_val_on_years(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
-        specific_model_type=specific_model_type
+        specific_model_type=specific_model_type,
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
@@ -552,7 +558,8 @@ def choose_hyper_parameters_validation(
         discharge_data_folder,
         model_name,
         dataset_to_use,
-        optim_name
+        optim_name,
+        shared_model
 ):
     all_stations_list = (
         open("../data/CAMELS_US/train_basins.txt", "r").read().splitlines()
@@ -610,7 +617,8 @@ def choose_hyper_parameters_validation(
             discharge_data_folder,
             model_name=model_name,
             dataset_to_use=dataset_to_use,
-            optim_name=optim_name
+            optim_name=optim_name,
+            shared_model=shared_model
         )
         nse_list.extend(nse_list_single_pass)
         if len(nse_list) == 0:
@@ -676,6 +684,10 @@ def main():
         choices=["SGD", "Adam"],
         default="SGD",
     )
+    parser.add_argument("--shared_model",
+                        help="whether to run in shared model scenario - when the "
+                             "training and validation stations are not the same",
+                        choices=[True, False], default=False)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -687,7 +699,8 @@ def main():
             CAMELS_dataset.DISCHARGE_DATA_FOLDER,
             model_name=command_args.model,
             dataset_to_use="CAMELS",
-            optim_name=command_args.optim
+            optim_name=command_args.optim,
+            shared_model=command_args.shared_model
         )
     elif command_args.dataset == "ERA5":
         choose_hyper_parameters_validation(
@@ -699,7 +712,8 @@ def main():
             ERA5_dataset.DISCHARGE_DATA_FOLDER_ERA5,
             model_name=command_args.model,
             dataset_to_use="ERA5",
-            optim_name=command_args.optim
+            optim_name=command_args.optim,
+            shared_model=command_args.shared_model
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
