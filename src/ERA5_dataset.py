@@ -253,9 +253,7 @@ class Dataset_ERA5(Dataset):
 
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static
-                and os.path.exists(Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc")
-                and os.path.exists(
-                    Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"))
+                and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"))
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (

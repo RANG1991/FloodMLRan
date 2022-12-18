@@ -196,7 +196,8 @@ def prepare_datasets(
         create_box_plots=False,
 ):
     print(f"running with dataset: {dataset_to_use}")
-    if dataset_to_use == "ERA5":
+    if dataset_to_use == "ERA5" or dataset_to_use == "CARAVAN":
+        use_Caravan_dataset = True if dataset_to_use == "CARAVAN" else False
         training_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
             static_data_folder=static_data_folder,
@@ -213,7 +214,7 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            use_Caravan_dataset=False,
+            use_Caravan_dataset=use_Caravan_dataset
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -235,7 +236,7 @@ def prepare_datasets(
             x_maxs=training_data.get_x_maxs(),
             y_mean=training_data.get_y_mean(),
             y_std=training_data.get_y_std(),
-            use_Caravan_dataset=False,
+            use_Caravan_dataset=use_Caravan_dataset
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -345,6 +346,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
             dynamic_data_folder_train,
             static_data_folder,
             discharge_data_folder,
+            specific_model_type=model_name,
             dataset_to_use=dataset_to_use,
         )
         training_data.set_sequence_length(sequence_length)
@@ -405,7 +407,7 @@ def run_single_parameters_check_with_val_on_years(
         optim_name
 
 ):
-    specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else ""
+    specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
         sequence_length,
         all_stations_list,
@@ -508,7 +510,8 @@ def run_training_and_test(
                          image_input_size=(11, 13)).to(device)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
-    if optim_name.lower() == "SGD":
+    print(f"running with optimizer: {optim_name}")
+    if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -556,12 +559,12 @@ def choose_hyper_parameters_validation(
     )
     shuffle(all_stations_list)
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
-    dropout_rates = [0.4]
-    sequence_lengths = [270]
+    dropout_rates = [0.0, 0.25, 0.4, 0.5]
+    sequence_lengths = [10, 30, 90, 180, 270, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [256]
+        num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
     num_epochs = [10]
     dict_results = {
         "dropout rate": [],
@@ -658,7 +661,7 @@ def main():
     parser.add_argument(
         "--dataset",
         help="which dataset to train and test on",
-        choices=["CAMELS", "ERA5"],
+        choices=["CAMELS", "ERA5", "CARAVAN"],
         default="ERA5",
     )
     parser.add_argument(
@@ -696,6 +699,18 @@ def main():
             ERA5_dataset.DISCHARGE_DATA_FOLDER_ERA5,
             model_name=command_args.model,
             dataset_to_use="ERA5",
+            optim_name=command_args.optim
+        )
+    elif command_args.dataset == "CARAVAN":
+        choose_hyper_parameters_validation(
+            ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
+            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
+            ERA5_dataset.DISCHARGE_STR_CARAVAN,
+            ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
+            ERA5_dataset.STATIC_DATA_FOLDER,
+            ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
+            model_name=command_args.model,
+            dataset_to_use="CARAVAN",
             optim_name=command_args.optim
         )
     else:
