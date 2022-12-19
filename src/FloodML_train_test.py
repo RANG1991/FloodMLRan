@@ -150,7 +150,7 @@ def calc_validation_basins_nse(
     ax.legend()
     ax.set_title(f"Basin {max_basin} - NSE: {max_nse:.3f}")
     plt.savefig(
-        f"../data/images/Hydrography_of_{num_epoch}_epoch_{curr_datetime_str}.png"
+        f"../data/images/Hydrograph_of_{num_epoch}_epoch_{curr_datetime_str}.png"
     )
     plt.close()
     return nse_list_basins
@@ -543,13 +543,13 @@ def run_training_and_test(
     nse_list = []
     preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
+        loss_on_test_epoch = eval_model(
+            model, test_dataloader, device, preds_obs_dict_per_basin, loss_func
+        )
         loss_on_training_epoch = train_epoch(
             model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device
         )
         loss_list_training.append(loss_on_training_epoch)
-        loss_on_test_epoch = eval_model(
-            model, test_dataloader, device, preds_obs_dict_per_basin, loss_func
-        )
         loss_list_test.append(loss_on_test_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             nse_list_epoch = calc_validation_basins_nse(
