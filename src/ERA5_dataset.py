@@ -219,21 +219,27 @@ class Dataset_ERA5(Dataset):
             "../data/ERA5/ERA_5_all_data"
         )
         for station_id in all_stations_ids:
-            if specific_model_type.lower() == "conv":
-                X_data_single_basin = self.read_single_station_file_spatial(station_id)
-                X_data_single_basin = self.pad_np_array_equally_from_sides(
-                    X_data_single_basin, max_width, max_height
-                )
-                list_returned.append(X_data_single_basin)
-            elif specific_model_type.lower() == "cnn":
-                X_data_single_basin = self.read_single_station_file_spatial(station_id)
-                X_data_single_basin = self.pad_np_array_equally_from_sides(
-                    X_data_single_basin, max_width, max_height
-                ).flatten()
-                list_returned.append(X_data_single_basin)
-                list_returned.append(self.read_single_station_file(station_id))
-            else:
-                list_returned.append(self.read_single_station_file(station_id))
+            if self.check_is_valid_station_id(station_id):
+                if specific_model_type.lower() == "conv":
+                    station_id_repeated, X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
+                    X_data_spatial = self.pad_np_array_equally_from_sides(
+                        X_data_spatial, max_width, max_height
+                    ).flatten()
+                    list_returned.append((station_id_repeated, X_data_spatial, y_data))
+                elif specific_model_type.lower() == "cnn":
+                    station_id_repeated, X_data_spatial, y_data_spatial = self.read_single_station_file_spatial(
+                        station_id)
+                    _, X_data_non_spatial, _ = self.read_single_station_file(station_id)
+                    if len(X_data_non_spatial) > 0 and len(X_data_non_spatial) > 0:
+                        X_data_spatial = self.pad_np_array_equally_from_sides(
+                            X_data_spatial, max_width, max_height
+                        )
+                        X_data_all = np.concatenate(
+                            [X_data_spatial.reshape(len(X_data_non_spatial), max_height * max_width),
+                             np.stack(X_data_non_spatial)], axis=1)
+                        list_returned.append((station_id_repeated, X_data_all, y_data_spatial))
+                else:
+                    list_returned.append(self.read_single_station_file(station_id))
         for station_id_repeated, X_data_curr, y_data_curr in list_returned:
             if len(station_id_repeated) > 0:
                 self.dict_basin_records_count[station_id_repeated[0]] = len(
@@ -245,11 +251,11 @@ class Dataset_ERA5(Dataset):
                     y_data_list.append(y_data_curr)
         return list_stations_repeated, X_data_list, y_data_list
 
+    def check_is_valid_station_id(self, station_id):
+        return (station_id in self.list_stations_static
+                and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"))
+
     def read_single_station_file_spatial(self, station_id):
-        if station_id not in self.list_stations_static or not os.path.exists(
-                Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
-        ):
-            return np.array([]), np.array([]), np.array([])
         station_data_file_spatial = (
                 Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
         )
@@ -308,10 +314,6 @@ class Dataset_ERA5(Dataset):
         return dataset_xarray_filtered, df_dis_data
 
     def read_single_station_file(self, station_id):
-        if station_id not in self.list_stations_static or not os.path.exists(
-                Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"
-        ):
-            return np.array([]), np.array([]), np.array([])
         station_data_file = (
                 Path(self.dynamic_data_folder)
                 / f"{self.prefix_dynamic_data_file}{station_id}.csv"

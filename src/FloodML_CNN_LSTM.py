@@ -1,6 +1,7 @@
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 
 
 # convolution has 3 parameters:
@@ -61,12 +62,12 @@ class CNN(nn.Module):
         width = input_image_shape[0]
         height = input_image_shape[1]
         new_dims = np.zeros(2)
-        new_dims[0] = ((width - filter_size) / stride) + 1
-        new_dims[1] = ((height - filter_size) / stride) + 1
+        new_dims[0] = ((width - filter_size) // stride) + 1
+        new_dims[1] = ((height - filter_size) // stride) + 1
         return new_dims
 
     def calc_dims_after_all_conv_op(self, input_image_shape: [int], ops_list: [str]):
-        image_dims = (input_image_shape[1], input_image_shape[2])
+        image_dims = (input_image_shape[-2], input_image_shape[-1])
         for op in ops_list:
             if op[0] == "conv":
                 image_dims = CNN.calc_dims_after_filter(image_dims,

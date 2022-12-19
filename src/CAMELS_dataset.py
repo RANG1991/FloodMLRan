@@ -56,26 +56,26 @@ DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
 
 class Dataset_CAMELS(Dataset):
     def __init__(
-        self,
-        dynamic_data_folder,
-        static_data_folder,
-        discharge_data_folder,
-        dynamic_attributes_names,
-        discharge_str,
-        train_start_date,
-        train_end_date,
-        validation_start_date,
-        validation_end_date,
-        test_start_date,
-        test_end_date,
-        stage,
-        all_stations_ids,
-        static_attributes_names=[],
-        sequence_length=270,
-        x_mins=None,
-        x_maxs=None,
-        y_mean=None,
-        y_std=None,
+            self,
+            dynamic_data_folder,
+            static_data_folder,
+            discharge_data_folder,
+            dynamic_attributes_names,
+            discharge_str,
+            train_start_date,
+            train_end_date,
+            validation_start_date,
+            validation_end_date,
+            test_start_date,
+            test_end_date,
+            stage,
+            all_stations_ids,
+            static_attributes_names=[],
+            sequence_length=270,
+            x_mins=None,
+            x_maxs=None,
+            y_mean=None,
+            y_std=None,
     ):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
@@ -107,7 +107,7 @@ class Dataset_CAMELS(Dataset):
         self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
         self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
         self.X_data = (self.X_data - self.x_min) / (
-            (self.x_max - self.x_min) + (10 ** (-6))
+                (self.x_max - self.x_min) + (10 ** (-6))
         )
         self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
@@ -117,7 +117,7 @@ class Dataset_CAMELS(Dataset):
 
     def __getitem__(self, index) -> T_co:
         X_data_tensor = torch.tensor(
-            self.X_data[index : index + self.sequence_length]
+            self.X_data[index: index + self.sequence_length]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(
             torch.float32
@@ -200,7 +200,7 @@ class Dataset_CAMELS(Dataset):
             df_discharge = df_discharge.set_index("date")
             # normalize discharge from cubic feet per second to mm per day
             df_discharge.QObs = (
-                28316846.592 * df_discharge.QObs * 86400 / (area * 10 ** 6)
+                    28316846.592 * df_discharge.QObs * 86400 / (area * 10 ** 6)
             )
             df_forcing = df_forcing.drop(columns=["Year", "Mnth", "Day"])
             df_discharge = df_discharge.drop(columns=["Year", "Mnth", "Day"])
@@ -224,13 +224,13 @@ class Dataset_CAMELS(Dataset):
             )
             X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
             station_id_repeated = [station_id] * X_data.shape[0]
-            print(f"finished with station id (basin): {station_id}")
+            # print(f"finished with station id (basin): {station_id}")
             return station_id_repeated, X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[
             self.list_dynamic_attributes_names + [self.discharge_str]
-        ].copy()
+            ].copy()
         df_dynamic_data[self.list_dynamic_attributes_names] = df_dynamic_data[
             self.list_dynamic_attributes_names
         ].astype(float)
@@ -247,7 +247,7 @@ class Dataset_CAMELS(Dataset):
         end_date = datetime.strptime(end_date, "%d/%m/%Y")
         df_dynamic_data = df_dynamic_data[
             (df_dynamic_data.index >= start_date) & (df_dynamic_data.index <= end_date)
-        ]
+            ]
         return df_dynamic_data
 
     def calculate_dataset_length(self):
