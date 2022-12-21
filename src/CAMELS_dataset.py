@@ -73,10 +73,10 @@ class Dataset_CAMELS(Dataset):
             static_attributes_names=[],
             sequence_length=270,
             x_mins=None,
-            x_maxs=None,
-            y_mean=None,
-            y_std=None,
+            x_maxs=None
     ):
+        self.y_mean_dict = {}
+        self.y_std_dict = {}
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
@@ -102,14 +102,11 @@ class Dataset_CAMELS(Dataset):
         )
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
-        self.y_std = y_std if y_std is not None else self.y_data.std()
-        self.y_mean = y_mean if y_mean is not None else self.y_data.mean()
         self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
         self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
         self.X_data = (self.X_data - self.x_min) / (
                 (self.x_max - self.x_min) + (10 ** (-6))
         )
-        self.y_data = (self.y_data - self.y_mean) / self.y_std
         self.list_stations_repeated = list_stations_repeated
 
     def __len__(self):
@@ -225,6 +222,12 @@ class Dataset_CAMELS(Dataset):
             X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
             station_id_repeated = [station_id] * X_data.shape[0]
             # print(f"finished with station id (basin): {station_id}")
+            if station_id not in self.y_mean_dict.keys():
+                self.y_mean_dict[station_id] = y_data.mean(axis=0)
+            if station_id not in self.y_std_dict.keys():
+                self.y_std_dict[station_id] = y_data.std(axis=0)
+            y_data -= (self.y_mean_dict[station_id])
+            y_data /= (self.y_std_dict[station_id])
             return station_id_repeated, X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
@@ -267,7 +270,7 @@ class Dataset_CAMELS(Dataset):
         return self.x_max
 
     def get_y_std(self):
-        return self.y_std
+        return self.y_std_dict
 
     def get_y_mean(self):
-        return self.y_mean
+        return self.y_mean_dict

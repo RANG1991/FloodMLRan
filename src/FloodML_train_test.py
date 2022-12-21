@@ -38,7 +38,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     running_loss = 0.0
-    for _, xs, ys in pbar:
+    for station_id_batch, xs, ys in pbar:
         # delete previously stored gradients from the model
         optimizer.zero_grad()
         # push data to GPU (if available)
@@ -84,17 +84,25 @@ def eval_model(
     with torch.no_grad():
         # request mini-batch of data from the loader
         for station_id_batch, xs, ys in loader:
-            station_id = station_id_batch[0]
-            if station_id_batch not in preds_obs_dict_per_basin.keys():
-                preds_obs_dict_per_basin[station_id] = []
             # push data to GPU (if available)
             xs = xs.to(device)
             # get model predictions
             y_hat = model(xs)
-            # print(np.concatenate([y_hat.cpu().numpy(), ys], axis=1))
+            # print(torch.cat([y_hat.cpu(), ys], dim=1))
             loss = loss_func(y_hat.squeeze(0), ys.to(device))
             running_loss += loss.item()
-            preds_obs_dict_per_basin[station_id].append((ys, y_hat))
+            for i in range(len(station_id_batch)):
+                station_id = station_id_batch[i]
+                if station_id not in preds_obs_dict_per_basin.keys():
+                    preds_obs_dict_per_basin[station_id] = []
+                pred_actual = (
+                        (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                    station_id].item())
+                pred_expected = (
+                        (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                    station_id].item())
+                preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
+
     print(
         f"Loss on the entire evaluation (test or validation) epoch: {(running_loss / len(loader)):.4f}"
     )
@@ -254,9 +262,9 @@ def prepare_datasets(
             sequence_length=sequence_length,
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
+            use_Caravan_dataset=use_Caravan_dataset,
             x_mins=training_data.get_x_mins(),
-            x_maxs=training_data.get_x_maxs(),
-            use_Caravan_dataset=use_Caravan_dataset
+            x_maxs=training_data.get_x_maxs()
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -292,10 +300,8 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            x_mins=training_data.get_x_mins(),
             x_maxs=training_data.get_x_maxs(),
-            y_mean=training_data.get_y_mean(),
-            y_std=training_data.get_y_std(),
+            x_mins=training_data.get_x_mins()
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")
