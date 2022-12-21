@@ -49,7 +49,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         loss = loss_func(y_hat.squeeze(0), ys)
         # calculate gradients
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
@@ -91,6 +91,7 @@ def eval_model(
             xs = xs.to(device)
             # get model predictions
             y_hat = model(xs)
+            # print(np.concatenate([y_hat.cpu().numpy(), ys], axis=1))
             loss = loss_func(y_hat.squeeze(0), ys.to(device))
             running_loss += loss.item()
             preds_obs_dict_per_basin[station_id].append((ys, y_hat))
@@ -112,7 +113,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     # sim = np.delete(sim, np.argwhere(obs < 0), axis=0)
     # obs = np.delete(obs, np.argwhere(obs < 0), axis=0)
     # check for NaNs in observations
-    sim = np.delete(sim, np.argwhere(np.isnan(obs)), axis=0)
+    sim = np.delete(sim, np.argwhere(np.isnan(sim)), axis=0)
     obs = np.delete(obs, np.argwhere(np.isnan(obs)), axis=0)
     denominator = np.sum((obs - np.mean(obs)) ** 2)
     numerator = np.sum((sim - obs) ** 2)
@@ -255,8 +256,6 @@ def prepare_datasets(
             specific_model_type=specific_model_type,
             x_mins=training_data.get_x_mins(),
             x_maxs=training_data.get_x_maxs(),
-            y_mean=training_data.get_y_mean(),
-            y_std=training_data.get_y_std(),
             use_Caravan_dataset=use_Caravan_dataset
         )
     elif dataset_to_use == "CAMELS":
@@ -585,14 +584,16 @@ def choose_hyper_parameters_validation(
             train_stations_list.append(all_stations_list_sorted[i])
         else:
             val_stations_list.append(all_stations_list_sorted[i])
-    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    # shuffle(train_stations_list)
+    # shuffle(val_stations_list)
+    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
-    sequence_lengths = [10, 30, 90, 180, 270, 365]
+    sequence_lengths = [90, 180, 270, 365, 10, 30]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
         num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [10]
+    num_epochs = [15]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
