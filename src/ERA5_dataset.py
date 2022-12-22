@@ -112,8 +112,8 @@ class Dataset_ERA5(Dataset):
             y_std_dict=None,
             use_Caravan_dataset=True,
     ):
-        self.y_mean_dict = {}
-        self.y_std_dict = {}
+        self.y_mean_dict = y_mean_dict if y_mean_dict is not None else {}
+        self.y_std_dict = y_std_dict if y_std_dict is not None else {}
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder

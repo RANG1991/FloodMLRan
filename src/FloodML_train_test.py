@@ -206,7 +206,7 @@ def sort_basins_by_static_attributes(static_data_folder):
         .values.tolist()
     )
     df_attr = df_attr.dropna()
-    df_attr = df_attr[["gauge_id", "basin_area"]].sort_values(["basin_area"], ascending=False)
+    # df_attr = df_attr[["gauge_id", "basin_area"]].sort_values(["basin_area"], ascending=False)
     return df_attr["gauge_id"].to_list()
 
 
@@ -263,7 +263,9 @@ def prepare_datasets(
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
             x_mins=training_data.get_x_mins(),
-            x_maxs=training_data.get_x_maxs()
+            x_maxs=training_data.get_x_maxs(),
+            y_mean_dict=training_data.y_mean_dict(),
+            y_std_dict=training_data.get_y_std()
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -300,7 +302,9 @@ def prepare_datasets(
             sequence_length=sequence_length,
             discharge_str=discharge_str,
             x_maxs=training_data.get_x_maxs(),
-            x_mins=training_data.get_x_mins()
+            x_mins=training_data.get_x_mins(),
+            y_mean_dict=training_data.y_mean_dict(),
+            y_std_dict=training_data.get_y_std()
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")
@@ -584,13 +588,13 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     all_stations_list_sorted = sort_basins_by_static_attributes(static_data_folder)
-    for i in range(len(all_stations_list_sorted)):
-        if i % 5 != 0:
-            train_stations_list.append(all_stations_list_sorted[i])
-        else:
-            val_stations_list.append(all_stations_list_sorted[i])
-    # shuffle(train_stations_list)
-    # shuffle(val_stations_list)
+    # for i in range(len(all_stations_list_sorted)):
+    #     if i % 5 != 0:
+    #         train_stations_list.append(all_stations_list_sorted[i])
+    #     else:
+    #         val_stations_list.append(all_stations_list_sorted[i])
+    train_stations_list = all_stations_list_sorted[:]
+    val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.0, 0.25, 0.4, 0.5]
     sequence_lengths = [90, 180, 270, 365, 10, 30]
