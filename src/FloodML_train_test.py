@@ -264,7 +264,7 @@ def prepare_datasets(
             use_Caravan_dataset=use_Caravan_dataset,
             x_mins=training_data.get_x_mins(),
             x_maxs=training_data.get_x_maxs(),
-            y_mean_dict=training_data.y_mean_dict(),
+            y_mean_dict=training_data.get_y_mean(),
             y_std_dict=training_data.get_y_std()
         )
     elif dataset_to_use == "CAMELS":
@@ -303,7 +303,7 @@ def prepare_datasets(
             discharge_str=discharge_str,
             x_maxs=training_data.get_x_maxs(),
             x_mins=training_data.get_x_mins(),
-            y_mean_dict=training_data.y_mean_dict(),
+            y_mean_dict=training_data.get_y_mean(),
             y_std_dict=training_data.get_y_std()
         )
     else:
