@@ -596,7 +596,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
-    dropout_rates = [0.0, 0.25, 0.4, 0.5]
+    dropout_rates = [0.4, 0.5, 0.0, 0.25]
     sequence_lengths = [90, 180, 270, 365, 10, 30]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
