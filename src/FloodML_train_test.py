@@ -102,7 +102,7 @@ def eval_model(
                 # pred_expected = (
                 #         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
                 #     station_id].item()).numpy()
-                preds_obs_dict_per_basin[station_id].append((ys[i], y_hat[i]))
+                preds_obs_dict_per_basin[station_id].append((ys[i], y_hat[i].cpu()))
 
     print(
         f"Loss on the entire evaluation (test or validation) epoch: {(running_loss / len(loader)):.4f}"
