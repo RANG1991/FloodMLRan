@@ -96,13 +96,13 @@ def eval_model(
                 station_id = station_id_batch[i]
                 if station_id not in preds_obs_dict_per_basin.keys():
                     preds_obs_dict_per_basin[station_id] = []
-                pred_actual = (
-                        (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                    station_id].item()).cpu().numpy()
-                pred_expected = (
-                        (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                    station_id].item()).numpy()
-                preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
+                # pred_actual = (
+                #         (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                #     station_id].item()).cpu().numpy()
+                # pred_expected = (
+                #         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                #     station_id].item()).numpy()
+                preds_obs_dict_per_basin[station_id].append((ys[i], y_hat[i]))
 
     print(
         f"Loss on the entire evaluation (test or validation) epoch: {(running_loss / len(loader)):.4f}"
