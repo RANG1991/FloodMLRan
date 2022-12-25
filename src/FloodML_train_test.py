@@ -29,6 +29,8 @@ matplotlib.use("AGG")
 
 K_VALUE_CROSS_VALIDATION = 2
 
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # set model to train mode (important for dropout)
@@ -96,10 +98,10 @@ def eval_model(
                     preds_obs_dict_per_basin[station_id] = []
                 pred_actual = (
                         (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                    station_id].item())
+                    station_id].item()).cpu().numpy()
                 pred_expected = (
                         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                    station_id].item())
+                    station_id].item()).numpy()
                 preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
 
     print(
@@ -124,7 +126,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     obs = np.delete(obs, np.argwhere(np.isnan(obs)), axis=0)
     denominator = np.sum((obs - np.mean(obs)) ** 2)
     numerator = np.sum((sim - obs) ** 2)
-    nse_val = 1 - (numerator / denominator)
+    nse_val = 1 - numerator / denominator
     return nse_val
 
 
@@ -140,8 +142,8 @@ def calc_validation_basins_nse(
     for stations_id in stations_ids:
         obs_and_preds = preds_obs_dict_per_basin[stations_id]
         obs, preds = zip(*obs_and_preds)
-        obs = np.array([single_obs.cpu().numpy() for single_obs in obs])
-        preds = np.array([single_pred.cpu().numpy() for single_pred in preds])
+        obs = np.array([single_obs for single_obs in obs])
+        preds = np.array([single_pred for single_pred in preds])
         nse = calc_nse(obs, preds)
         # print(f"station with id: {stations_id} has nse of: {nse}")
         nse_list_basins.append(nse)
@@ -262,8 +264,8 @@ def prepare_datasets(
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
-            x_mins=training_data.get_x_mins(),
-            x_maxs=training_data.get_x_maxs(),
+            x_mins_dict=training_data.get_x_mins(),
+            x_maxs_dict=training_data.get_x_maxs(),
             y_mean_dict=training_data.get_y_mean(),
             y_std_dict=training_data.get_y_std()
         )
@@ -424,7 +426,6 @@ def run_single_parameters_check_with_val_on_years(
         sequence_length,
         learning_rate,
         num_hidden_units,
-        num_epochs,
         dropout_rate,
         static_attributes_names,
         dynamic_attributes_names,
@@ -435,7 +436,8 @@ def run_single_parameters_check_with_val_on_years(
         model_name,
         dataset_to_use,
         optim_name,
-        shared_model
+        shared_model,
+        num_epochs=10,
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
@@ -602,7 +604,6 @@ def choose_hyper_parameters_validation(
         num_hidden_units = [1]
     else:
         num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
-    num_epochs = [15]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
@@ -619,7 +620,6 @@ def choose_hyper_parameters_validation(
             dropout_rates,
             sequence_lengths,
             num_hidden_units,
-            num_epochs,
         )
     )
     curr_datetime = datetime.now()
@@ -629,7 +629,6 @@ def choose_hyper_parameters_validation(
             dropout_rate_param,
             sequence_length_param,
             num_hidden_units_param,
-            num_epochs_param,
     ) in all_parameters:
         nse_list_single_pass = run_single_parameters_check_with_val_on_years(
             train_stations_list,
@@ -637,7 +636,6 @@ def choose_hyper_parameters_validation(
             sequence_length_param,
             learning_rate_param,
             num_hidden_units_param,
-            num_epochs_param,
             dropout_rate_param,
             static_attributes_names,
             dynamic_attributes_names,
@@ -645,6 +643,7 @@ def choose_hyper_parameters_validation(
             dynamic_data_folder_train,
             static_data_folder,
             discharge_data_folder,
+            num_epochs=10,
             model_name=model_name,
             dataset_to_use=dataset_to_use,
             optim_name=optim_name,
@@ -659,7 +658,7 @@ def choose_hyper_parameters_validation(
                 f"{learning_rate_param};"
                 f"{sequence_length_param};"
                 f"{num_hidden_units_param};"
-                f"{num_epochs_param}"
+                f"{10}"
             )
             list_nse_lists_basins.append(nse_list_single_pass)
         if median_nse > best_median_nse or best_median_nse == -1:
@@ -668,7 +667,7 @@ def choose_hyper_parameters_validation(
                 learning_rate_param,
                 sequence_length_param,
                 num_hidden_units_param,
-                num_epochs_param,
+                10,
             )
         dict_results["dropout rate"].append(dropout_rate_param)
         dict_results["sequence length"].append(sequence_length_param)
@@ -694,6 +693,7 @@ def choose_hyper_parameters_validation(
 
 
 def main():
+    torch.manual_seed(987)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
