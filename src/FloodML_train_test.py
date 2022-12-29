@@ -5,7 +5,6 @@ import ERA5_dataset
 import CAMELS_dataset
 from tqdm import tqdm
 import torch.optim
-import torch.nn as nn
 from os import listdir
 from os.path import isfile, join
 import pandas as pd
@@ -17,7 +16,6 @@ import numpy as np
 import itertools
 from datetime import datetime
 import statistics
-from random import shuffle
 import argparse
 from FloodML_LSTM import LSTM
 from FloodML_Transformer import ERA5_Transformer
@@ -47,8 +45,13 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         xs, ys = xs.to(device), ys.to(device)
         # get model predictions
         y_hat = model(xs)
+        stds = []
+        for i in range(len(station_id_batch)):
+            station_id = station_id_batch[i]
+            stds.append(loader.dataset.y_std_dict[station_id])
+        stds = torch.cat(stds, dim=0)
         # calculate loss
-        loss = loss_func(y_hat.squeeze(0), ys)
+        loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # calculate gradients
         loss.backward()
         # update the weights
@@ -57,7 +60,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         running_loss += loss.item()
         # print(f"Loss: {loss.item():.4f}")
         # pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
-    print(f"Loss on the entire training epoch: {(running_loss / len(loader)):.4f}")
+    print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}")
     return running_loss / (len(loader))
 
 
@@ -89,9 +92,10 @@ def eval_model(
             xs = xs.to(device)
             # get model predictions
             y_hat = model(xs)
+            ys = ys.to(device)
             # print(torch.cat([y_hat.cpu(), ys], dim=1))
-            loss = loss_func(y_hat.squeeze(0), ys.to(device))
-            running_loss += loss.item()
+            loss = loss_func(ys, y_hat.squeeze(0))
+            running_loss += loss
             for i in range(len(station_id_batch)):
                 station_id = station_id_batch[i]
                 if station_id not in preds_obs_dict_per_basin.keys():
@@ -102,12 +106,19 @@ def eval_model(
                 # pred_expected = (
                 #         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
                 #     station_id].item()).numpy()
-                preds_obs_dict_per_basin[station_id].append((ys[i].numpy(), y_hat[i].cpu().numpy()))
+                preds_obs_dict_per_basin[station_id].append((ys[i], y_hat[i]))
+    return running_loss / (len(loader) * 256)
 
-    print(
-        f"Loss on the entire evaluation (test or validation) epoch: {(running_loss / len(loader)):.4f}"
-    )
-    return running_loss / (len(loader))
+
+def calc_nse_star(obs, sim, stds):
+    mask = ~torch.isnan(obs)
+    y_hat = sim[mask]
+    y = obs[mask]
+    per_basin_target_stds = stds[mask]
+    squared_error = (y_hat - y) ** 2
+    weights = 1 / (per_basin_target_stds + 1e-6) ** 2
+    scaled_loss = weights * squared_error
+    return torch.mean(scaled_loss)
 
 
 def calc_nse(obs: np.array, sim: np.array) -> float:
@@ -122,47 +133,43 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     # sim = np.delete(sim, np.argwhere(obs < 0), axis=0)
     # obs = np.delete(obs, np.argwhere(obs < 0), axis=0)
     # check for NaNs in observations
-    sim = np.delete(sim, np.argwhere(np.isnan(sim)), axis=0)
-    obs = np.delete(obs, np.argwhere(np.isnan(obs)), axis=0)
-    denominator = np.sum((obs - np.mean(obs)) ** 2)
-    numerator = np.sum((sim - obs) ** 2)
-    nse_val = 1 - numerator / denominator
-    return nse_val
+    mask = ~torch.isnan(obs)
+    sim = sim[mask]
+    obs = obs[mask]
+    denominator = torch.sum((obs - torch.mean(obs)) ** 2)
+    numerator = torch.sum((sim - obs) ** 2)
+    nse_val = 1 - numerator / (denominator + 1e-6)
+    return nse_val.item()
 
 
 def calc_validation_basins_nse(
-        preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10
+        preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10, device="cpu"
 ):
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
-    max_nse = -1
-    max_basin = -1
-    max_preds = []
-    max_obs = []
     for stations_id in stations_ids:
         obs_and_preds = preds_obs_dict_per_basin[stations_id]
         obs, preds = zip(*obs_and_preds)
-        obs = np.array([single_obs for single_obs in obs])
-        preds = np.array([single_pred for single_pred in preds])
+        obs = torch.stack(list(obs))
+        preds = torch.stack(list(preds))
         nse = calc_nse(obs, preds)
-        # print(f"station with id: {stations_id} has nse of: {nse}")
+        print(f"station with id: {stations_id} has nse of: {nse}")
         nse_list_basins.append(nse)
-        if nse > max_nse or max_nse == -1:
-            max_nse = nse
-            max_basin = stations_id
-            max_preds = preds
-            max_obs = obs
-    curr_datetime = datetime.now()
-    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    fig, ax = plt.subplots(figsize=(20, 6))
-    ax.plot(max_obs.squeeze(), label="observation")
-    ax.plot(max_preds.squeeze(), label="prediction")
-    ax.legend()
-    ax.set_title(f"Basin {max_basin} - NSE: {max_nse:.3f}")
-    plt.savefig(
-        f"../data/images/Hydrograph_of_{num_epoch}_epoch_{curr_datetime_str}.png"
-    )
-    plt.close()
+    nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
+    median_nse_basin = stations_ids[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
+    median_nse = nse_list_basins[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
+    print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
+    # curr_datetime = datetime.now()
+    # curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+    # fig, ax = plt.subplots(figsize=(20, 6))
+    # ax.plot(max_obs.cpu().numpy().squeeze(), label="observation")
+    # ax.plot(max_preds.cpu().numpy().squeeze(), label="prediction")
+    # ax.legend()
+    # ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
+    # plt.savefig(
+    #     f"../data/images/Hydrograph_of_{num_epoch}_epoch_{curr_datetime_str}.png"
+    # )
+    # plt.close()
     return nse_list_basins
 
 
@@ -359,7 +366,6 @@ def run_single_parameters_check_with_cross_val_on_basins(
         )
     ]
     training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs))
-    validation_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs))
     nse_list_single_cross_val = []
     for i in range(len(split_stations_list)):
         train_stations_list = list(
@@ -385,7 +391,6 @@ def run_single_parameters_check_with_cross_val_on_basins(
         (
             nse_list_single_pass,
             training_loss_list_single_pass,
-            validation_loss_list_single_pass,
         ) = run_training_and_test(
             learning_rate,
             sequence_length,
@@ -396,10 +401,10 @@ def run_single_parameters_check_with_cross_val_on_basins(
             dropout_rate,
             static_attributes,
             dynamic_attributes,
+            calc_nse_interval=num_epochs,
             model_name=model_name
         )
         training_loss_list[i] = training_loss_list_single_pass
-        validation_loss_list[i] = validation_loss_list_single_pass
         nse_list_single_cross_val.extend(nse_list_single_pass)
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -408,7 +413,6 @@ def run_single_parameters_check_with_cross_val_on_basins(
         f"{num_hidden_units}"
     )
     plt.plot(training_loss_list.mean(axis=0), label="training")
-    plt.plot(validation_loss_list.mean(axis=0), label="validation")
     plt.legend(loc="upper left")
     plt.savefig(
         f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
@@ -458,7 +462,6 @@ def run_single_parameters_check_with_val_on_years(
     (
         nse_list_single_pass,
         training_loss_list_single_pass,
-        validation_loss_list_single_pass,
     ) = run_training_and_test(
         learning_rate,
         sequence_length,
@@ -469,6 +472,7 @@ def run_single_parameters_check_with_val_on_years(
         dropout_rate,
         static_attributes_names,
         dynamic_attributes_names,
+        calc_nse_interval=num_epochs,
         model_name=model_name,
         optim_name=optim_name
     )
@@ -479,7 +483,6 @@ def run_single_parameters_check_with_val_on_years(
         f"{num_hidden_units}"
     )
     plt.plot(training_loss_list_single_pass, label="training")
-    plt.plot(validation_loss_list_single_pass, label="validation")
     plt.legend(loc="upper left")
     plt.savefig(
         f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
@@ -507,10 +510,10 @@ def run_training_and_test(
         optim_name="SGD"
 ):
     train_dataloader = DataLoader(
-        training_data, batch_size=256, shuffle=True, num_workers=1
+        training_data, batch_size=256, shuffle=True,
     )
     test_dataloader = DataLoader(
-        test_data, batch_size=256, shuffle=False, num_workers=1
+        test_data, batch_size=256, shuffle=False,
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running with model: {model_name}")
@@ -547,23 +550,20 @@ def run_training_and_test(
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    loss_func = nn.MSELoss()
     loss_list_training = []
-    loss_list_test = []
     nse_list = []
     preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
-        loss_on_test_epoch = eval_model(
-            model, test_dataloader, device, preds_obs_dict_per_basin, loss_func
-        )
         loss_on_training_epoch = train_epoch(
-            model, optimizer, train_dataloader, loss_func, epoch=(i + 1), device=device
+            model, optimizer, train_dataloader, calc_nse_star, epoch=(i + 1), device=device
+        )
+        loss_on_test_epoch = eval_model(
+            model, test_dataloader, device, preds_obs_dict_per_basin, calc_nse
         )
         loss_list_training.append(loss_on_training_epoch)
-        loss_list_test.append(loss_on_test_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             nse_list_epoch = calc_validation_basins_nse(
-                preds_obs_dict_per_basin, (i + 1)
+                preds_obs_dict_per_basin, (i + 1), device=device
             )
             preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
@@ -572,7 +572,7 @@ def run_training_and_test(
             f"parameters are: dropout={dropout} sequence_length={sequence_length} "
             f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}"
         )
-    return nse_list, loss_list_training, loss_list_test
+    return nse_list, loss_list_training
 
 
 def choose_hyper_parameters_validation(
@@ -585,7 +585,8 @@ def choose_hyper_parameters_validation(
         model_name,
         dataset_to_use,
         optim_name,
-        shared_model
+        shared_model,
+        num_epochs=10
 ):
     train_stations_list = []
     val_stations_list = []
@@ -597,7 +598,7 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4, 0.5, 0.0, 0.25]
     sequence_lengths = [90, 180, 270, 365, 10, 30]
     if model_name.lower() == "transformer":
@@ -643,7 +644,7 @@ def choose_hyper_parameters_validation(
             dynamic_data_folder_train,
             static_data_folder,
             discharge_data_folder,
-            num_epochs=10,
+            num_epochs=num_epochs,
             model_name=model_name,
             dataset_to_use=dataset_to_use,
             optim_name=optim_name,
@@ -658,7 +659,7 @@ def choose_hyper_parameters_validation(
                 f"{learning_rate_param};"
                 f"{sequence_length_param};"
                 f"{num_hidden_units_param};"
-                f"{10}"
+                f"{num_epochs}"
             )
             list_nse_lists_basins.append(nse_list_single_pass)
         if median_nse > best_median_nse or best_median_nse == -1:
@@ -667,7 +668,7 @@ def choose_hyper_parameters_validation(
                 learning_rate_param,
                 sequence_length_param,
                 num_hidden_units_param,
-                10,
+                num_epochs,
             )
         dict_results["dropout rate"].append(dropout_rate_param)
         dict_results["sequence length"].append(sequence_length_param)
@@ -717,6 +718,7 @@ def main():
                         help="whether to run in shared model scenario - when the "
                              "training and validation stations are not the same",
                         choices=["True", "False"], default="False")
+    parser.add_argument("--num_epochs", help="num epochs for training", default=10, type=int)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -729,7 +731,8 @@ def main():
             model_name=command_args.model,
             dataset_to_use="CAMELS",
             optim_name=command_args.optim,
-            shared_model=bool(command_args.shared_model)
+            shared_model=bool(command_args.shared_model),
+            num_epochs=command_args.num_epochs
         )
     elif command_args.dataset == "ERA5":
         choose_hyper_parameters_validation(
@@ -742,7 +745,8 @@ def main():
             model_name=command_args.model,
             dataset_to_use="ERA5",
             optim_name=command_args.optim,
-            shared_model=bool(command_args.shared_model)
+            shared_model=bool(command_args.shared_model),
+            num_epochs=command_args.num_epochs
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
@@ -755,7 +759,8 @@ def main():
             model_name=command_args.model,
             dataset_to_use="CARAVAN",
             optim_name=command_args.optim,
-            shared_model=bool(command_args.shared_model)
+            shared_model=bool(command_args.shared_model),
+            num_epochs=command_args.num_epochs
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")

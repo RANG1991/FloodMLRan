@@ -346,9 +346,9 @@ class Dataset_ERA5(Dataset):
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
         station_id_repeated = [station_id] * X_data.shape[0]
         if station_id not in self.y_mean_dict.keys():
-            self.y_mean_dict[station_id] = y_data.mean(axis=0)
+            self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
         if station_id not in self.y_std_dict.keys():
-            self.y_std_dict[station_id] = y_data.std(axis=0)
+            self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
         # y_data -= (self.y_mean_dict[station_id])
         # y_data /= (self.y_std_dict[station_id])
         return station_id_repeated, X_data, y_data
