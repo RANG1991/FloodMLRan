@@ -557,16 +557,16 @@ def run_training_and_test(
         loss_on_training_epoch = train_epoch(
             model, optimizer, train_dataloader, calc_nse_star, epoch=(i + 1), device=device
         )
-        loss_on_test_epoch = eval_model(
-            model, test_dataloader, device, preds_obs_dict_per_basin, calc_nse
-        )
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
+            loss_on_test_epoch = eval_model(
+                model, test_dataloader, device, preds_obs_dict_per_basin, calc_nse
+            )
             nse_list_epoch = calc_validation_basins_nse(
                 preds_obs_dict_per_basin, (i + 1), device=device
             )
-            preds_obs_dict_per_basin.clear()
             nse_list.extend(nse_list_epoch)
+            preds_obs_dict_per_basin.clear()
     if len(nse_list) > 0:
         print(
             f"parameters are: dropout={dropout} sequence_length={sequence_length} "
@@ -600,7 +600,7 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4, 0.5, 0.0, 0.25]
-    sequence_lengths = [90, 180, 270, 365, 10, 30]
+    sequence_lengths = [10, 30, 90, 180, 270, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
