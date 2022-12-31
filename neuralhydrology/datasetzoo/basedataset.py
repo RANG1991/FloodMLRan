@@ -368,6 +368,9 @@ class BaseDataset(Dataset):
                     data_list.append(xr.astype(np.float32))
 
             # create one large dataset that has two coordinates: datetime and basin
+            if len(data_list) == 0:
+                return None
+
             xr = xarray.concat(data_list, dim="basin")
 
             if self.is_train and self.cfg.save_train_data:
@@ -580,6 +583,9 @@ class BaseDataset(Dataset):
         self._load_combined_attributes()
 
         xr = self._load_or_create_xarray_dataset()
+
+        if xr is None:
+            return
 
         if self.cfg.loss.lower() in ['nse', 'weightednse']:
             # get the std of the discharge for each basin, which is needed for the (weighted) NSE loss.
