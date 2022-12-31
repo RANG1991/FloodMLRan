@@ -6,9 +6,9 @@ run_dir: /sci/labs/efratmorin/ranga/FloodMLRan/runs/
 experiment_name: train_run
 
 # files to specify training, validation and test basins (relative to code root or absolute path)
-train_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/531_basin_list.txt
-validation_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/531_basin_list.txt
-test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/531_basin_list.txt
+train_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins_ERA5.txt
+validation_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins_ERA5.txt
+test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins_ERA5.txt
 
 # training, validation and test time periods (format = 'dd/mm/yyyy')
 train_start_date: '01/10/1999'
@@ -29,7 +29,7 @@ allow_subsequent_nan_losses: 10
 validate_every: 3
 
 # specify how many random basins to use for validation
-validate_n_random_basins: 531
+validate_n_random_basins: 10
 
 # specify which metrics to calculate during validation (see neuralhydrology.evaluation.metrics)
 # this can either be a list or a dictionary. If a dictionary is used, the inner keys must match the name of the
@@ -79,6 +79,9 @@ learning_rate:
   0: 5e-4
   30: 5e-4
   40: 5e-4
+
+# fixed seed, leave empty to use a random seed
+seed: 123
 
 # Mini-batch size
 batch_size: 256

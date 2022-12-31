@@ -243,8 +243,8 @@ def prepare_datasets(
             static_attributes_names=static_attributes_names,
             train_start_date="01/10/1999",
             train_end_date="30/09/2008",
-            validation_start_date="01/10/1980",
-            validation_end_date="30/09/1989",
+            validation_start_date="01/10/1989",
+            validation_end_date="30/09/1999",
             test_start_date="01/10/1989",
             test_end_date="30/09/1999",
             stage="train",
@@ -590,7 +590,7 @@ def choose_hyper_parameters_validation(
 ):
     train_stations_list = []
     val_stations_list = []
-    all_stations_list_sorted = open("../data/CAMELS_US/531_basin_list.txt").read().splitlines()
+    all_stations_list_sorted = open("../data/CAMELS_US/train_basins_ERA5.txt").read().splitlines()
     # for i in range(len(all_stations_list_sorted)):
     #     if i % 5 != 0:
     #         train_stations_list.append(all_stations_list_sorted[i])
@@ -694,7 +694,7 @@ def choose_hyper_parameters_validation(
 
 
 def main():
-    torch.manual_seed(987)
+    torch.manual_seed(123)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
