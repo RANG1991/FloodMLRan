@@ -6,9 +6,9 @@ run_dir: /sci/labs/efratmorin/ranga/FloodMLRan/runs/
 experiment_name: train_run
 
 # files to specify training, validation and test basins (relative to code root or absolute path)
-train_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/train_basins.txt
-validation_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/validation_basins.txt
-test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5/test_basins.txt
+train_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/531_basin_list.txt
+validation_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/531_basin_list.txt
+test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/531_basin_list.txt
 
 # training, validation and test time periods (format = 'dd/mm/yyyy')
 train_start_date: '01/10/1999'
@@ -29,7 +29,7 @@ allow_subsequent_nan_losses: 10
 validate_every: 3
 
 # specify how many random basins to use for validation
-# validate_n_random_basins: 10
+validate_n_random_basins: 531
 
 # specify which metrics to calculate during validation (see neuralhydrology.evaluation.metrics)
 # this can either be a list or a dictionary. If a dictionary is used, the inner keys must match the name of the
@@ -58,7 +58,7 @@ output_activation: linear
 # ----> General settings <----
 
 # Number of cell states of the LSTM
-hidden_size: 20
+hidden_size: 256
 
 # Initial bias value of the forget gate
 initial_forget_bias:
@@ -72,19 +72,19 @@ output_dropout: 0.4
 optimizer: Adam
 
 # specify loss [MSE, NSE, RMSE]
-loss: MSE
+loss: NSE
 
 # specify learning rates to use starting at specific epochs (0 is the initial learning rate)
 learning_rate:
-  0: 1e-3
-  30: 1e-3
-  40: 1e-3
+  0: 5e-4
+  30: 5e-4
+  40: 5e-4
 
 # Mini-batch size
 batch_size: 256
 
 # Number of training epochs
-epochs: 5
+epochs: 10
 
 # If a value, clips the gradients during training to that norm.
 clip_gradient_norm: 2
@@ -95,7 +95,7 @@ predict_last_n: 1
 
 # Length of the input sequence
 # If use_frequencies is used, this needs to be a dict mapping each frequency to a seq_length, else an int.
-seq_length: 30
+seq_length: 270
 
 # Number of parallel workers used in the data pipeline
 num_workers: 2
@@ -123,21 +123,17 @@ data_dir: /sci/labs/efratmorin/ranga/FloodMLRan/data/
 # Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
 # can be either a list of forcings or a single forcing product
 forcings:
-- maurer
+  - maurer
 
 # variables to use as time series input (names match the data file column headers)
 # Note: In case of multiple input forcing products, you have to append the forcing product behind
 # each variable. E.g. 'prcp(mm/day)' of the daymet product is 'prcp(mm/day)_daymet'
 dynamic_inputs:
-  - total_precipitation_sum
-  - temperature_2m_min
-  - temperature_2m_max
-  - potential_evaporation_sum
-  - surface_net_solar_radiation_mean
+  - precip
 
 # which columns to use as target
 target_variables:
-  - streamflow
+  - flow
 
 static_attributes:
   - ele_mt_sav

@@ -280,6 +280,9 @@ class BaseDataset(Dataset):
                     LOGGER.info("the basin is: {}".format(basin))
                 df = self._load_basin_data(basin)
 
+                if df is None:
+                    continue
+
                 # add columns from dataframes passed as additional data files
                 df = pd.concat([df, *[d[basin] for d in self.additional_features]], axis=1)
 

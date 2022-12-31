@@ -72,13 +72,15 @@ class Dataset_CAMELS(Dataset):
             all_stations_ids,
             static_attributes_names=[],
             sequence_length=270,
-            x_mins=None,
-            x_maxs=None,
+            x_mins_dict=None,
+            x_maxs_dict=None,
             y_mean_dict=None,
             y_std_dict=None
     ):
         self.y_mean_dict = y_mean_dict if y_mean_dict is not None else {}
         self.y_std_dict = y_std_dict if y_std_dict is not None else {}
+        self.x_mins_dict = x_mins_dict if x_mins_dict is not None else {}
+        self.x_maxs_dict = x_maxs_dict if x_maxs_dict is not None else {}
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
@@ -104,11 +106,11 @@ class Dataset_CAMELS(Dataset):
         )
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
-        self.x_min = x_mins if x_mins is not None else self.X_data.min(axis=0)
-        self.x_max = x_maxs if x_maxs is not None else self.X_data.max(axis=0)
-        self.X_data = (self.X_data - self.x_min) / (
-                (self.x_max - self.x_min) + (10 ** (-6))
-        )
+        x_data_min_static = self.X_data[:, -(len(self.list_static_attributes_names)):].min(axis=0)
+        x_data_max_static = self.X_data[:, -(len(self.list_static_attributes_names)):].max(axis=0)
+        self.X_data[:, -(len(self.list_static_attributes_names)):] = \
+            (self.X_data[:, -(len(self.list_static_attributes_names)):] - x_data_min_static) / \
+            (x_data_max_static - x_data_min_static)
         self.list_stations_repeated = list_stations_repeated
 
     def __len__(self):
@@ -221,15 +223,22 @@ class Dataset_CAMELS(Dataset):
             static_attrib_station_rep = static_attrib_station.repeat(
                 X_data.shape[0], axis=0
             )
+            if station_id not in self.x_mins_dict.keys():
+                self.x_mins_dict[station_id] = X_data.min(axis=0)
+            if station_id not in self.x_maxs_dict.keys():
+                self.x_maxs_dict[station_id] = X_data.max(axis=0)
+            X_data = (X_data - self.x_mins_dict[station_id]) / (
+                    (self.x_maxs_dict[station_id] - self.x_mins_dict[station_id]) + (10 ** (-6))
+            )
             X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
             station_id_repeated = [station_id] * X_data.shape[0]
             # print(f"finished with station id (basin): {station_id}")
             if station_id not in self.y_mean_dict.keys():
-                self.y_mean_dict[station_id] = y_data.mean(axis=0)
+                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
             if station_id not in self.y_std_dict.keys():
-                self.y_std_dict[station_id] = y_data.std(axis=0)
-            y_data -= (self.y_mean_dict[station_id])
-            y_data /= (self.y_std_dict[station_id])
+                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+            # y_data -= (self.y_mean_dict[station_id])
+            # y_data /= (self.y_std_dict[station_id])
             return station_id_repeated, X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
@@ -266,10 +275,10 @@ class Dataset_CAMELS(Dataset):
         self.calculate_dataset_length()
 
     def get_x_mins(self):
-        return self.x_min
+        return self.x_mins_dict
 
     def get_x_maxs(self):
-        return self.x_max
+        return self.x_maxs_dict
 
     def get_y_std(self):
         return self.y_std_dict

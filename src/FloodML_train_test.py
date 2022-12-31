@@ -310,8 +310,8 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            x_maxs=training_data.get_x_maxs(),
-            x_mins=training_data.get_x_mins(),
+            x_maxs_dict=training_data.get_x_maxs(),
+            x_mins_dict=training_data.get_x_mins(),
             y_mean_dict=training_data.get_y_mean(),
             y_std_dict=training_data.get_y_std()
         )
@@ -549,7 +549,7 @@ def run_training_and_test(
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.005)
     loss_list_training = []
     nse_list = []
     preds_obs_dict_per_basin = {}
@@ -590,7 +590,7 @@ def choose_hyper_parameters_validation(
 ):
     train_stations_list = []
     val_stations_list = []
-    all_stations_list_sorted = sort_basins_by_static_attributes(static_data_folder)
+    all_stations_list_sorted = open("../data/CAMELS_US/531_basin_list.txt").read().splitlines()
     # for i in range(len(all_stations_list_sorted)):
     #     if i % 5 != 0:
     #         train_stations_list.append(all_stations_list_sorted[i])
@@ -598,13 +598,13 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4, 0.5, 0.0, 0.25]
-    sequence_lengths = [10, 30, 90, 180, 270, 365]
+    sequence_lengths = [270, 10, 30, 90, 180, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [64, 96, 128, 156, 196, 224, 256]
+        num_hidden_units = [256, 64, 96, 128, 156, 196, 224]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
