@@ -271,10 +271,6 @@ def prepare_datasets(
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
-            x_mins_dict=training_data.get_x_mins(),
-            x_maxs_dict=training_data.get_x_maxs(),
-            y_mean_dict=training_data.get_y_mean(),
-            y_std_dict=training_data.get_y_std()
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -310,10 +306,6 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            x_maxs_dict=training_data.get_x_maxs(),
-            x_mins_dict=training_data.get_x_mins(),
-            y_mean_dict=training_data.get_y_mean(),
-            y_std_dict=training_data.get_y_std()
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")
@@ -510,7 +502,7 @@ def run_training_and_test(
         optim_name="SGD"
 ):
     train_dataloader = DataLoader(
-        training_data, batch_size=256, shuffle=True,
+        training_data, batch_size=256, shuffle=False,
     )
     test_dataloader = DataLoader(
         test_data, batch_size=256, shuffle=False,
@@ -549,7 +541,7 @@ def run_training_and_test(
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.005)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_list_training = []
     nse_list = []
     preds_obs_dict_per_basin = {}

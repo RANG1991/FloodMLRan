@@ -106,14 +106,14 @@ class Dataset_ERA5(Dataset):
             specific_model_type="",
             static_attributes_names=[],
             sequence_length=270,
-            x_mins_dict=None,
-            x_maxs_dict=None,
+            x_mean_dict=None,
+            x_std_dict=None,
             y_mean_dict=None,
             y_std_dict=None,
             use_Caravan_dataset=True,
     ):
-        self.x_mins_dict = x_mins_dict if x_mins_dict is not None else {}
-        self.x_maxs_dict = x_maxs_dict if x_maxs_dict is not None else {}
+        self.x_mean_dict = x_mean_dict if x_mean_dict is not None else {}
+        self.x_std_dict = x_std_dict if x_std_dict is not None else {}
         self.y_mean_dict = y_mean_dict if y_mean_dict is not None else {}
         self.y_std_dict = y_std_dict if y_std_dict is not None else {}
         self.sequence_length = sequence_length
@@ -140,11 +140,16 @@ class Dataset_ERA5(Dataset):
         ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids, specific_model_type=specific_model_type)
         self.X_data = np.concatenate(X_data_list)
         self.y_data = np.concatenate(y_data_list)
-        x_data_min_static = self.X_data[:, -(len(self.list_static_attributes_names)):].min(axis=0)
-        x_data_max_static = self.X_data[:, -(len(self.list_static_attributes_names)):].max(axis=0)
-        self.X_data[:, -(len(self.list_static_attributes_names)):] = \
-            (self.X_data[:, -(len(self.list_static_attributes_names)):] - x_data_min_static) / \
-            (x_data_max_static - x_data_min_static)
+        x_data_mean_dynamic = self.X_data[:, :(len(self.list_dynamic_attributes_names))].mean(axis=0)
+        x_data_std_dynamic = self.X_data[:, :(len(self.list_dynamic_attributes_names))].std(axis=0)
+        self.X_data[:, :(len(self.list_dynamic_attributes_names))] = \
+            (self.X_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
+            (x_data_std_dynamic + (10 ** (-6)))
+        x_data_mean_static = self.X_data[:, (len(self.list_dynamic_attributes_names)):].mean(axis=0)
+        x_data_std_static = self.X_data[:, (len(self.list_dynamic_attributes_names)):].std(axis=0)
+        self.X_data[:, (len(self.list_dynamic_attributes_names)):] = \
+            (self.X_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
+            (x_data_std_static + (10 ** (-6)))
         self.list_stations_repeated = list_stations_repeated
 
     @staticmethod
@@ -175,7 +180,7 @@ class Dataset_ERA5(Dataset):
 
     def __getitem__(self, index) -> T_co:
         X_data_tensor = torch.tensor(
-            self.X_data[index: index + self.sequence_length]
+            self.X_data[index: index + self.sequence_length + 1]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(
             torch.float32
@@ -336,13 +341,10 @@ class Dataset_ERA5(Dataset):
         static_attrib_station_rep = static_attrib_station.repeat(
             X_data.shape[0], axis=0
         )
-        if station_id not in self.x_mins_dict.keys():
-            self.x_mins_dict[station_id] = X_data.min(axis=0)
-        if station_id not in self.x_maxs_dict.keys():
-            self.x_maxs_dict[station_id] = X_data.max(axis=0)
-        X_data = (X_data - self.x_mins_dict[station_id]) / (
-                (self.x_maxs_dict[station_id] - self.x_mins_dict[station_id]) + (10 ** (-6))
-        )
+        if station_id not in self.x_mean_dict.keys():
+            self.x_mean_dict[station_id] = X_data.mean(axis=0)
+        if station_id not in self.x_std_dict.keys():
+            self.x_std_dict[station_id] = X_data.std(axis=0)
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
         station_id_repeated = [station_id] * X_data.shape[0]
         if station_id not in self.y_mean_dict.keys():
@@ -391,7 +393,7 @@ class Dataset_ERA5(Dataset):
     def calculate_dataset_length(self):
         count = 0
         for key in self.dict_basin_records_count.keys():
-            count += self.dict_basin_records_count[key] - self.sequence_length
+            count += (self.dict_basin_records_count[key] - self.sequence_length - 1)
         return count
 
     def create_boxplot_of_entire_dataset(self):
@@ -464,11 +466,11 @@ class Dataset_ERA5(Dataset):
         self.sequence_length = sequence_length
         self.calculate_dataset_length()
 
-    def get_x_mins(self):
-        return self.x_mins_dict
+    def get_x_std(self):
+        return self.x_std_dict
 
-    def get_x_maxs(self):
-        return self.x_maxs_dict
+    def get_x_mean(self):
+        return self.x_mean_dict
 
     def get_y_std(self):
         return self.y_std_dict
