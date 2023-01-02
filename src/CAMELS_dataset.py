@@ -269,7 +269,7 @@ class Dataset_CAMELS(Dataset):
     def calculate_dataset_length(self):
         count = 0
         for key in self.dict_basin_records_count.keys():
-            count += self.dict_basin_records_count[key] - self.sequence_length
+            count += (self.dict_basin_records_count[key] - self.sequence_length)
         return count
 
     def set_sequence_length(self, sequence_length):

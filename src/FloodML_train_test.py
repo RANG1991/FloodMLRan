@@ -61,7 +61,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         # print(f"Loss: {loss.item():.4f}")
         # pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
     print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}")
-    return running_loss / (len(loader) * 256)
+    return running_loss / (len(loader))
 
 
 def eval_model(
@@ -98,16 +98,16 @@ def eval_model(
             running_loss += loss
             for i in range(len(station_id_batch)):
                 station_id = station_id_batch[i]
-                if station_id not in preds_obs_dict_per_basin.keys():
+                if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
-                # pred_actual = (
-                #         (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                #     station_id].item()).cpu().numpy()
-                # pred_expected = (
-                #         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                #     station_id].item()).numpy()
-                preds_obs_dict_per_basin[station_id].append((ys[i], y_hat[i]))
-    return running_loss / (len(loader) * 256)
+                pred_actual = (
+                        (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                    station_id].item())
+                pred_expected = (
+                        (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                    station_id].item())
+                preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
+    return running_loss / (len(loader))
 
 
 def calc_nse_star(obs, sim, stds):
@@ -116,7 +116,7 @@ def calc_nse_star(obs, sim, stds):
     y = obs[mask]
     per_basin_target_stds = stds[mask]
     squared_error = (y_hat - y) ** 2
-    weights = 1 / (per_basin_target_stds + 1e-6) ** 2
+    weights = 1 / (per_basin_target_stds + 0.1) ** 2
     scaled_loss = weights * squared_error
     return torch.mean(scaled_loss)
 
@@ -261,8 +261,8 @@ def prepare_datasets(
             static_attributes_names=static_attributes_names,
             train_start_date="01/10/1999",
             train_end_date="30/09/2008",
-            validation_start_date="01/10/1980",
-            validation_end_date="30/09/1989",
+            validation_start_date="01/10/1989",
+            validation_end_date="30/09/1999",
             test_start_date="01/10/1989",
             test_end_date="30/09/1999",
             stage="validation",
@@ -271,6 +271,10 @@ def prepare_datasets(
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
+            x_std_dict=training_data.x_std_dict,
+            x_mean_dict=training_data.x_mean_dict,
+            y_std_dict=training_data.y_std_dict,
+            y_mean_dict=training_data.y_mean_dict
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -298,7 +302,7 @@ def prepare_datasets(
             discharge_data_folder=discharge_data_folder,
             train_start_date="01/10/1999",
             train_end_date="30/09/2008",
-            validation_start_date="01/10/1980",
+            validation_start_date="01/10/1989",
             validation_end_date="30/09/1989",
             test_start_date="01/10/1989",
             test_end_date="30/09/1999",
@@ -306,6 +310,10 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
+            x_std_dict=training_data.x_std_dict,
+            x_mean_dict=training_data.x_mean_dict,
+            y_std_dict=training_data.y_std_dict,
+            y_mean_dict=training_data.y_mean_dict
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")
@@ -393,7 +401,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
             dropout_rate,
             static_attributes,
             dynamic_attributes,
-            calc_nse_interval=num_epochs,
+            calc_nse_interval=1,
             model_name=model_name
         )
         training_loss_list[i] = training_loss_list_single_pass
@@ -464,7 +472,7 @@ def run_single_parameters_check_with_val_on_years(
         dropout_rate,
         static_attributes_names,
         dynamic_attributes_names,
-        calc_nse_interval=num_epochs,
+        calc_nse_interval=1,
         model_name=model_name,
         optim_name=optim_name
     )

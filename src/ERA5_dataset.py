@@ -132,25 +132,31 @@ class Dataset_ERA5(Dataset):
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
-        self.dict_basin_records_count = {}
-        (
-            list_stations_repeated,
-            X_data_list,
-            y_data_list,
-        ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids, specific_model_type=specific_model_type)
-        self.X_data = np.concatenate(X_data_list)
-        self.y_data = np.concatenate(y_data_list)
-        x_data_mean_dynamic = self.X_data[:, :(len(self.list_dynamic_attributes_names))].mean(axis=0)
-        x_data_std_dynamic = self.X_data[:, :(len(self.list_dynamic_attributes_names))].std(axis=0)
+        (self.dict_station_id_to_data,
+         x_inc_sum,
+         x_inc_sum_squared,
+         count_of_samples
+         ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
+                                              specific_model_type=specific_model_type)
+
+        self.dataset_length, self.lookup_table = self.create_look_table()
+
+        x_data_mean_dynamic = x_inc_sum[:(len(self.list_dynamic_attributes_names))] / count_of_samples
+        x_data_std_dynamic = np.sqrt(
+            (x_inc_sum_squared[:(len(self.list_dynamic_attributes_names))] / count_of_samples) -
+            ((x_inc_sum[:(len(self.list_dynamic_attributes_names))]) / count_of_samples) ** 2)
+
         self.X_data[:, :(len(self.list_dynamic_attributes_names))] = \
             (self.X_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
             (x_data_std_dynamic + (10 ** (-6)))
-        x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
-        x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
+
+        x_data_mean_static = x_inc_sum[(len(self.list_dynamic_attributes_names)):] / count_of_samples
+        x_data_std_static = np.sqrt((x_inc_sum_squared[(len(self.list_dynamic_attributes_names)):] / count_of_samples) -
+                                    ((x_inc_sum[(len(self.list_dynamic_attributes_names)):]) / count_of_samples) ** 2)
+
         self.X_data[:, (len(self.list_dynamic_attributes_names)):] = \
             (self.X_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
             (x_data_std_static + (10 ** (-6)))
-        self.list_stations_repeated = list_stations_repeated
 
     @staticmethod
     def pad_np_array_equally_from_sides(X_data_single_basin, max_width, max_height):
@@ -176,17 +182,21 @@ class Dataset_ERA5(Dataset):
         )
 
     def __len__(self):
-        return self.calculate_dataset_length()
+        return self.dataset_length
 
     def __getitem__(self, index) -> T_co:
+        next_basin = self.lookup_table[index]
+        if self.current_basin != next_basin:
+            self.current_basin = next_basin
+            self.inner_index_in_data_of_basin = 0
+        X_data, y_data = self.dict_station_id_to_data[self.current_basin]
         X_data_tensor = torch.tensor(
-            self.X_data[index: index + self.sequence_length]
+            X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
-        y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(
+        y_data_tensor = torch.tensor(y_data[self.inner_index_in_data_of_basin + self.sequence_length]).to(
             torch.float32
         )
-        station_id = self.list_stations_repeated[index + self.sequence_length]
-        return station_id, X_data_tensor, y_data_tensor
+        return self.current_basin, X_data_tensor, y_data_tensor
 
     def read_static_attributes(self):
         df_attr_caravan = pd.read_csv(
@@ -213,49 +223,42 @@ class Dataset_ERA5(Dataset):
         return df_attr, df_attr["gauge_id"].values.tolist()
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type):
-        list_stations_repeated = []
-        X_data_list = []
-        y_data_list = []
-        list_returned = []
         # with Pool(multiprocessing.cpu_count() - 1) as p:
         #     list_returned = p.map(
         #         self.read_single_station_file_spatial, all_stations_ids
         #     )
+        x_inc_sum = 0
+        x_inc_sum_squared = 0
+        count_of_samples = 0
+        dict_station_id_to_data = {}
         max_width, max_length = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data"
         )
         for station_id in all_stations_ids:
             if self.check_is_valid_station_id(station_id):
                 if specific_model_type.lower() == "conv":
-                    station_id_repeated, X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
+                    X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
                     X_data_spatial = self.pad_np_array_equally_from_sides(
                         X_data_spatial, max_width, max_length
                     ).flatten()
-                    list_returned.append((station_id_repeated, X_data_spatial, y_data))
+                    dict_station_id_to_data[station_id] = (X_data_spatial, y_data)
                 elif specific_model_type.lower() == "cnn":
-                    station_id_repeated, X_data_spatial, y_data_spatial = self.read_single_station_file_spatial(
+                    X_data_spatial, y_data_spatial = self.read_single_station_file_spatial(
                         station_id)
-                    _, X_data_non_spatial, _ = self.read_single_station_file(station_id)
+                    X_data_non_spatial, _ = self.read_single_station_file(station_id)
                     if len(X_data_non_spatial) > 0 and len(X_data_non_spatial) > 0:
-                        X_data_spatial = self.pad_np_array_equally_from_sides(
-                            X_data_spatial, max_width, max_length
-                        )
-                        X_data_all = np.concatenate(
-                            [X_data_spatial.reshape(len(X_data_non_spatial), max_length * max_width),
-                             np.stack(X_data_non_spatial)], axis=1)
-                        list_returned.append((station_id_repeated, X_data_all, y_data_spatial))
+                        X_data_spatial = self.pad_np_array_equally_from_sides(X_data_spatial, max_width, max_length)
+                        X_data_all = np.concatenate([X_data_spatial.reshape(len(X_data_non_spatial),
+                                                                            max_length * max_width),
+                                                     np.stack(X_data_non_spatial)], axis=1)
+                        dict_station_id_to_data[station_id] = (X_data_all, y_data_spatial)
                 else:
-                    list_returned.append(self.read_single_station_file(station_id))
-        for station_id_repeated, X_data_curr, y_data_curr in list_returned:
-            if len(station_id_repeated) > 0:
-                self.dict_basin_records_count[station_id_repeated[0]] = len(
-                    station_id_repeated
-                )
-                list_stations_repeated.extend(station_id_repeated)
-                if X_data_curr.size > 0:
-                    X_data_list.append(X_data_curr)
-                    y_data_list.append(y_data_curr)
-        return list_stations_repeated, X_data_list, y_data_list
+                    X_data, y_data = self.read_single_station_file(station_id)
+                    dict_station_id_to_data[station_id] = (X_data, y_data)
+                x_inc_sum += dict_station_id_to_data[station_id][0].sum(axis=0)
+                x_inc_sum_squared += (dict_station_id_to_data[station_id][0] ** 2).sum(axis=0)
+                count_of_samples += len(dict_station_id_to_data[station_id][1])
+        return dict_station_id_to_data, x_inc_sum, x_inc_sum_squared, count_of_samples
 
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static
@@ -284,8 +287,7 @@ class Dataset_ERA5(Dataset):
             .to_numpy()
             .reshape(1, -1)
         )
-        station_id_repeated = [station_id] * X_data_spatial.shape[0]
-        return station_id_repeated, X_data_spatial, y_data
+        return X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
         df_dis_data.loc[self.discharge_str] = df_dis_data[self.discharge_str].apply(
@@ -353,7 +355,7 @@ class Dataset_ERA5(Dataset):
             self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
         # y_data -= (self.y_mean_dict[station_id])
         # y_data /= (self.y_std_dict[station_id])
-        return station_id_repeated, X_data, y_data
+        return X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[
@@ -393,11 +395,19 @@ class Dataset_ERA5(Dataset):
             ]
         return df_dynamic_data
 
+    def create_look_table(self):
+        self.inner_index_in_data_of_basin = 0
+        lookup_table_basins = {}
+        length_of_dataset = 0
+        for key in self.dict_station_id_to_data.keys():
+            for _ in range(len(self.dict_station_id_to_data[key][0]) - self.sequence_length):
+                self.current_basin = key
+                lookup_table_basins[length_of_dataset] = key
+                length_of_dataset += 1
+        return length_of_dataset + 1, lookup_table_basins
+
     def calculate_dataset_length(self):
-        count = 0
-        for key in self.dict_basin_records_count.keys():
-            count += (self.dict_basin_records_count[key] - self.sequence_length)
-        return count
+        return len(self.lookup_table_basins)
 
     def create_boxplot_of_entire_dataset(self):
         all_attributes_names = (
@@ -467,7 +477,7 @@ class Dataset_ERA5(Dataset):
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
-        self.calculate_dataset_length()
+        self.dataset_length, self.lookup_table = self.create_look_table()
 
     def get_x_std(self):
         return self.x_std_dict
