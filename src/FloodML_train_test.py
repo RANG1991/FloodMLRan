@@ -61,7 +61,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         # print(f"Loss: {loss.item():.4f}")
         # pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
     print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}")
-    return running_loss / (len(loader))
+    return running_loss / (len(loader) * 256)
 
 
 def eval_model(
