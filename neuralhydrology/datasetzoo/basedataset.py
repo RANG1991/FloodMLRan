@@ -347,7 +347,8 @@ class BaseDataset(Dataset):
                     # add warmup period, so that we can make prediction at the first time step specified by period.
                     # offsets have the warmup offset needed for each frequency; the overall warmup starts with the
                     # earliest date, i.e., the largest offset across all frequencies.
-                    warmup_start_date = min(start_date - offset for offset in offsets)
+                    # RAN CHANGED THIS!!!
+                    warmup_start_date = start_date
                     df_sub = df[warmup_start_date:end_date]
 
                     # make sure the df covers the full date range from warmup_start_date to end_date, filling any

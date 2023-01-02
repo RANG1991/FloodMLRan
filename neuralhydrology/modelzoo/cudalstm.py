@@ -66,7 +66,7 @@ class CudaLSTM(BaseModel):
         # the x_d in data dictionary is of size [batch_size, seq_length, number_of_features]
         # possibly pass dynamic and static inputs through embedding layers, then concatenate them
         x_d = self.embedding_net(data)
-        print(x_d)
+        # print(data["x_d"])
         lstm_output, (h_n, c_n) = self.lstm(input=x_d)
 
         # reshape to [batch_size, seq, n_hiddens]

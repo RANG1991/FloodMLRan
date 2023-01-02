@@ -119,7 +119,7 @@ class Dataset_ERA5(Dataset):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
-        self.list_static_attributes_names = static_attributes_names
+        self.list_static_attributes_names = sorted(static_attributes_names)
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
@@ -145,8 +145,8 @@ class Dataset_ERA5(Dataset):
         self.X_data[:, :(len(self.list_dynamic_attributes_names))] = \
             (self.X_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
             (x_data_std_dynamic + (10 ** (-6)))
-        x_data_mean_static = self.X_data[:, (len(self.list_dynamic_attributes_names)):].mean(axis=0)
-        x_data_std_static = self.X_data[:, (len(self.list_dynamic_attributes_names)):].std(axis=0)
+        x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
+        x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
         self.X_data[:, (len(self.list_dynamic_attributes_names)):] = \
             (self.X_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
             (x_data_std_static + (10 ** (-6)))
@@ -180,7 +180,7 @@ class Dataset_ERA5(Dataset):
 
     def __getitem__(self, index) -> T_co:
         X_data_tensor = torch.tensor(
-            self.X_data[index: index + self.sequence_length + 1]
+            self.X_data[index: index + self.sequence_length]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(
             torch.float32
@@ -366,6 +366,9 @@ class Dataset_ERA5(Dataset):
             self.discharge_str
         ].apply(lambda x: float(x))
         df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
+        dynamic_attributes_to_get_from_df = self.list_dynamic_attributes_names[0] if len(
+            self.list_dynamic_attributes_names) == 1 else self.list_dynamic_attributes_names
+        df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
         start_date = (
@@ -393,7 +396,7 @@ class Dataset_ERA5(Dataset):
     def calculate_dataset_length(self):
         count = 0
         for key in self.dict_basin_records_count.keys():
-            count += (self.dict_basin_records_count[key] - self.sequence_length - 1)
+            count += (self.dict_basin_records_count[key] - self.sequence_length)
         return count
 
     def create_boxplot_of_entire_dataset(self):
