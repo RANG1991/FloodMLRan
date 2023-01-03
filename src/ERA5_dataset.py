@@ -133,29 +133,25 @@ class Dataset_ERA5(Dataset):
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
         (self.dict_station_id_to_data,
-         x_inc_sum,
-         x_inc_sum_squared,
-         count_of_samples
+         x_means,
+         x_stds,
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type)
 
         self.dataset_length, self.lookup_table = self.create_look_table()
 
-        x_data_mean_dynamic = x_inc_sum[:(len(self.list_dynamic_attributes_names))] / count_of_samples
-        x_data_std_dynamic = np.sqrt(
-            (x_inc_sum_squared[:(len(self.list_dynamic_attributes_names))] / count_of_samples) -
-            ((x_inc_sum[:(len(self.list_dynamic_attributes_names))]) / count_of_samples) ** 2)
+        x_data_mean_dynamic = x_means[:(len(self.list_dynamic_attributes_names))]
+        x_data_std_dynamic = x_stds[:(len(self.list_dynamic_attributes_names))]
+
+        x_data_mean_static = x_means[(len(self.list_dynamic_attributes_names)):]
+        x_data_std_static = x_stds[(len(self.list_dynamic_attributes_names)):]
 
         for key in self.dict_station_id_to_data.keys():
             current_x_data = self.dict_station_id_to_data[key][0]
+
             current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
                 (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
                 (x_data_std_dynamic + (10 ** (-6)))
-
-            x_data_mean_static = x_inc_sum[(len(self.list_dynamic_attributes_names)):] / count_of_samples
-            x_data_std_static = np.sqrt(
-                (x_inc_sum_squared[(len(self.list_dynamic_attributes_names)):] / count_of_samples) -
-                ((x_inc_sum[(len(self.list_dynamic_attributes_names)):]) / count_of_samples) ** 2)
 
             current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
                 (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
@@ -231,8 +227,8 @@ class Dataset_ERA5(Dataset):
         #     list_returned = p.map(
         #         self.read_single_station_file_spatial, all_stations_ids
         #     )
-        x_inc_sum = 0
-        x_inc_sum_squared = 0
+        cumm_m = 0
+        cumm_s = 0
         count_of_samples = 0
         dict_station_id_to_data = {}
         max_width, max_length = self.get_maximum_width_and_length_of_basin(
@@ -262,10 +258,12 @@ class Dataset_ERA5(Dataset):
                 if len(X_data) == 0 or len(y_data) == 0:
                     continue
                 dict_station_id_to_data[station_id] = (X_data, y_data)
-                x_inc_sum += dict_station_id_to_data[station_id][0].sum(axis=0)
-                x_inc_sum_squared += (dict_station_id_to_data[station_id][0] ** 2).sum(axis=0)
-                count_of_samples += len(dict_station_id_to_data[station_id][1])
-        return dict_station_id_to_data, x_inc_sum, x_inc_sum_squared, count_of_samples
+                prev_mean = cumm_m
+                count_of_samples = count_of_samples + (len(y_data))
+                cumm_m = cumm_m + ((X_data - cumm_m) / count_of_samples).sum(axis=0)
+                cumm_s = cumm_s + ((X_data - cumm_m) * (X_data - prev_mean)).sum(axis=0)
+        std = np.sqrt(cumm_s / (count_of_samples - 1))
+        return dict_station_id_to_data, cumm_m, std
 
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static
@@ -356,10 +354,11 @@ class Dataset_ERA5(Dataset):
             self.x_std_dict[station_id] = X_data.std(axis=0)
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
         station_id_repeated = [station_id] * X_data.shape[0]
-        # if station_id not in self.y_mean_dict.keys():
-        #     self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-        # if station_id not in self.y_std_dict.keys():
-        #     self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+        if self.stage == "train":
+            if station_id not in self.y_mean_dict.keys():
+                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+            if station_id not in self.y_std_dict.keys():
+                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
         # y_data -= (self.y_mean_dict[station_id])
         # y_data /= (self.y_std_dict[station_id])
         return X_data, y_data

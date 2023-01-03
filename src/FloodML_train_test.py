@@ -106,7 +106,7 @@ def eval_model(
                 pred_expected = (
                         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
                     station_id].item())
-                preds_obs_dict_per_basin[station_id].append((pred_actual, pred_expected))
+                preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
     return running_loss / (len(loader))
 
 
@@ -157,7 +157,7 @@ def calc_validation_basins_nse(
         nse_list_basins.append(nse)
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
     median_nse_basin = stations_ids[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
-    median_nse = nse_list_basins[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
+    median_nse = statistics.median(nse_list_basins)
     print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
     # curr_datetime = datetime.now()
     # curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
@@ -600,11 +600,11 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4, 0.5, 0.0, 0.25]
-    sequence_lengths = [270, 10, 30, 90, 180, 365]
+    sequence_lengths = [10, 270, 30, 90, 180, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [256, 64, 96, 128, 156, 196, 224]
+        num_hidden_units = [64, 256, 96, 128, 156, 196, 224]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
