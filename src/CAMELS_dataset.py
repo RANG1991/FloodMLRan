@@ -96,40 +96,47 @@ class Dataset_CAMELS(Dataset):
         self.test_end_date = test_end_date
         self.stage = stage
         self.df_attr, self.list_stations_static = self.read_static_attributes()
-        self.dict_basin_records_count = {}
-        (
-            list_stations_repeated,
-            X_data_list,
-            y_data_list,
-        ) = self.read_all_dynamic_and_discharge_data_files(
-            all_stations_ids=all_stations_ids
-        )
-        self.X_data = np.concatenate(X_data_list)
-        self.y_data = np.concatenate(y_data_list)
-        x_data_mean_dynamic = self.X_data[:, :(len(self.list_dynamic_attributes_names))].mean(axis=0)
-        x_data_std_dynamic = self.X_data[:, :(len(self.list_dynamic_attributes_names))].std(axis=0)
-        self.X_data[:, :(len(self.list_dynamic_attributes_names))] = \
-            (self.X_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
-            (x_data_std_dynamic + (10 ** (-6)))
-        x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
-        x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
-        self.X_data[:, (len(self.list_dynamic_attributes_names)):] = \
-            (self.X_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
-            (x_data_std_static + (10 ** (-6)))
-        self.list_stations_repeated = list_stations_repeated
+        (self.dict_station_id_to_data,
+         x_means,
+         x_stds,
+         ) = self.read_all_dynamic_and_discharge_data_files(all_stations_ids=all_stations_ids)
+
+        self.dataset_length, self.lookup_table = self.create_look_table()
+
+        x_data_mean_dynamic = x_means[:(len(self.list_dynamic_attributes_names))]
+        x_data_std_dynamic = x_stds[:(len(self.list_dynamic_attributes_names))]
+
+        x_data_mean_static = x_means[(len(self.list_dynamic_attributes_names)):]
+        x_data_std_static = x_stds[(len(self.list_dynamic_attributes_names)):]
+
+        for key in self.dict_station_id_to_data.keys():
+            current_x_data = self.dict_station_id_to_data[key][0]
+
+            current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
+                (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
+                (x_data_std_dynamic + (10 ** (-6)))
+
+            current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
+                (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
+                (x_data_std_static + (10 ** (-6)))
 
     def __len__(self):
-        return self.calculate_dataset_length()
+        return self.dataset_length
 
     def __getitem__(self, index) -> T_co:
+        next_basin = self.lookup_table[index]
+        if self.current_basin != next_basin:
+            self.current_basin = next_basin
+            self.inner_index_in_data_of_basin = 0
+        X_data, y_data = self.dict_station_id_to_data[self.current_basin]
         X_data_tensor = torch.tensor(
-            self.X_data[index: index + self.sequence_length]
+            X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
-        y_data_tensor = torch.tensor(self.y_data[index + self.sequence_length]).to(
+        y_data_tensor = torch.tensor(y_data[self.inner_index_in_data_of_basin + self.sequence_length]).to(
             torch.float32
         )
-        station_id = self.list_stations_repeated[index + self.sequence_length]
-        return station_id, X_data_tensor, y_data_tensor
+        self.inner_index_in_data_of_basin += 1
+        return self.current_basin, X_data_tensor, y_data_tensor
 
     def read_static_attributes(self):
         attributes_path = Path(self.static_data_folder)
@@ -148,23 +155,21 @@ class Dataset_CAMELS(Dataset):
         return df, df.index.to_list()
 
     def read_all_dynamic_and_discharge_data_files(self, all_stations_ids):
-        list_stations_repeated = []
-        X_data_list = []
-        y_data_list = []
-        list_returned = []
+        cumm_m = 0
+        cumm_s = 0
+        count_of_samples = 0
+        dict_station_id_to_data = {}
         for station_id in all_stations_ids:
-            list_returned.append(
-                self.read_single_station_dynamic_and_discharge_file(station_id)
-            )
-        for station_id_repeated, X_data_curr, y_data_curr in list_returned:
-            self.dict_basin_records_count[station_id_repeated[0]] = len(
-                station_id_repeated
-            )
-            list_stations_repeated.extend(station_id_repeated)
-            if X_data_curr.size > 0:
-                X_data_list.append(X_data_curr)
-                y_data_list.append(y_data_curr)
-        return list_stations_repeated, X_data_list, y_data_list
+            X_data, y_data = self.read_single_station_dynamic_and_discharge_file(station_id)
+            if len(X_data) == 0 or len(y_data) == 0:
+                continue
+            dict_station_id_to_data[station_id] = (X_data, y_data)
+            prev_mean = cumm_m
+            count_of_samples = count_of_samples + (len(y_data))
+            cumm_m = cumm_m + ((X_data - cumm_m) / count_of_samples).sum(axis=0)
+            cumm_s = cumm_s + ((X_data - cumm_m) * (X_data - prev_mean)).sum(axis=0)
+        std = np.sqrt(cumm_s / (count_of_samples - 1))
+        return dict_station_id_to_data, cumm_m, std
 
     def read_single_station_dynamic_and_discharge_file(self, station_id):
         if station_id not in self.list_stations_static:
@@ -233,7 +238,6 @@ class Dataset_CAMELS(Dataset):
             if station_id not in self.x_std_dict.keys():
                 self.x_std_dict[station_id] = X_data.std(axis=0)
             X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
-            station_id_repeated = [station_id] * X_data.shape[0]
             # print(f"finished with station id (basin): {station_id}")
             if station_id not in self.y_mean_dict.keys():
                 self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
@@ -241,7 +245,7 @@ class Dataset_CAMELS(Dataset):
                 self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
             # y_data -= (self.y_mean_dict[station_id])
             # y_data /= (self.y_std_dict[station_id])
-            return station_id_repeated, X_data, y_data
+            return X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[
@@ -267,14 +271,22 @@ class Dataset_CAMELS(Dataset):
         return df_dynamic_data
 
     def calculate_dataset_length(self):
-        count = 0
-        for key in self.dict_basin_records_count.keys():
-            count += (self.dict_basin_records_count[key] - self.sequence_length)
-        return count
+        return self.dataset_length
+
+    def create_look_table(self):
+        self.inner_index_in_data_of_basin = 0
+        lookup_table_basins = {}
+        length_of_dataset = 0
+        self.current_basin = list(self.dict_station_id_to_data.keys())[0]
+        for key in self.dict_station_id_to_data.keys():
+            for _ in range(len(self.dict_station_id_to_data[key][0]) - self.sequence_length):
+                lookup_table_basins[length_of_dataset] = key
+                length_of_dataset += 1
+        return length_of_dataset, lookup_table_basins
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
-        self.calculate_dataset_length()
+        self.dataset_length, self.lookup_table = self.create_look_table()
 
     def get_x_mins(self):
         return self.x_mins_dict
