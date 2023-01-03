@@ -106,7 +106,7 @@ def eval_model(
                 pred_expected = (
                         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
                     station_id].item())
-                preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
+                preds_obs_dict_per_basin[station_id].append((pred_actual, pred_expected))
     return running_loss / (len(loader))
 
 

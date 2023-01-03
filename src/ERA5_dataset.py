@@ -199,6 +199,7 @@ class Dataset_ERA5(Dataset):
         y_data_tensor = torch.tensor(y_data[self.inner_index_in_data_of_basin + self.sequence_length]).to(
             torch.float32
         )
+        self.inner_index_in_data_of_basin += 1
         return self.current_basin, X_data_tensor, y_data_tensor
 
     def read_static_attributes(self):
@@ -241,23 +242,26 @@ class Dataset_ERA5(Dataset):
             if self.check_is_valid_station_id(station_id):
                 if specific_model_type.lower() == "conv":
                     X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
-                    X_data_spatial = self.pad_np_array_equally_from_sides(
+                    X_data = self.pad_np_array_equally_from_sides(
                         X_data_spatial, max_width, max_length
                     ).flatten()
-                    dict_station_id_to_data[station_id] = (X_data_spatial, y_data)
                 elif specific_model_type.lower() == "cnn":
-                    X_data_spatial, y_data_spatial = self.read_single_station_file_spatial(
+                    X_data_spatial, y_data = self.read_single_station_file_spatial(
                         station_id)
                     X_data_non_spatial, _ = self.read_single_station_file(station_id)
                     if len(X_data_non_spatial) > 0 and len(X_data_non_spatial) > 0:
                         X_data_spatial = self.pad_np_array_equally_from_sides(X_data_spatial, max_width, max_length)
-                        X_data_all = np.concatenate([X_data_spatial.reshape(len(X_data_non_spatial),
-                                                                            max_length * max_width),
-                                                     np.stack(X_data_non_spatial)], axis=1)
-                        dict_station_id_to_data[station_id] = (X_data_all, y_data_spatial)
+                        X_data = np.concatenate([X_data_spatial.reshape(len(X_data_non_spatial),
+                                                                        max_length * max_width),
+                                                 np.stack(X_data_non_spatial)], axis=1)
+                    else:
+                        X_data = np.array([])
+                        y_data = np.array([])
                 else:
                     X_data, y_data = self.read_single_station_file(station_id)
-                    dict_station_id_to_data[station_id] = (X_data, y_data)
+                if len(X_data) == 0 or len(y_data) == 0:
+                    continue
+                dict_station_id_to_data[station_id] = (X_data, y_data)
                 x_inc_sum += dict_station_id_to_data[station_id][0].sum(axis=0)
                 x_inc_sum_squared += (dict_station_id_to_data[station_id][0] ** 2).sum(axis=0)
                 count_of_samples += len(dict_station_id_to_data[station_id][1])
@@ -334,7 +338,7 @@ class Dataset_ERA5(Dataset):
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:
-            return np.array([]), np.array([]), np.array([])
+            return np.array([]), np.array([])
         X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
         y_data = y_data.reshape(-1, 1)
         static_attrib_station = (
@@ -352,10 +356,10 @@ class Dataset_ERA5(Dataset):
             self.x_std_dict[station_id] = X_data.std(axis=0)
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
         station_id_repeated = [station_id] * X_data.shape[0]
-        if station_id not in self.y_mean_dict.keys():
-            self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-        if station_id not in self.y_std_dict.keys():
-            self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+        # if station_id not in self.y_mean_dict.keys():
+        #     self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+        # if station_id not in self.y_std_dict.keys():
+        #     self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
         # y_data -= (self.y_mean_dict[station_id])
         # y_data /= (self.y_std_dict[station_id])
         return X_data, y_data
@@ -402,15 +406,15 @@ class Dataset_ERA5(Dataset):
         self.inner_index_in_data_of_basin = 0
         lookup_table_basins = {}
         length_of_dataset = 0
+        self.current_basin = list(self.dict_station_id_to_data.keys())[0]
         for key in self.dict_station_id_to_data.keys():
             for _ in range(len(self.dict_station_id_to_data[key][0]) - self.sequence_length):
-                self.current_basin = key
                 lookup_table_basins[length_of_dataset] = key
                 length_of_dataset += 1
-        return length_of_dataset + 1, lookup_table_basins
+        return length_of_dataset, lookup_table_basins
 
     def calculate_dataset_length(self):
-        return len(self.lookup_table_basins)
+        return self.dataset_length
 
     def create_boxplot_of_entire_dataset(self):
         all_attributes_names = (
