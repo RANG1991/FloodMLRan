@@ -143,8 +143,8 @@ class Dataset_ERA5(Dataset):
         x_data_mean_dynamic = x_means[:(len(self.list_dynamic_attributes_names))]
         x_data_std_dynamic = x_stds[:(len(self.list_dynamic_attributes_names))]
 
-        x_data_mean_static = x_means[(len(self.list_dynamic_attributes_names)):]
-        x_data_std_static = x_stds[(len(self.list_dynamic_attributes_names)):]
+        x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
+        x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
         for key in self.dict_station_id_to_data.keys():
             current_x_data = self.dict_station_id_to_data[key][0]
@@ -156,6 +156,8 @@ class Dataset_ERA5(Dataset):
             current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
                 (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
                 (x_data_std_static + (10 ** (-6)))
+
+            self.dict_station_id_to_data[key] = (current_x_data, self.dict_station_id_to_data[key][1])
 
     @staticmethod
     def pad_np_array_equally_from_sides(X_data_single_basin, max_width, max_height):
@@ -260,8 +262,11 @@ class Dataset_ERA5(Dataset):
                 dict_station_id_to_data[station_id] = (X_data, y_data)
                 prev_mean = cumm_m
                 count_of_samples = count_of_samples + (len(y_data))
-                cumm_m = cumm_m + ((X_data - cumm_m) / count_of_samples).sum(axis=0)
-                cumm_s = cumm_s + ((X_data - cumm_m) * (X_data - prev_mean)).sum(axis=0)
+                cumm_m = cumm_m + (
+                        (X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m) / count_of_samples).sum(
+                    axis=0)
+                cumm_s = cumm_s + ((X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m) * (
+                        X_data[:, :len(self.list_dynamic_attributes_names)] - prev_mean)).sum(axis=0)
             else:
                 print(f"station with id: {station_id} has no valid file")
         std = np.sqrt(cumm_s / (count_of_samples - 1))
@@ -350,10 +355,10 @@ class Dataset_ERA5(Dataset):
         static_attrib_station_rep = static_attrib_station.repeat(
             X_data.shape[0], axis=0
         )
-        if station_id not in self.x_mean_dict.keys():
-            self.x_mean_dict[station_id] = X_data.mean(axis=0)
-        if station_id not in self.x_std_dict.keys():
-            self.x_std_dict[station_id] = X_data.std(axis=0)
+        # if station_id not in self.x_mean_dict.keys():
+        #     self.x_mean_dict[station_id] = X_data.mean(axis=0)
+        # if station_id not in self.x_std_dict.keys():
+        #     self.x_std_dict[station_id] = X_data.std(axis=0)
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
         station_id_repeated = [station_id] * X_data.shape[0]
         if self.stage == "train":

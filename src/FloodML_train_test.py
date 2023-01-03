@@ -101,11 +101,10 @@ def eval_model(
                 if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
                 # pred_actual = (
-                #         (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                #     station_id].item())
+                #         (y_hat[i] * loader.dataset.y_std_dict[station_id]) + loader.dataset.y_mean_dict[
+                #     station_id])
                 # pred_expected = (
-                #         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                #     station_id].item())
+                #         (ys[i] * loader.dataset.y_std_dict[station_id]) + loader.dataset.y_mean_dict[station_id])
                 preds_obs_dict_per_basin[station_id].append((ys[i], y_hat[i]))
     return running_loss / (len(loader))
 
@@ -271,8 +270,6 @@ def prepare_datasets(
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
-            x_std_dict=training_data.x_std_dict,
-            x_mean_dict=training_data.x_mean_dict,
             y_std_dict=training_data.y_std_dict,
             y_mean_dict=training_data.y_mean_dict
         )
@@ -285,8 +282,8 @@ def prepare_datasets(
             static_attributes_names=static_attributes_names,
             train_start_date="01/10/1999",
             train_end_date="30/09/2008",
-            validation_start_date="01/10/1980",
-            validation_end_date="30/09/1989",
+            validation_start_date="01/10/1989",
+            validation_end_date="30/09/1999",
             test_start_date="01/10/1989",
             test_end_date="30/09/1999",
             stage="train",
@@ -303,15 +300,13 @@ def prepare_datasets(
             train_start_date="01/10/1999",
             train_end_date="30/09/2008",
             validation_start_date="01/10/1989",
-            validation_end_date="30/09/1989",
+            validation_end_date="30/09/1999",
             test_start_date="01/10/1989",
             test_end_date="30/09/1999",
             stage="validation",
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            x_std_dict=training_data.x_std_dict,
-            x_mean_dict=training_data.x_mean_dict,
             y_std_dict=training_data.y_std_dict,
             y_mean_dict=training_data.y_mean_dict
         )
