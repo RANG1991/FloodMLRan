@@ -262,6 +262,8 @@ class Dataset_ERA5(Dataset):
                 count_of_samples = count_of_samples + (len(y_data))
                 cumm_m = cumm_m + ((X_data - cumm_m) / count_of_samples).sum(axis=0)
                 cumm_s = cumm_s + ((X_data - cumm_m) * (X_data - prev_mean)).sum(axis=0)
+            else:
+                print(f"station with id: {station_id} has no valid file")
         std = np.sqrt(cumm_s / (count_of_samples - 1))
         return dict_station_id_to_data, cumm_m, std
 
