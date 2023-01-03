@@ -147,8 +147,9 @@ class Dataset_ERA5(Dataset):
             ((x_inc_sum[:(len(self.list_dynamic_attributes_names))]) / count_of_samples) ** 2)
 
         for key in self.dict_station_id_to_data.keys():
-            self.X_data[:, :(len(self.list_dynamic_attributes_names))] = \
-                (self.X_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
+            current_x_data = self.dict_station_id_to_data[key][0]
+            current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
+                (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
                 (x_data_std_dynamic + (10 ** (-6)))
 
             x_data_mean_static = x_inc_sum[(len(self.list_dynamic_attributes_names)):] / count_of_samples
@@ -156,8 +157,8 @@ class Dataset_ERA5(Dataset):
                 (x_inc_sum_squared[(len(self.list_dynamic_attributes_names)):] / count_of_samples) -
                 ((x_inc_sum[(len(self.list_dynamic_attributes_names)):]) / count_of_samples) ** 2)
 
-            self.X_data[:, (len(self.list_dynamic_attributes_names)):] = \
-                (self.X_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
+            current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
+                (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
                 (x_data_std_static + (10 ** (-6)))
 
     @staticmethod
