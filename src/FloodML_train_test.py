@@ -100,13 +100,13 @@ def eval_model(
                 station_id = station_id_batch[i]
                 if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
-                pred_actual = (
-                        (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                    station_id].item())
-                pred_expected = (
-                        (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
-                    station_id].item())
-                preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
+                # pred_actual = (
+                #         (y_hat[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                #     station_id].item())
+                # pred_expected = (
+                #         (ys[i] * loader.dataset.y_std_dict[station_id].item()) + loader.dataset.y_mean_dict[
+                #     station_id].item())
+                preds_obs_dict_per_basin[station_id].append((ys[i], y_hat[i]))
     return running_loss / (len(loader))
 
 
@@ -116,7 +116,7 @@ def calc_nse_star(obs, sim, stds):
     y = obs[mask]
     per_basin_target_stds = stds[mask]
     squared_error = (y_hat - y) ** 2
-    weights = 1 / (per_basin_target_stds + 0.1) ** 2
+    weights = 1 / (per_basin_target_stds + 1e-6) ** 2
     scaled_loss = weights * squared_error
     return torch.mean(scaled_loss)
 
@@ -600,11 +600,11 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4, 0.5, 0.0, 0.25]
-    sequence_lengths = [10, 270, 30, 90, 180, 365]
+    sequence_lengths = [270, 10, 30, 90, 180, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [64, 256, 96, 128, 156, 196, 224]
+        num_hidden_units = [256, 256, 96, 128, 156, 196, 224]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
