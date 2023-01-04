@@ -115,7 +115,7 @@ def calc_nse_star(obs, sim, stds):
     y = obs[mask]
     per_basin_target_stds = stds[mask]
     squared_error = (y_hat - y) ** 2
-    weights = 1 / (per_basin_target_stds + 1e-6) ** 2
+    weights = 1 / (per_basin_target_stds + 0.1) ** 2
     scaled_loss = weights * squared_error
     return torch.mean(scaled_loss)
 
@@ -137,8 +137,8 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     obs = obs[mask]
     denominator = torch.sum((obs - torch.mean(obs)) ** 2)
     numerator = torch.sum((sim - obs) ** 2)
-    nse_val = 1 - numerator / (denominator + 1e-6)
-    return nse_val.item()
+    nse_val = 1 - numerator / denominator
+    return float(nse_val.item())
 
 
 def calc_validation_basins_nse(
@@ -560,7 +560,7 @@ def run_training_and_test(
             nse_list_epoch = calc_validation_basins_nse(
                 preds_obs_dict_per_basin, (i + 1), device=device
             )
-            nse_list.extend(nse_list_epoch)
+            nse_list = nse_list_epoch[:]
             preds_obs_dict_per_basin.clear()
     if len(nse_list) > 0:
         print(
