@@ -85,7 +85,7 @@ class Dataset_CAMELS(Dataset):
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
         self.discharge_data_folder = discharge_data_folder
-        self.list_static_attributes_names = static_attributes_names
+        self.list_static_attributes_names = sorted(static_attributes_names)
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
@@ -248,8 +248,8 @@ class Dataset_CAMELS(Dataset):
                 self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
             if station_id not in self.y_std_dict.keys():
                 self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
-            # y_data -= (self.y_mean_dict[station_id])
-            # y_data /= (self.y_std_dict[station_id])
+            y_data -= (self.y_mean_dict[station_id].numpy())
+            y_data /= (self.y_std_dict[station_id].numpy())
             return X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):

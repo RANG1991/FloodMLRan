@@ -366,8 +366,8 @@ class Dataset_ERA5(Dataset):
                 self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
             if station_id not in self.y_std_dict.keys():
                 self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
-        # y_data -= (self.y_mean_dict[station_id].numpy())
-        # y_data /= (self.y_std_dict[station_id].numpy())
+        y_data -= (self.y_mean_dict[station_id].numpy())
+        y_data /= (self.y_std_dict[station_id].numpy())
         return X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
