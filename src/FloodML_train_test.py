@@ -101,10 +101,9 @@ def eval_model(
                 if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
                 pred_actual = (
-                        (y_hat[i].item() * loader.dataset.y_std_dict[station_id]) + loader.dataset.y_mean_dict[
-                    station_id])
+                        (y_hat[i].item() * loader.dataset.y_std) + loader.dataset.y_mean)
                 pred_expected = (
-                        (ys[i].item() * loader.dataset.y_std_dict[station_id]) + loader.dataset.y_mean_dict[station_id])
+                        (ys[i].item() * loader.dataset.y_std) + loader.dataset.y_mean)
                 preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
     return running_loss / (len(loader))
 
@@ -270,8 +269,8 @@ def prepare_datasets(
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
-            y_std_dict=training_data.y_std_dict,
-            y_mean_dict=training_data.y_mean_dict
+            y_std=training_data.y_std,
+            y_mean=training_data.y_mean
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -307,8 +306,8 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            y_std_dict=training_data.y_std_dict,
-            y_mean_dict=training_data.y_mean_dict
+            y_std=training_data.y_std,
+            y_mean=training_data.y_mean
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")

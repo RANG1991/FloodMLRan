@@ -74,13 +74,15 @@ class Dataset_CAMELS(Dataset):
             sequence_length=270,
             x_mean_dict=None,
             x_std_dict=None,
-            y_mean_dict=None,
-            y_std_dict=None
+            y_mean=None,
+            y_std=None
     ):
         self.x_mean_dict = x_mean_dict if x_mean_dict is not None else {}
         self.x_std_dict = x_std_dict if x_std_dict is not None else {}
-        self.y_mean_dict = y_mean_dict if y_mean_dict is not None else {}
-        self.y_std_dict = y_std_dict if y_std_dict is not None else {}
+        self.y_mean_dict = {}
+        self.y_std_dict = {}
+        self.y_mean = y_mean if y_mean is not None else None
+        self.y_std = y_std if y_std is not None else None
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
@@ -99,10 +101,14 @@ class Dataset_CAMELS(Dataset):
         (self.dict_station_id_to_data,
          x_means,
          x_stds,
+         y_mean,
+         y_std
          ) = self.read_all_dynamic_and_discharge_data_files(all_stations_ids=all_stations_ids)
 
-        self.dataset_length, self.lookup_table = self.create_look_table()
+        self.y_mean = y_mean if self.y_mean is None else self.y_mean
+        self.y_std = y_std if self.y_std is None else self.y_std
 
+        self.dataset_length, self.lookup_table = self.create_look_table()
         x_data_mean_dynamic = x_means[:(len(self.list_dynamic_attributes_names))]
         x_data_std_dynamic = x_stds[:(len(self.list_dynamic_attributes_names))]
 
@@ -111,6 +117,7 @@ class Dataset_CAMELS(Dataset):
 
         for key in self.dict_station_id_to_data.keys():
             current_x_data = self.dict_station_id_to_data[key][0]
+            current_y_data = self.dict_station_id_to_data[key][1]
 
             current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
                 (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
@@ -120,7 +127,9 @@ class Dataset_CAMELS(Dataset):
                 (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
                 (x_data_std_static + (10 ** (-6)))
 
-            self.dict_station_id_to_data[key] = (current_x_data, self.dict_station_id_to_data[key][1])
+            current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
+
+            self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
 
     def __len__(self):
         return self.dataset_length
@@ -157,8 +166,10 @@ class Dataset_CAMELS(Dataset):
         return df, df.index.to_list()
 
     def read_all_dynamic_and_discharge_data_files(self, all_stations_ids):
-        cumm_m = 0
-        cumm_s = 0
+        cumm_m_x = 0
+        cumm_s_x = 0
+        cumm_m_y = 0
+        cumm_s_y = 0
         count_of_samples = 0
         dict_station_id_to_data = {}
         for station_id in all_stations_ids:
@@ -166,15 +177,21 @@ class Dataset_CAMELS(Dataset):
             if len(X_data) == 0 or len(y_data) == 0:
                 continue
             dict_station_id_to_data[station_id] = (X_data, y_data)
-            prev_mean = cumm_m
+            prev_mean_x = cumm_m_x
             count_of_samples = count_of_samples + (len(y_data))
-            cumm_m = cumm_m + (
-                    (X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m) / count_of_samples).sum(
+            cumm_m_x = cumm_m_x + (
+                    (X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) / count_of_samples).sum(
                 axis=0)
-            cumm_s = cumm_s + ((X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m) * (
-                    X_data[:, :len(self.list_dynamic_attributes_names)] - prev_mean)).sum(axis=0)
-        std = np.sqrt(cumm_s / (count_of_samples - 1))
-        return dict_station_id_to_data, cumm_m, std
+            cumm_s_x = cumm_s_x + ((X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
+                    X_data[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
+
+            prev_mean_y = cumm_m_y
+            cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0)
+            cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0)
+
+        std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
+        std_y = np.sqrt(cumm_s_y / (count_of_samples - 1))
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y
 
     def read_single_station_dynamic_and_discharge_file(self, station_id):
         if station_id not in self.list_stations_static:
@@ -248,8 +265,8 @@ class Dataset_CAMELS(Dataset):
                 self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
             if station_id not in self.y_std_dict.keys():
                 self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
-            y_data -= (self.y_mean_dict[station_id].numpy())
-            y_data /= (self.y_std_dict[station_id].numpy())
+            # y_data -= (self.y_mean_dict[station_id].numpy())
+            # y_data /= (self.y_std_dict[station_id].numpy())
             return X_data, y_data
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
@@ -300,7 +317,7 @@ class Dataset_CAMELS(Dataset):
         return self.x_maxs_dict
 
     def get_y_std(self):
-        return self.y_std_dict
+        return self.y_std
 
     def get_y_mean(self):
-        return self.y_mean_dict
+        return self.y_mean
