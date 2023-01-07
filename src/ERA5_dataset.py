@@ -273,7 +273,7 @@ class Dataset_ERA5(Dataset):
                 if len(X_data) == 0 or len(y_data) == 0:
                     continue
                 dict_station_id_to_data[station_id] = (X_data, y_data)
-                prev_mean = cumm_m
+                prev_mean_x = cumm_m_x
                 count_of_samples = count_of_samples + (len(y_data))
                 cumm_m_x = cumm_m_x + (
                         (X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) / count_of_samples).sum(

@@ -16,4 +16,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 source $virtual_env
 # module load cuda/11.2
 
-python ./FloodML_train_test.py --model LSTM --dataset CARAVAN --optim SGD --shared_model True
+python ./FloodML_train_test.py --model LSTM --dataset ERA5 --optim SGD --shared_model True
