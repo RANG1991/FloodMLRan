@@ -288,7 +288,7 @@ class Dataset_ERA5(Dataset):
                 print(f"station with id: {station_id} has no valid file")
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1))
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y.item(), std_y.item()
 
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static

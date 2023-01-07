@@ -101,9 +101,9 @@ def eval_model(
                 if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
                 pred_actual = (
-                        (y_hat[i].item() * loader.dataset.y_std) + loader.dataset.y_mean)
+                        (y_hat[i] * loader.dataset.y_std) + loader.dataset.y_mean)
                 pred_expected = (
-                        (ys[i].item() * loader.dataset.y_std) + loader.dataset.y_mean)
+                        (ys[i] * loader.dataset.y_std) + loader.dataset.y_mean)
                 preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
     return running_loss / (len(loader))
 

@@ -191,7 +191,7 @@ class Dataset_CAMELS(Dataset):
 
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1))
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y.item(), std_y.item()
 
     def read_single_station_dynamic_and_discharge_file(self, station_id):
         if station_id not in self.list_stations_static:
