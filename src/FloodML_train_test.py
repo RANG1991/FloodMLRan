@@ -674,11 +674,11 @@ def choose_hyper_parameters_validation(
                 num_hidden_units_param,
                 num_epochs,
             )
-        dict_results["dropout rate"].append(dropout_rate_param)
-        dict_results["sequence length"].append(sequence_length_param)
-        dict_results["num hidden units"].append(num_hidden_units_param)
+        dict_results["dropout rate"] = dropout_rate_param
+        dict_results["sequence length"] = sequence_length_param
+        dict_results["num hidden units"] = num_hidden_units_param
         # dict_results["num epochs"].append(num_epochs_param)
-        dict_results["median NSE"].append(median_nse)
+        dict_results["median NSE"] = median_nse
         for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
             plot_NSE_CDF(list_nse, title)
         plt.grid()
