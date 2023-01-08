@@ -208,9 +208,9 @@ class Dataset_ERA5(Dataset):
         X_data_tensor = torch.tensor(
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
-        y_data_tensor = torch.tensor(y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]).to(
-            torch.float32
-        )
+        y_data_tensor = torch.tensor(
+            y_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+        ).to(torch.float32)
         self.inner_index_in_data_of_basin += 1
         return self.current_basin, X_data_tensor, y_data_tensor
 
@@ -376,10 +376,10 @@ class Dataset_ERA5(Dataset):
         static_attrib_station_rep = static_attrib_station.repeat(
             X_data.shape[0], axis=0
         )
-        # if station_id not in self.x_mean_dict.keys():
-        #     self.x_mean_dict[station_id] = X_data.mean(axis=0)
-        # if station_id not in self.x_std_dict.keys():
-        #     self.x_std_dict[station_id] = X_data.std(axis=0)
+        if station_id not in self.x_mean_dict.keys():
+            self.x_mean_dict[station_id] = X_data.mean(axis=0)
+        if station_id not in self.x_std_dict.keys():
+            self.x_std_dict[station_id] = X_data.std(axis=0)
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
         station_id_repeated = [station_id] * X_data.shape[0]
         if self.stage == "train":

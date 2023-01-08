@@ -135,8 +135,8 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     mask = ~torch.isnan(obs)
     sim = sim[mask]
     obs = obs[mask]
-    denominator = torch.sum((obs - torch.mean(obs)) ** 2)
-    numerator = torch.sum((sim - obs) ** 2)
+    denominator = ((obs - obs.mean()) ** 2).sum()
+    numerator = ((sim - obs) ** 2).sum()
     nse_val = 1 - numerator / denominator
     return float(nse_val)
 
