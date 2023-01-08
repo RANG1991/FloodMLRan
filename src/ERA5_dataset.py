@@ -143,8 +143,8 @@ class Dataset_ERA5(Dataset):
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type)
 
-        self.y_mean = y_mean if self.y_mean is None else self.y_mean
-        self.y_std = y_std if self.y_std is None else self.y_std
+        self.y_mean = y_mean if stage == "train" else self.y_mean
+        self.y_std = y_std if stage == "train" else self.y_std
 
         self.dataset_length, self.lookup_table = self.create_look_table()
 

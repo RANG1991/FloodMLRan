@@ -84,7 +84,6 @@ def eval_model(
     # set model to eval mode (important for dropout)
     model.eval()
     # in inference mode, we don't need to store intermediate steps for backprob
-    running_loss = 0.0
     with torch.no_grad():
         # request mini-batch of data from the loader
         for station_id_batch, xs, ys in loader:
@@ -94,8 +93,6 @@ def eval_model(
             y_hat = model(xs)
             ys = ys.to(device)
             # print(torch.cat([y_hat.cpu(), ys], dim=1))
-            loss = loss_func(ys, y_hat.squeeze(0))
-            running_loss += loss
             for i in range(len(station_id_batch)):
                 station_id = station_id_batch[i]
                 if station_id not in preds_obs_dict_per_basin:
@@ -105,7 +102,6 @@ def eval_model(
                 pred_expected = (
                         (ys[i] * loader.dataset.y_std) + loader.dataset.y_mean)
                 preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
-    return running_loss / (len(loader))
 
 
 def calc_nse_star(obs, sim, stds):
@@ -137,7 +133,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     denominator = torch.sum((obs - torch.mean(obs)) ** 2)
     numerator = torch.sum((sim - obs) ** 2)
     nse_val = 1 - numerator / denominator
-    return float(nse_val.item())
+    return float(nse_val)
 
 
 def calc_validation_basins_nse(
@@ -553,7 +549,7 @@ def run_training_and_test(
         )
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            loss_on_test_epoch = eval_model(
+            eval_model(
                 model, test_dataloader, device, preds_obs_dict_per_basin, calc_nse
             )
             nse_list_epoch = calc_validation_basins_nse(

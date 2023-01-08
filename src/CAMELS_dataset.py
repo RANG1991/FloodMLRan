@@ -105,8 +105,8 @@ class Dataset_CAMELS(Dataset):
          y_std
          ) = self.read_all_dynamic_and_discharge_data_files(all_stations_ids=all_stations_ids)
 
-        self.y_mean = y_mean if self.y_mean is None else self.y_mean
-        self.y_std = y_std if self.y_std is None else self.y_std
+        self.y_mean = y_mean if stage == "train" else self.y_mean
+        self.y_std = y_std if stage == "train" else self.y_std
 
         self.dataset_length, self.lookup_table = self.create_look_table()
         x_data_mean_dynamic = x_means[:(len(self.list_dynamic_attributes_names))]
