@@ -53,6 +53,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # calculate gradients
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
