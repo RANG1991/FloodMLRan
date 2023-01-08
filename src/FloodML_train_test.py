@@ -34,7 +34,6 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # set model to train mode (important for dropout)
     model.train()
     pbar = tqdm(loader, file=sys.stdout)
-    print(f"Epoch {epoch}")
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     running_loss = 0.0
@@ -65,7 +64,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
 
 
 def eval_model(
-        model, loader, device, preds_obs_dict_per_basin, loss_func
+        model, loader, device, preds_obs_dict_per_basin, loss_func, epoch,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the model.
 
@@ -83,28 +82,32 @@ def eval_model(
     """
     # set model to eval mode (important for dropout)
     model.eval()
+    pbar = tqdm(loader, file=sys.stdout)
+    pbar.set_description(f"Epoch {epoch}")
     # in inference mode, we don't need to store intermediate steps for backprob
     with torch.no_grad():
         # request mini-batch of data from the loader
-        for station_id_batch, xs, ys in loader:
+        for station_id_batch, xs, ys in pbar:
             # push data to GPU (if available)
             xs = xs.to(device)
             # get model predictions
-            y_hat = model(xs)
-            ys = ys.to(device)
+            y_hat = model(xs).squeeze()[:, -1]
+            ys = ys.to(device)[:, -1]
+            pred_actual = (
+                    (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
+            pred_expected = (
+                    (ys * loader.dataset.y_std) + loader.dataset.y_mean)
             # print(torch.cat([y_hat.cpu(), ys], dim=1))
             for i in range(len(station_id_batch)):
                 station_id = station_id_batch[i]
                 if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
-                pred_actual = (
-                        (y_hat[i] * loader.dataset.y_std) + loader.dataset.y_mean)
-                pred_expected = (
-                        (ys[i] * loader.dataset.y_std) + loader.dataset.y_mean)
-                preds_obs_dict_per_basin[station_id].append((pred_expected, pred_actual))
+                preds_obs_dict_per_basin[station_id].append((pred_expected[i], pred_actual[i]))
 
 
 def calc_nse_star(obs, sim, stds):
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     mask = ~torch.isnan(obs)
     y_hat = sim.squeeze() * mask.int().float()
     y = obs * mask.int().float()
@@ -127,6 +130,8 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     # sim = np.delete(sim, np.argwhere(obs < 0), axis=0)
     # obs = np.delete(obs, np.argwhere(obs < 0), axis=0)
     # check for NaNs in observations
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     mask = ~torch.isnan(obs)
     sim = sim[mask]
     obs = obs[mask]
@@ -149,6 +154,7 @@ def calc_validation_basins_nse(
         nse = calc_nse(obs, preds)
         print(f"station with id: {stations_id} has nse of: {nse}")
         nse_list_basins.append(nse)
+    # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
     median_nse_basin = stations_ids[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
     median_nse = statistics.median(nse_list_basins)
@@ -550,7 +556,7 @@ def run_training_and_test(
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             eval_model(
-                model, test_dataloader, device, preds_obs_dict_per_basin, calc_nse
+                model, test_dataloader, device, preds_obs_dict_per_basin, calc_nse, epoch=(i + 1)
             )
             nse_list_epoch = calc_validation_basins_nse(
                 preds_obs_dict_per_basin, (i + 1), device=device
