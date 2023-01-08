@@ -18,4 +18,4 @@ class LSTM(torch.nn.Module):
     def forward(self, x):
         output, (h_n, c_n) = self.lstm(x)
         output = self.dropout(output)
-        return self.head(output[:, -1, :])
+        return self.head(output)

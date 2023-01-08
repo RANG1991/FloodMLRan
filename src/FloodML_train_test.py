@@ -106,9 +106,9 @@ def eval_model(
 
 def calc_nse_star(obs, sim, stds):
     mask = ~torch.isnan(obs)
-    y_hat = sim[mask]
-    y = obs[mask]
-    per_basin_target_stds = stds[mask]
+    y_hat = sim.squeeze() * mask.int().float()
+    y = obs * mask.int().float()
+    per_basin_target_stds = stds[torch.all(mask, dim=1)]
     squared_error = (y_hat - y) ** 2
     weights = 1 / (per_basin_target_stds + 0.1) ** 2
     scaled_loss = weights * squared_error
