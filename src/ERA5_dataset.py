@@ -210,7 +210,7 @@ class Dataset_ERA5(Dataset):
         ).to(torch.float32)
         y_data_tensor = torch.tensor(
             y_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
-        ).to(torch.float32)
+        ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.current_basin, X_data_tensor, y_data_tensor
 
