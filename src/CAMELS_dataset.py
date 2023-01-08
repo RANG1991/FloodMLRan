@@ -72,13 +72,15 @@ class Dataset_CAMELS(Dataset):
             all_stations_ids,
             static_attributes_names=[],
             sequence_length=270,
-            x_mean_dict=None,
-            x_std_dict=None,
+            x_means=None,
+            x_stds=None,
             y_mean=None,
             y_std=None
     ):
-        self.x_mean_dict = x_mean_dict if x_mean_dict is not None else {}
-        self.x_std_dict = x_std_dict if x_std_dict is not None else {}
+        self.x_mean_dict = {}
+        self.x_std_dict = {}
+        self.x_means = x_means if x_means is not None else None
+        self.x_stds = x_stds if x_stds is not None else None
         self.y_mean_dict = {}
         self.y_std_dict = {}
         self.y_mean = y_mean if y_mean is not None else None
@@ -107,10 +109,12 @@ class Dataset_CAMELS(Dataset):
 
         self.y_mean = y_mean if stage == "train" else self.y_mean
         self.y_std = y_std if stage == "train" else self.y_std
+        self.x_means = x_means if stage == "train" else self.x_means
+        self.x_stds = x_stds if stage == "train" else self.x_stds
 
         self.dataset_length, self.lookup_table = self.create_look_table()
-        x_data_mean_dynamic = x_means[:(len(self.list_dynamic_attributes_names))]
-        x_data_std_dynamic = x_stds[:(len(self.list_dynamic_attributes_names))]
+        x_data_mean_dynamic = self.x_means[:(len(self.list_dynamic_attributes_names))]
+        x_data_std_dynamic = self.x_stds[:(len(self.list_dynamic_attributes_names))]
 
         x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
@@ -310,11 +314,11 @@ class Dataset_CAMELS(Dataset):
         self.sequence_length = sequence_length
         self.dataset_length, self.lookup_table = self.create_look_table()
 
-    def get_x_mins(self):
-        return self.x_mins_dict
+    def get_x_means(self):
+        return self.x_means
 
-    def get_x_maxs(self):
-        return self.x_maxs_dict
+    def get_x_stds(self):
+        return self.x_stds
 
     def get_y_std(self):
         return self.y_std

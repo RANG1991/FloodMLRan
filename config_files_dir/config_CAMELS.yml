@@ -6,9 +6,9 @@ run_dir: /sci/labs/efratmorin/ranga/FloodMLRan/runs/
 experiment_name: train_run
 
 # files to specify training, validation and test basins (relative to code root or absolute path)
-train_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins.txt
-validation_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins.txt
-test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins.txt
+train_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins_local.txt
+validation_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins_local.txt
+test_basin_file: /sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/train_basins_local.txt
 
 # training, validation and test time periods (format = 'dd/mm/yyyy')
 train_start_date: '01/10/1999'
