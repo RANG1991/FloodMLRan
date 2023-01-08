@@ -271,6 +271,8 @@ def prepare_datasets(
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
+            x_means=training_data.x_means,
+            x_stds=training_data.x_stds,
             y_std=training_data.y_std,
             y_mean=training_data.y_mean
         )
@@ -591,7 +593,7 @@ def choose_hyper_parameters_validation(
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins_ERA5.txt").read().splitlines())
     else:
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins_local.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):
     #     if i % 5 != 0:
     #         train_stations_list.append(all_stations_list_sorted[i])
