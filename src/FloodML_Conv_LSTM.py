@@ -34,7 +34,7 @@ class Conv_LSTM(torch.nn.Module):
             output_cnn = self.pool(
                 F.relu(
                     self.conv1(
-                        x[:, i, :, :].squeeze().unsqueeze(3).permute((0, 3, 1, 2))
+                        x[:, i, :, :].squeeze(1).unsqueeze(3).permute((0, 3, 1, 2))
                     )
                 )
             )

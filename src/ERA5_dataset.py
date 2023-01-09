@@ -137,13 +137,21 @@ class Dataset_ERA5(Dataset):
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
+        max_width, max_length = self.get_maximum_width_and_length_of_basin(
+            "../data/ERA5/ERA_5_all_data"
+        )
+        if max_length <= 0 or max_width <= 0:
+            raise Exception("max length or max width are not greater than 0")
+        self.max_width = max_width
+        self.max_length = max_length
         (self.dict_station_id_to_data,
          x_means,
          x_stds,
          y_mean,
          y_std
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
-                                              specific_model_type=specific_model_type)
+                                              specific_model_type=specific_model_type,
+                                              max_width=max_width, max_length=max_length)
 
         self.y_mean = y_mean if stage == "train" else self.y_mean
         self.y_std = y_std if stage == "train" else self.y_std
@@ -165,9 +173,12 @@ class Dataset_ERA5(Dataset):
                 (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
                 (x_data_std_dynamic + (10 ** (-6)))
 
-            current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
-                (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
-                (x_data_std_static + (10 ** (-6)))
+            if specific_model_type.lower() != "conv" and specific_model_type.lower() != "cnn":
+                current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
+                    (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
+                    (x_data_std_static + (10 ** (-6)))
+            else:
+                current_x_data = current_x_data.reshape(-1, max_width, max_length)
 
             current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
@@ -238,7 +249,7 @@ class Dataset_ERA5(Dataset):
         ).to_numpy()
         return df_attr, df_attr["gauge_id"].values.tolist()
 
-    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type):
+    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length):
         # with Pool(multiprocessing.cpu_count() - 1) as p:
         #     list_returned = p.map(
         #         self.read_single_station_file_spatial, all_stations_ids
@@ -249,32 +260,29 @@ class Dataset_ERA5(Dataset):
         cumm_s_y = 0
         count_of_samples = 0
         dict_station_id_to_data = {}
-        max_width, max_length = self.get_maximum_width_and_length_of_basin(
-            "../data/ERA5/ERA_5_all_data"
-        )
         for station_id in all_stations_ids:
             if self.check_is_valid_station_id(station_id):
                 if specific_model_type.lower() == "conv":
                     X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
+                    if len(X_data_spatial) == 0 or len(y_data) == 0:
+                        continue
                     X_data = self.pad_np_array_equally_from_sides(
                         X_data_spatial, max_width, max_length
-                    ).flatten()
+                    ).reshape(X_data_spatial.shape[0], -1)
                 elif specific_model_type.lower() == "cnn":
                     X_data_spatial, y_data = self.read_single_station_file_spatial(
                         station_id)
                     X_data_non_spatial, _ = self.read_single_station_file(station_id)
-                    if len(X_data_non_spatial) > 0 and len(X_data_non_spatial) > 0:
-                        X_data_spatial = self.pad_np_array_equally_from_sides(X_data_spatial, max_width, max_length)
-                        X_data = np.concatenate([X_data_spatial.reshape(len(X_data_non_spatial),
-                                                                        max_length * max_width),
-                                                 np.stack(X_data_non_spatial)], axis=1)
-                    else:
-                        X_data = np.array([])
-                        y_data = np.array([])
+                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial):
+                        continue
+                    X_data_spatial = self.pad_np_array_equally_from_sides(X_data_spatial, max_width, max_length)
+                    X_data = np.concatenate([X_data_spatial.reshape(len(X_data_non_spatial),
+                                                                    max_length * max_width),
+                                             np.stack(X_data_non_spatial)], axis=1)
                 else:
                     X_data, y_data = self.read_single_station_file(station_id)
-                if len(X_data) == 0 or len(y_data) == 0:
-                    continue
+                    if len(X_data) == 0 or len(y_data) == 0:
+                        continue
                 dict_station_id_to_data[station_id] = (X_data, y_data)
                 prev_mean_x = cumm_m_x
                 count_of_samples = count_of_samples + (len(y_data))
@@ -320,6 +328,11 @@ class Dataset_ERA5(Dataset):
             .to_numpy()
             .reshape(1, -1)
         )
+        if self.stage == "train":
+            if station_id not in self.y_mean_dict.keys():
+                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+            if station_id not in self.y_std_dict.keys():
+                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
         return X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
