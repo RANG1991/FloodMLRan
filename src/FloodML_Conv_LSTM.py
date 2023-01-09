@@ -44,7 +44,7 @@ class Conv_LSTM(torch.nn.Module):
             output_lstm.append(h_i)
         output_lstm = torch.stack(output_lstm, dim=0)
         output_final = torch.nn.Dropout(0.4)(output_lstm)
-        return self.head(output_final[-1, :, :])
+        return self.head(output_final.permute((1, 0, 2)))
 
     @staticmethod
     def calc_dims_after_filter(input_image_shape, filter_size, stride):
