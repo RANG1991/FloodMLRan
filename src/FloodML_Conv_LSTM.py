@@ -22,6 +22,7 @@ class Conv_LSTM(torch.nn.Module):
             in_channels=16, out_channels=32, kernel_size=(3, 3)
         )
         self.pool = torch.nn.MaxPool2d(2, 2)
+        self.dropout = torch.nn.Dropout(0.4)
         self.head = torch.nn.Linear(in_features=self.hidden_dim_lstm, out_features=1)
 
     def forward(self, x):
@@ -43,7 +44,7 @@ class Conv_LSTM(torch.nn.Module):
             h_i, c_i = self.lstm_cell(output_cnn, (h_i, c_i))
             output_lstm.append(h_i)
         output_lstm = torch.stack(output_lstm, dim=0)
-        output_final = torch.nn.Dropout(0.4)(output_lstm)
+        output_final = self.dropout(output_lstm)
         return self.head(output_final.permute((1, 0, 2)))
 
     @staticmethod

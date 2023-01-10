@@ -183,10 +183,10 @@ def plot_NSE_CDF(nse_losses, title_for_legend):
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     # plot the cumulative function
-    plt.title("CDF of NSE of basins")
+    plt.title(f"CDF of NSE of basins - {title_for_legend}")
     plt.xlabel("NSE")
     plt.ylabel("CDF")
-    plt.plot(base[:-1], cumulative, label=title_for_legend)
+    plt.plot(base[:-1], cumulative)
 
 
 def read_basins_csv_files(folder_name, num_basins):
@@ -603,12 +603,12 @@ def choose_hyper_parameters_validation(
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
-    dropout_rates = [0.4, 0.5, 0.0, 0.25]
-    sequence_lengths = [270, 10, 30, 90, 180, 365]
+    dropout_rates = [0.25, 0.4, 0.0, 0.5]
+    sequence_lengths = [365, 270, 30, 90, 180, 10]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [256, 256, 96, 128, 156, 196, 224]
+        num_hidden_units = [156, 96, 128, 256, 196, 224]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
@@ -660,7 +660,7 @@ def choose_hyper_parameters_validation(
             median_nse = statistics.median(nse_list_single_pass)
         if len(nse_list_single_pass) > 0:
             list_plots_titles.append(
-                f"{learning_rate_param};"
+                f"{dropout_rate_param};"
                 f"{sequence_length_param};"
                 f"{num_hidden_units_param};"
                 f"{num_epochs}"
@@ -669,22 +669,20 @@ def choose_hyper_parameters_validation(
         if median_nse > best_median_nse or best_median_nse == -1:
             best_median_nse = median_nse
             best_parameters = (
-                learning_rate_param,
+                dropout_rate_param,
                 sequence_length_param,
                 num_hidden_units_param,
                 num_epochs,
             )
-        dict_results["dropout rate"] = dropout_rate_param
-        dict_results["sequence length"] = sequence_length_param
-        dict_results["num hidden units"] = num_hidden_units_param
+        dict_results["dropout rate"] = [dropout_rate_param]
+        dict_results["sequence length"] = [sequence_length_param]
+        dict_results["num hidden units"] = [num_hidden_units_param]
         # dict_results["num epochs"].append(num_epochs_param)
-        dict_results["median NSE"] = median_nse
-        for list_nse, title in zip(list_nse_lists_basins, list_plots_titles):
-            plot_NSE_CDF(list_nse, title)
+        dict_results["median NSE"] = [median_nse]
+        plot_NSE_CDF(list_nse_lists_basins[-1], list_plots_titles[-1])
         plt.grid()
-        plt.legend()
         plt.savefig(
-            "../data/images/parameters_comparison" + f"_{curr_datetime_str}" + ".png"
+            "../data/images/parameters_comparison" + f"_{list_plots_titles[-1]}" + ".png"
         )
         plt.close()
         df_results = pd.DataFrame(data=dict_results)
