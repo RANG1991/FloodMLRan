@@ -5,13 +5,13 @@ import math
 
 class ERA5_Transformer(nn.Module):
     def __init__(
-        self,
-        input_dim,
-        sequence_length,
-        dim_model,
-        num_heads,
-        num_encoder_layers,
-        dropout_p,
+            self,
+            input_dim,
+            sequence_length,
+            dim_model,
+            num_heads,
+            num_encoder_layers,
+            dropout_p,
     ):
         super().__init__()
 
@@ -53,6 +53,8 @@ class ERA5_Transformer(nn.Module):
         return matrix == pad_token
 
     def forward(self, src):
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         # embedding + positional encoding - we get size (batch_size, sequence_length, dim_model)
         src = self.linear_1(src) * math.sqrt(self.dim_model)
         src = self.positional_encoder(src)
@@ -77,7 +79,7 @@ class PositionalEncoding(nn.Module):
         positions_vector = torch.arange(1, max_seq_length + 1).reshape(-1, 1)
         positions_matrix = torch.tile(positions_vector, (1, encodings_dim))
         denominator = (
-            10000 ** (torch.arange(0, encodings_dim) / encodings_dim)
+                10000 ** (torch.arange(0, encodings_dim) / encodings_dim)
         ).reshape(1, -1)
         denominator_matrix = torch.tile(denominator, (max_seq_length, 1))
         pos_encodings_matrix[:, :] = positions_matrix / denominator_matrix
