@@ -76,7 +76,7 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
 
 
 def create_and_write_precipitation_spatial(
-    datetimes, ls_spatial, ERA5_static_data_file_name, station_id, output_folder_name
+        datetimes, ls_spatial, ERA5_static_data_file_name, station_id, output_folder_name
 ):
     ds = xr.Dataset(
         {
@@ -99,7 +99,7 @@ def create_and_write_precipitation_spatial(
 
 
 def create_and_write_precipitation_mean(
-    datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
+        datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
 ):
     # convert the precipitation times from UTC (Grinch) to current timezone
     # create a dataframe from the precipitation data and the timedates
@@ -122,13 +122,13 @@ def create_and_write_precipitation_mean(
 
 
 def parse_single_basin_precipitation(
-    station_id,
-    basin_data,
-    discharge_file_name,
-    ERA5_data_folder_name,
-    discharge_folder_name,
-    ERA5_static_data_file_name,
-    output_folder_name,
+        station_id,
+        basin_data,
+        discharge_file_name,
+        ERA5_data_folder_name,
+        discharge_folder_name,
+        ERA5_static_data_file_name,
+        output_folder_name,
 ):
     # all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
     # if all_files_exist:
@@ -191,7 +191,7 @@ def parse_single_basin_precipitation(
             started_reading_data = True
         tp = np.asarray(
             dataset["tp"][
-                :, ind_lat_max : ind_lat_min + 1, ind_lon_min : ind_lon_max + 1
+            :, ind_lat_max: ind_lat_min + 1, ind_lon_min: ind_lon_max + 1
             ]
         )
         # multiply the precipitation by 1000 to get millimeter instead of meter
@@ -332,7 +332,7 @@ def main():
     root_folder = PATH_ROOT
     boundaries_file_name = root_folder + "/HCDN_nhru_final_671.shp"
     ERA5_static_data_file_name = (
-        root_folder + "/Caravan/attributes/attributes_hydroatlas_us.csv"
+            root_folder + "/Caravan/attributes/attributes_hydroatlas_us.csv"
     )
     ERA5_percip_data_folder_name = root_folder + "/Precipitation/"
     ERA5_discharge_data_folder_name = root_folder + "/Discharge/"
@@ -342,25 +342,28 @@ def main():
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"]
-    for station_id in station_ids_list:
-        print("working on basin with id: {}".format(station_id))
+    for station_id in station_ids_list[162:]:
         station_id = str(station_id).zfill(8)
         basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
-        parse_single_basin_discharge(
-            station_id, basin_data, ERA5_discharge_data_folder_name
-        )
-        discharge_file_name = (
-            ERA5_discharge_data_folder_name + "/dis_" + str(station_id) + ".csv"
-        )
-        parse_single_basin_precipitation(
-            station_id,
-            basin_data,
-            discharge_file_name,
-            ERA5_percip_data_folder_name,
-            ERA5_discharge_data_folder_name,
-            ERA5_static_data_file_name,
-            output_folder_name,
-        )
+        try:
+            parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
+        except Exception as e:
+            print(f"parsing discharge of basin with id: {station_id} failed with exception: {e}")
+            continue
+        discharge_file_name = (ERA5_discharge_data_folder_name + "/dis_" + str(station_id) + ".csv")
+        try:
+            parse_single_basin_precipitation(
+                station_id,
+                basin_data,
+                discharge_file_name,
+                ERA5_percip_data_folder_name,
+                ERA5_discharge_data_folder_name,
+                ERA5_static_data_file_name,
+                output_folder_name,
+            )
+        except Exception as e:
+            print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
+            continue
 
 
 main()

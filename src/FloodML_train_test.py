@@ -22,6 +22,7 @@ from FloodML_Transformer import ERA5_Transformer
 from FloodML_Conv_LSTM import Conv_LSTM
 from FloodML_CNN_LSTM import CNN_LSTM
 from pathlib import Path
+import random
 
 matplotlib.use("AGG")
 
@@ -697,6 +698,8 @@ def choose_hyper_parameters_validation(
 
 def main():
     torch.manual_seed(123)
+    random.seed(123)
+    np.random.seed(123)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
