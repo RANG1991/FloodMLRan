@@ -250,10 +250,6 @@ class Dataset_ERA5(Dataset):
         return df_attr, df_attr["gauge_id"].values.tolist()
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length):
-        # with Pool(multiprocessing.cpu_count() - 1) as p:
-        #     list_returned = p.map(
-        #         self.read_single_station_file_spatial, all_stations_ids
-        #     )
         cumm_m_x = 0
         cumm_s_x = 0
         cumm_m_y = 0
