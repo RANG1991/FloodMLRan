@@ -523,9 +523,9 @@ def run_training_and_test(
         model = ERA5_Transformer(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             sequence_length=sequence_length,
-            dim_model=512,
+            dim_model=256,
             num_heads=8,
-            num_encoder_layers=6,
+            num_encoder_layers=3,
             dropout_p=dropout,
         ).to(device)
     elif model_name.lower() == "conv_lstm":
@@ -605,7 +605,7 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.25, 0.4, 0.0, 0.5]
-    sequence_lengths = [365, 270, 30, 90, 180, 10]
+    sequence_lengths = [270, 365, 30, 90, 180, 10]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:

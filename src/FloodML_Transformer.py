@@ -27,7 +27,7 @@ class ERA5_Transformer(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(
             self.encoder_layer, num_layers=num_encoder_layers
         )
-        self.linear_2 = nn.Linear(dim_model * sequence_length, 1)
+        self.linear_2 = nn.Linear(dim_model, 1)
 
     @staticmethod
     def get_tgt_mask(size) -> torch.tensor:
@@ -61,11 +61,8 @@ class ERA5_Transformer(nn.Module):
         # we permute to obtain size (sequence length, batch_size, dim_model)
         src = src.permute((1, 0, 2))
         transformer_encoder_out = self.transformer_encoder(src)
-        # we permute again to obtain size (batch_size, sequence length, dim_model) and then reshape to get size of
-        # (batch_size, sequence_length * dim_model)
-        transformer_encoder_out = transformer_encoder_out.permute((1, 0, 2)).reshape(
-            -1, self.dim_model * self.sequence_length
-        )
+        # we permute again to obtain size (batch_size, sequence length, dim_model)
+        transformer_encoder_out = transformer_encoder_out.permute((1, 0, 2))
         # we use linear transformation to get size of (batch_size, 1)
         out = self.linear_2(transformer_encoder_out)
         return out
