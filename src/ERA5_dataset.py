@@ -186,24 +186,25 @@ class Dataset_ERA5(Dataset):
             if specific_model_type.lower() == "lstm":
                 self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
             elif specific_model_type.lower() == "conv":
-                current_x_data_spatial = current_x_data[:, (len(self.list_dynamic_attributes_names))
-                                                           + (len(self.list_static_attributes_names)):].reshape(-1,
-                                                                                                                self.max_width,
-                                                                                                                self.max_length)
+                current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
+                                                            + (len(self.list_static_attributes_names))):].reshape(-1,
+                                                                                                                  self.max_width,
+                                                                                                                  self.max_length)
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
                 current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
-                current_x_data_non_spatial = current_x_data_non_spatial.unsqueeze(-1).unsqueeze(-1).repeat(
-                    (1, max_width, max_length))
-                current_x_data = torch.cat([current_x_data_non_spatial, current_x_data_spatial])
+                current_x_data_non_spatial = np.tile(np.expand_dims(current_x_data_non_spatial, axis=(2, 3)),
+                                                     (1, 1, max_width, max_length))
+                current_x_data = np.concatenate(
+                    [current_x_data_non_spatial, np.expand_dims(current_x_data_spatial, axis=(1,))], axis=1)
                 self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
             else:
-                current_x_data_spatial = current_x_data[:, (len(self.list_dynamic_attributes_names))
-                                                           + (len(self.list_static_attributes_names)):].reshape(-1,
-                                                                                                                self.max_width,
-                                                                                                                self.max_length)
+                current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
+                                                            + (len(self.list_static_attributes_names))):].reshape(-1,
+                                                                                                                  self.max_width,
+                                                                                                                  self.max_length)
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
@@ -288,21 +289,19 @@ class Dataset_ERA5(Dataset):
         dict_station_id_to_data = {}
         for station_id in all_stations_ids:
             if self.check_is_valid_station_id(station_id):
-                if specific_model_type.lower() == "conv":
-                    X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
-                    if len(X_data_spatial) == 0 or len(y_data) == 0:
-                        continue
-                    X_data = self.pad_np_array_equally_from_sides(
-                        X_data_spatial, max_width, max_length
-                    ).reshape(X_data_spatial.shape[0], -1)
-                elif specific_model_type.lower() == "cnn" or specific_model_type.lower() == "transformer":
+                if (specific_model_type.lower() == "conv" or
+                        specific_model_type.lower() == "cnn" or
+                        specific_model_type.lower() == "transformer"):
                     X_data_spatial, y_data = self.read_single_station_file_spatial(
                         station_id)
                     X_data_non_spatial, _ = self.read_single_station_file(station_id)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         continue
                     X_data_spatial = self.pad_np_array_equally_from_sides(X_data_spatial, max_width, max_length)
-                    X_data = np.concatenate([X_data_spatial.reshape(len(X_data_non_spatial),
+                    if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
+                        print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
+                        continue
+                    X_data = np.concatenate([X_data_spatial.reshape(X_data_non_spatial.shape[0],
                                                                     max_length * max_width),
                                              np.stack(X_data_non_spatial)], axis=1)
                 else:
@@ -330,7 +329,7 @@ class Dataset_ERA5(Dataset):
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
-                and os.path.exists(Path(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")))
+                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc"))
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (
