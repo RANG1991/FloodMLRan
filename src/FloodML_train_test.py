@@ -530,10 +530,10 @@ def run_training_and_test(
                                  out_features_cnn=512).to(device)
     elif model_name.lower() == "conv_lstm":
         model = Conv_LSTM(
-            input_dim_lstm=1,
+            image_input_size=(training_data.max_length, training_data.max_width),
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
-            in_channels_cnn=1,
+            in_channels_cnn=len(dynamic_attributes_names) + len(static_attributes_names) + 1
         ).to(device)
     elif model_name.lower() == "lstm":
         model = LSTM(
@@ -755,6 +755,8 @@ def main():
             num_epochs=command_args.num_epochs
         )
     elif command_args.dataset == "CARAVAN":
+        if command_args.model == "CONV_LSTM":
+            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[1:]
         choose_hyper_parameters_validation(
             ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
             ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
