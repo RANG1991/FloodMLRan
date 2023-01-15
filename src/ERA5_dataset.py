@@ -169,20 +169,27 @@ class Dataset_ERA5(Dataset):
             current_x_data = self.dict_station_id_to_data[key][0]
             current_y_data = self.dict_station_id_to_data[key][1]
 
-            current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
-                (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
+            indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
+
+            current_x_data[:, indices_features_dynamic_non_spatial] = \
+                (current_x_data[:, indices_features_dynamic_non_spatial] - x_data_mean_dynamic) / \
                 (x_data_std_dynamic + (10 ** (-6)))
 
-            if specific_model_type.lower() != "conv" and specific_model_type.lower() != "cnn":
-                current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
-                    (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
-                    (x_data_std_static + (10 ** (-6)))
+            indices_features_static = range((len(self.list_dynamic_attributes_names)),
+                                            (len(self.list_dynamic_attributes_names)) + (
+                                                len(self.list_static_attributes_names)))
+
+            current_x_data[:, indices_features_static] = \
+                (current_x_data[:, indices_features_static] - x_data_mean_static) / (x_data_std_static + (10 ** (-6)))
+
+            if specific_model_type.lower() != "lstm":
+                self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
             else:
-                current_x_data = current_x_data.reshape(-1, max_width, max_length)
-
-            current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
-
-            self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
+                current_x_data_spatial = current_x_data[:, (len(self.list_dynamic_attributes_names))
+                                                           + (len(self.list_static_attributes_names)):].reshape \
+                    (-1, self.max_width, self.max_length)
+                current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
+                self.dict_station_id_to_data[key] = (current_x_data, current_x_data_spatial, current_y_data)
 
     @staticmethod
     def pad_np_array_equally_from_sides(X_data_single_basin, max_width, max_height):
@@ -269,7 +276,7 @@ class Dataset_ERA5(Dataset):
                     X_data_spatial, y_data = self.read_single_station_file_spatial(
                         station_id)
                     X_data_non_spatial, _ = self.read_single_station_file(station_id)
-                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial):
+                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         continue
                     X_data_spatial = self.pad_np_array_equally_from_sides(X_data_spatial, max_width, max_length)
                     X_data = np.concatenate([X_data_spatial.reshape(len(X_data_non_spatial),

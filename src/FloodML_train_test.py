@@ -521,14 +521,11 @@ def run_training_and_test(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
-        model = ERA5_Transformer(
-            input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
-            sequence_length=sequence_length,
-            dim_model=256,
-            num_heads=8,
-            num_encoder_layers=3,
-            dropout_p=dropout,
-        ).to(device)
+        model = ERA5_Transformer(sequence_length=sequence_length,
+                                 image_input_size=(training_data.max_length, training_data.max_width),
+                                 in_features=len(dynamic_attributes_names) + len(static_attributes_names),
+                                 out_features=1,
+                                 out_features_cnn=512).to(device)
     elif model_name.lower() == "conv_lstm":
         model = Conv_LSTM(
             input_dim_lstm=1,
@@ -542,10 +539,11 @@ def run_training_and_test(
             hidden_dim=num_hidden_units,
             dropout=dropout).to(device)
     elif model_name.lower() == "cnn_lstm":
-        model = CNN_LSTM(lat=11, lon=13, hidden_size=num_hidden_units, num_channels=1,
+        model = CNN_LSTM(lat=training_data.max_length, lon=training_data.max_width, hidden_size=num_hidden_units,
+                         num_channels=1,
                          dropout_rate=dropout,
                          num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
-                         image_input_size=(11, 13)).to(device)
+                         image_input_size=(training_data.max_length, training_data.max_width)).to(device)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -589,7 +587,7 @@ def choose_hyper_parameters_validation(
         dataset_to_use,
         optim_name,
         shared_model,
-        num_epochs=10
+        num_epochs=15
 ):
     train_stations_list = []
     val_stations_list = []

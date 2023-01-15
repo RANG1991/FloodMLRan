@@ -17,7 +17,7 @@ def get_subsequent_mask(seq):
     return subsequent_mask
 
 
-class ERA5_Transformer:
+class ERA5_Transformer(nn.Module):
 
     def __init__(self, out_features_cnn, image_input_size, in_features, out_features=512, sequence_length=270):
         super(ERA5_Transformer, self).__init__()
