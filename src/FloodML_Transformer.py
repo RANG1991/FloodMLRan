@@ -1,92 +1,140 @@
 import torch
 from torch import nn
-import math
+from Transformer.Layers import EncoderLayer
+from Transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 
 
-class ERA5_Transformer(nn.Module):
-    def __init__(
-            self,
-            input_dim,
-            sequence_length,
-            dim_model,
-            num_heads,
-            num_encoder_layers,
-            dropout_p,
-    ):
-        super().__init__()
+def get_pad_mask(seq, pad_idx):
+    return (seq != pad_idx).unsqueeze(-2)
 
-        self.dim_model = dim_model
-        self.sequence_length = sequence_length
-        self.positional_encoder = PositionalEncoding(
-            max_seq_length=sequence_length, encodings_dim=dim_model, dropout=dropout_p
-        )
-        self.linear_1 = nn.Linear(input_dim, dim_model)
-        self.encoder_layer = nn.TransformerEncoderLayer(
-            d_model=dim_model, nhead=num_heads
-        )
-        self.transformer_encoder = nn.TransformerEncoder(
-            self.encoder_layer, num_layers=num_encoder_layers
-        )
-        self.linear_2 = nn.Linear(dim_model, 1)
 
-    @staticmethod
-    def get_tgt_mask(size) -> torch.tensor:
-        # Generates a square matrix where each row allows one word more to be seen
-        mask = torch.tril(torch.ones(size, size) == 1)  # Lower triangular matrix
-        mask = mask.float()
-        mask = mask.masked_fill(mask == 0, float("-inf"))  # Convert zeros to -inf
-        mask = mask.masked_fill(mask == 1, float(0.0))  # Convert ones to 0
+def get_subsequent_mask(seq):
+    """ For masking out the subsequent info. """
+    sz_b, len_s = seq.size()
+    subsequent_mask = (1 - torch.triu(
+        torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).bool()
+    return subsequent_mask
 
-        # EX for size=5:
-        # [[0., -inf, -inf, -inf, -inf],
-        #  [0.,   0., -inf, -inf, -inf],
-        #  [0.,   0.,   0., -inf, -inf],
-        #  [0.,   0.,   0.,   0., -inf],
-        #  [0.,   0.,   0.,   0.,   0.]]
 
-        return mask
+class Transformer:
 
-    @staticmethod
-    def create_pad_mask(matrix: torch.tensor, pad_token: int) -> torch.tensor:
-        # If matrix = [1,2,3,0,0,0] where pad_token=0, the result mask is
-        # [False, False, False, True, True, True]
-        return matrix == pad_token
+    def __init__(self, in_features, out_features=512, sequence_length=270):
+        self.encoder = Encoder(in_features_dim=in_features, out_features_dim=out_features, n_layers=6, d_k=512 // 8,
+                               d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
+        self.decoder = DecoderCrossAttention(n_layers=6, d_k=512 // 8, d_v=512 // 8, n_head=8, d_model=512, d_inner=512)
 
-    def forward(self, src):
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        # embedding + positional encoding - we get size (batch_size, sequence_length, dim_model)
-        src = self.linear_1(src) * math.sqrt(self.dim_model)
-        src = self.positional_encoder(src)
-        # we permute to obtain size (sequence length, batch_size, dim_model)
-        src = src.permute((1, 0, 2))
-        transformer_encoder_out = self.transformer_encoder(src)
-        # we permute again to obtain size (batch_size, sequence length, dim_model)
-        transformer_encoder_out = transformer_encoder_out.permute((1, 0, 2))
-        # we use linear transformation to get size of (batch_size, 1)
-        out = self.linear_2(transformer_encoder_out)
-        return out
+    def forward(self, x_daily, x_hourly):
+        enc_output_1, *_ = self.encoder(x_daily)
+        enc_output_2, *_ = self.encoder(x_hourly)
+        dec_output, *_ = self.decoder(enc_output_1, enc_output_2)
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, encodings_dim, max_seq_length, dropout):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-        pos_encodings_matrix = torch.zeros(max_seq_length, encodings_dim)
-        positions_vector = torch.arange(1, max_seq_length + 1).reshape(-1, 1)
-        positions_matrix = torch.tile(positions_vector, (1, encodings_dim))
-        denominator = (
-                10000 ** (torch.arange(0, encodings_dim) / encodings_dim)
-        ).reshape(1, -1)
-        denominator_matrix = torch.tile(denominator, (max_seq_length, 1))
-        pos_encodings_matrix[:, :] = positions_matrix / denominator_matrix
-        pos_encodings_matrix[:, 0::2] = torch.sin(pos_encodings_matrix[:, 0::2])
-        pos_encodings_matrix[:, 1::2] = torch.cos(pos_encodings_matrix[:, 1::2])
-        self.register_buffer("pos_encodings_matrix", pos_encodings_matrix)
 
-    def forward(self, input_sequence: torch.tensor) -> torch.tensor:
-        # Residual connection + pos encoding
-        return self.dropout(
-            input_sequence
-            + self.pos_encodings_matrix[: input_sequence.size(1), :].unsqueeze(0)
-        )
+    def __init__(self, d_hid, sequence_length=270):
+        super(PositionalEncoding, self).__init__()
+
+        # Not a parameter
+        self.register_buffer('pos_table', self._get_sinusoid_encoding_table(sequence_length, d_hid))
+
+    def _get_sinusoid_encoding_table(self, sequence_length, d_hid):
+        """ Sinusoid position encoding table """
+
+        # TODO: make it with torch instead of numpy
+
+        def get_position_angle_vec(position):
+            return torch.tensor([position / torch.pow(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)])
+
+        sinusoid_table = torch.cat([get_position_angle_vec(pos_i) for pos_i in range(sequence_length)])
+        sinusoid_table[:, 0::2] = torch.sin(sinusoid_table[:, 0::2])  # dim 2i
+        sinusoid_table[:, 1::2] = torch.cos(sinusoid_table[:, 1::2])  # dim 2i+1
+
+        return torch.FloatTensor(sinusoid_table).unsqueeze(0)
+
+    def forward(self, x):
+        return x + self.pos_table[:, :x.size(1)].clone().detach()
+
+
+class Encoder(nn.Module):
+    """ A encoder model with self attention mechanism. """
+
+    def __init__(
+            self, in_features_dim, out_features_dim, n_layers, n_head, d_k, d_v,
+            d_model, d_inner, dropout=0.1, sequence_length=270, scale_emb=False):
+
+        super().__init__()
+
+        self.src_embeddings = nn.Linear(in_features_dim, out_features_dim)
+        self.position_enc = PositionalEncoding(out_features_dim, sequence_length=sequence_length)
+        self.dropout = nn.Dropout(p=dropout)
+        self.layer_stack = nn.ModuleList([
+            EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
+            for _ in range(n_layers)])
+        self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
+        self.scale_emb = scale_emb
+        self.d_model = d_model
+
+    def forward(self, src_seq, src_mask=None, return_attns=False):
+
+        enc_slf_attn_list = []
+
+        # -- Forward
+        enc_output = self.src_embeddings(src_seq)
+        if self.scale_emb:
+            enc_output *= self.d_model ** 0.5
+        enc_output = self.dropout(self.position_enc(enc_output))
+        enc_output = self.layer_norm(enc_output)
+
+        for enc_layer in self.layer_stack:
+            enc_output, enc_slf_attn = enc_layer(enc_output, slf_attn_mask=src_mask)
+            enc_slf_attn_list += [enc_slf_attn] if return_attns else []
+
+        if return_attns:
+            return enc_output, enc_slf_attn_list
+        return enc_output,
+
+
+class DecoderCrossAttention(nn.Module):
+    """ A decoder model with self attention mechanism. """
+
+    def __init__(self, n_layers, n_head, d_k, d_v, d_model, d_inner, dropout=0.1, scale_emb=False):
+
+        super().__init__()
+
+        self.dropout = nn.Dropout(p=dropout)
+        self.layer_stack = nn.ModuleList([
+            DecoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
+            for _ in range(n_layers)])
+        self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
+        self.scale_emb = scale_emb
+        self.d_model = d_model
+
+    def forward(self, enc_1_output, enc_2_output, src_mask=None, return_attns=False):
+
+        dec_slf_attn_list, dec_enc_attn_list = [], []
+
+        for dec_layer in self.layer_stack:
+            enc_1_output, dec_slf_attn, dec_enc_attn = dec_layer(
+                enc_1_output, enc_2_output, dec_enc_attn_mask=src_mask)
+            dec_slf_attn_list += [dec_slf_attn] if return_attns else []
+            dec_enc_attn_list += [dec_enc_attn] if return_attns else []
+
+        if return_attns:
+            return enc_1_output, dec_slf_attn_list, dec_enc_attn_list
+        return enc_1_output,
+
+
+class DecoderLayer(nn.Module):
+    """ Compose with three layers """
+
+    def __init__(self, d_model, d_inner, n_head, d_k, d_v, dropout=0.1):
+        super(DecoderLayer, self).__init__()
+        self.enc_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
+        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, dropout=dropout)
+
+    def forward(
+            self, enc_1_output, enc_2_output, dec_enc_attn_mask=None):
+        enc_1_output, dec_enc_attn = self.enc_attn(
+            enc_1_output, enc_1_output, enc_2_output, mask=dec_enc_attn_mask)
+        enc_1_output = self.pos_ffn(enc_1_output)
+        return enc_1_output, dec_enc_attn
