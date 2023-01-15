@@ -183,22 +183,9 @@ class Dataset_ERA5(Dataset):
             current_x_data[:, indices_features_static] = \
                 (current_x_data[:, indices_features_static] - x_data_mean_static) / (x_data_std_static + (10 ** (-6)))
 
+            current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
+
             if specific_model_type.lower() == "lstm":
-                self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
-            elif specific_model_type.lower() == "conv":
-                current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
-                                                            + (len(self.list_static_attributes_names))):].reshape(-1,
-                                                                                                                  self.max_width,
-                                                                                                                  self.max_length)
-                indices_all_features_non_spatial = range(0,
-                                                         (len(self.list_dynamic_attributes_names))
-                                                         + (len(self.list_static_attributes_names)))
-                current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
-                current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
-                current_x_data_non_spatial = np.tile(np.expand_dims(current_x_data_non_spatial, axis=(2, 3)),
-                                                     (1, 1, max_width, max_length))
-                current_x_data = np.concatenate(
-                    [current_x_data_non_spatial, np.expand_dims(current_x_data_spatial, axis=(1,))], axis=1)
                 self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
             else:
                 current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
@@ -208,7 +195,6 @@ class Dataset_ERA5(Dataset):
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
-                current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
                 current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
                 self.dict_station_id_to_data[key] = (current_x_data_non_spatial, current_x_data_spatial, current_y_data)
 
@@ -243,10 +229,12 @@ class Dataset_ERA5(Dataset):
         if self.current_basin != next_basin:
             self.current_basin = next_basin
             self.inner_index_in_data_of_basin = 0
-        if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "conv":
+        if self.specific_model_type.lower() == "lstm":
             X_data, y_data = self.dict_station_id_to_data[self.current_basin]
         else:
             X_data, X_data_spatial, y_data = self.dict_station_id_to_data[self.current_basin]
+            X_data = np.tile(np.expand_dims(X_data, axis=(2, 3)), (1, 1, self.max_width, self.max_length))
+            X_data = np.concatenate([X_data, np.expand_dims(X_data_spatial, axis=(1,))], axis=1)
         X_data_tensor = torch.tensor(
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
