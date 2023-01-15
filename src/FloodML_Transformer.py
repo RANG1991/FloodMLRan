@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from Transformer.Layers import EncoderLayer
 from Transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
+from FloodML_CNN_LSTM import CNN
 
 
 def get_pad_mask(seq, pad_idx):
@@ -18,15 +19,27 @@ def get_subsequent_mask(seq):
 
 class Transformer:
 
-    def __init__(self, in_features, out_features=512, sequence_length=270):
-        self.encoder = Encoder(in_features_dim=in_features, out_features_dim=out_features, n_layers=6, d_k=512 // 8,
-                               d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
+    def __init__(self, out_features_cnn, image_input_size, in_features, out_features=512, sequence_length=270):
+        self.out_features_cnn = out_features_cnn
+        self.cnn = CNN(1, out_features_cnn, image_input_size)
+        self.encoder_1 = Encoder(in_features_dim=in_features, out_features_dim=out_features,
+                                 n_layers=6, d_k=512 // 8,
+                                 d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
+        self.encoder_2 = Encoder(in_features_dim=out_features_cnn, out_features_dim=out_features,
+                                 n_layers=6, d_k=512 // 8,
+                                 d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
         self.decoder = DecoderCrossAttention(n_layers=6, d_k=512 // 8, d_v=512 // 8, n_head=8, d_model=512, d_inner=512)
+        self.fc = nn.Linear(512, 1)
 
-    def forward(self, x_daily, x_hourly):
-        enc_output_1, *_ = self.encoder(x_daily)
-        enc_output_2, *_ = self.encoder(x_hourly)
+    def forward(self, x_daily, x_spatial):
+        B, L, C, W, H = x_spatial.shape
+        x_spatial = x_spatial.reshape(B * L, C, W, H)
+        x_spatial = self.cnn(x_spatial)
+        x_spatial = x_spatial.reshape(B, L, self.out_features_cnn)
+        enc_output_1, *_ = self.encoder_1(x_daily)
+        enc_output_2, *_ = self.encoder_2(x_spatial)
         dec_output, *_ = self.decoder(enc_output_1, enc_output_2)
+        return self.fc(dec_output)
 
 
 class PositionalEncoding(nn.Module):
