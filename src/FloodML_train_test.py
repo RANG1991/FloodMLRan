@@ -445,7 +445,8 @@ def run_single_parameters_check_with_val_on_years(
         shared_model,
         num_epochs=10,
 ):
-    specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else "LSTM"
+    specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
+        "Transformer" if "Transformer" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,

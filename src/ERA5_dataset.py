@@ -265,7 +265,7 @@ class Dataset_ERA5(Dataset):
                     X_data = self.pad_np_array_equally_from_sides(
                         X_data_spatial, max_width, max_length
                     ).reshape(X_data_spatial.shape[0], -1)
-                elif specific_model_type.lower() == "cnn":
+                elif specific_model_type.lower() == "cnn" or specific_model_type.lower() == "transformer":
                     X_data_spatial, y_data = self.read_single_station_file_spatial(
                         station_id)
                     X_data_non_spatial, _ = self.read_single_station_file(station_id)
