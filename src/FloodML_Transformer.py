@@ -17,9 +17,10 @@ def get_subsequent_mask(seq):
     return subsequent_mask
 
 
-class Transformer:
+class ERA5_Transformer:
 
     def __init__(self, out_features_cnn, image_input_size, in_features, out_features=512, sequence_length=270):
+        super(ERA5_Transformer, self).__init__()
         self.out_features_cnn = out_features_cnn
         self.cnn = CNN(1, out_features_cnn, image_input_size)
         self.encoder_1 = Encoder(in_features_dim=in_features, out_features_dim=out_features,
