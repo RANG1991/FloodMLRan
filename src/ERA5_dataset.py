@@ -187,8 +187,9 @@ class Dataset_ERA5(Dataset):
                 self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
             elif specific_model_type.lower() == "conv":
                 current_x_data_spatial = current_x_data[:, (len(self.list_dynamic_attributes_names))
-                                                           + (len(self.list_static_attributes_names)):].reshape \
-                    (-1, self.max_width, self.max_length)
+                                                           + (len(self.list_static_attributes_names)):].reshape(-1,
+                                                                                                                self.max_width,
+                                                                                                                self.max_length)
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
@@ -196,12 +197,13 @@ class Dataset_ERA5(Dataset):
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
                 current_x_data_non_spatial = current_x_data_non_spatial.unsqueeze(-1).unsqueeze(-1).repeat(
                     (1, max_width, max_length))
-                current_x_data = torch.cat(current_x_data_non_spatial, current_x_data_spatial)
+                current_x_data = torch.cat([current_x_data_non_spatial, current_x_data_spatial])
                 self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
             else:
                 current_x_data_spatial = current_x_data[:, (len(self.list_dynamic_attributes_names))
-                                                           + (len(self.list_static_attributes_names)):].reshape \
-                    (-1, self.max_width, self.max_length)
+                                                           + (len(self.list_static_attributes_names)):].reshape(-1,
+                                                                                                                self.max_width,
+                                                                                                                self.max_length)
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
@@ -327,14 +329,16 @@ class Dataset_ERA5(Dataset):
 
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static
-                and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv"))
+                and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
+                and os.path.exists(Path(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")))
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (
-                Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc"
+                Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc"
         )
         station_data_file_discharge = (
-                Path(self.dynamic_data_folder) / f"dis24_{station_id}.csv"
+                Path(self.dynamic_data_folder)
+                / f"{self.prefix_dynamic_data_file}{station_id}.csv"
         )
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))

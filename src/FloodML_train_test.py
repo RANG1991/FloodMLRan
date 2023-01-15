@@ -445,7 +445,7 @@ def run_single_parameters_check_with_val_on_years(
         dataset_to_use,
         optim_name,
         shared_model,
-        num_epochs=10,
+        num_epochs=15,
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer" if "Transformer" in model_name else "LSTM"
@@ -724,7 +724,7 @@ def main():
                         help="whether to run in shared model scenario - when the "
                              "training and validation stations are not the same",
                         choices=["True", "False"], default="False")
-    parser.add_argument("--num_epochs", help="num epochs for training", default=10, type=int)
+    parser.add_argument("--num_epochs", help="num epochs for training", default=15, type=int)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
