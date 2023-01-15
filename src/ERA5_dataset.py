@@ -136,6 +136,7 @@ class Dataset_ERA5(Dataset):
         self.stage = stage
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
+        self.specific_model_type = specific_model_type
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
         max_width, max_length = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data"
@@ -239,7 +240,10 @@ class Dataset_ERA5(Dataset):
         if self.current_basin != next_basin:
             self.current_basin = next_basin
             self.inner_index_in_data_of_basin = 0
-        X_data, y_data = self.dict_station_id_to_data[self.current_basin]
+        if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "conv":
+            X_data, y_data = self.dict_station_id_to_data[self.current_basin]
+        else:
+            X_data, X_data_spatial, y_data = self.dict_station_id_to_data[self.current_basin]
         X_data_tensor = torch.tensor(
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)

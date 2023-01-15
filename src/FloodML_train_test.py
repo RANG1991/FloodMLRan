@@ -164,8 +164,10 @@ def calc_validation_basins_nse(
     fig, ax = plt.subplots(figsize=(20, 6))
     obs_and_preds = preds_obs_dict_per_basin[median_nse_basin]
     obs, preds = zip(*obs_and_preds)
-    ax.plot(list(obs).cpu().numpy().squeeze(), label="observation")
-    ax.plot(list(preds).cpu().numpy().squeeze(), label="prediction")
+    obs = torch.stack(list(obs))
+    preds = torch.stack(list(preds))
+    ax.plot(obs.cpu().numpy().squeeze(), label="observation")
+    ax.plot(preds.cpu().numpy().squeeze(), label="prediction")
     ax.legend()
     ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
     plt.savefig(
