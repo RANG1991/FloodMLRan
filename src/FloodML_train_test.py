@@ -161,17 +161,17 @@ def calc_validation_basins_nse(
     median_nse_basin = stations_ids[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
     median_nse = statistics.median(nse_list_basins)
     print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
-    # curr_datetime = datetime.now()
-    # curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    # fig, ax = plt.subplots(figsize=(20, 6))
-    # ax.plot(max_obs.cpu().numpy().squeeze(), label="observation")
-    # ax.plot(max_preds.cpu().numpy().squeeze(), label="prediction")
-    # ax.legend()
-    # ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
-    # plt.savefig(
-    #     f"../data/images/Hydrograph_of_{num_epoch}_epoch_{curr_datetime_str}.png"
-    # )
-    # plt.close()
+    fig, ax = plt.subplots(figsize=(20, 6))
+    obs_and_preds = preds_obs_dict_per_basin[median_nse_basin]
+    obs, preds = zip(*obs_and_preds)
+    ax.plot(obs.cpu().numpy().squeeze(), label="observation")
+    ax.plot(preds.cpu().numpy().squeeze(), label="prediction")
+    ax.legend()
+    ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
+    plt.savefig(
+        f"../data/images/Hydrograph_of_basin_{median_nse_basin}_in_epoch_{num_epoch}.png"
+    )
+    plt.close()
     return nse_list_basins
 
 
@@ -604,7 +604,7 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.25, 0.4, 0.0, 0.5]
-    sequence_lengths = [270, 365, 30, 90, 180, 10]
+    sequence_lengths = [270, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:

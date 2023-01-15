@@ -182,7 +182,7 @@ class Dataset_ERA5(Dataset):
             current_x_data[:, indices_features_static] = \
                 (current_x_data[:, indices_features_static] - x_data_mean_static) / (x_data_std_static + (10 ** (-6)))
 
-            if specific_model_type.lower() != "lstm":
+            if specific_model_type.lower() == "lstm":
                 self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
             else:
                 current_x_data_spatial = current_x_data[:, (len(self.list_dynamic_attributes_names))
