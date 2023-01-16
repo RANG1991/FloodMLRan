@@ -32,8 +32,7 @@ class CNN(nn.Module):
         dims_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.op_list)
         size_for_fc = dims_fc[0] * dims_fc[1] * self.channels_out_conv_2
         self.size_for_fc = int(size_for_fc)
-        self.fc1 = nn.Linear(self.size_for_fc, 120)
-        self.fc2 = nn.Linear(120, output_size_cnn)
+        self.fc = nn.Linear(self.size_for_fc, output_size_cnn)
         self.conv1 = torch.nn.Conv2d(
             in_channels=num_channels, out_channels=self.channels_out_conv_1,
             kernel_size=(self.filter_size_conv, self.filter_size_conv)
@@ -44,14 +43,12 @@ class CNN(nn.Module):
         )
         self.pool = torch.nn.MaxPool2d(self.filter_size_pool, self.filter_size_pool)
         self.dropout = torch.nn.Dropout(0.4)
-        self.dropout1 = nn.Dropout()
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = x.view(-1, self.size_for_fc)
-        x = self.dropout1(F.relu(self.fc1(x)))
-        x = self.fc2(x)
+        x = self.fc(self.dropout(F.relu(x)))
         return x
 
     @staticmethod
@@ -103,7 +100,6 @@ class CNN_LSTM(nn.Module):
         input_size = (image_input_size[0] * image_input_size[1] * num_channels) + num_attributes
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=(input_size - num_attributes),
                        image_input_size=image_input_size)
-        # create required layer
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=self.hidden_size,
                             num_layers=num_layers, bias=True,
                             batch_first=True)
