@@ -199,27 +199,34 @@ class Dataset_ERA5(Dataset):
                 self.dict_station_id_to_data[key] = (current_x_data_non_spatial, current_x_data_spatial, current_y_data)
 
     @staticmethod
-    def pad_np_array_equally_from_sides(X_data_single_basin, max_width, max_height):
+    def crop_or_pad_precip_spatial(X_data_single_basin, max_width, max_height):
         max_width_right = int(max_width / 2)
         max_width_left = math.ceil(max_width / 2)
         max_height_right = int(max_height / 2)
         max_height_left = math.ceil(max_height / 2)
-        return np.pad(
-            X_data_single_basin,
-            (
-                (0, 0),
-                (
-                    max_width_right - int(X_data_single_basin.shape[1] / 2),
-                    max_width_left - math.ceil(X_data_single_basin.shape[1] / 2),
-                ),
-                (
-                    max_height_right - int(X_data_single_basin.shape[2] / 2),
-                    max_height_left - math.ceil(X_data_single_basin.shape[2] / 2),
-                ),
-            ),
-            "constant",
-            constant_values=0,
-        )
+        if X_data_single_basin.shape[1] > max_width:
+            start = X_data_single_basin.shape[1] // 2 - (max_width // 2)
+            X_data_single_basin = X_data_single_basin[:, start:start + max_width, :]
+        else:
+            X_data_single_basin = np.pad(X_data_single_basin,
+                                         ((0, 0),
+                                          (max_width_right - int(X_data_single_basin.shape[1] / 2),
+                                           max_width_left - math.ceil(X_data_single_basin.shape[1] / 2)),
+                                          (0, 0)),
+                                         "constant",
+                                         constant_values=0)
+        if X_data_single_basin.shape[2] > max_height:
+            start = X_data_single_basin.shape[2] // 2 - (max_height // 2)
+            X_data_single_basin = X_data_single_basin[:, start:start + max_height, :]
+        else:
+            X_data_single_basin = np.pad(X_data_single_basin,
+                                         ((0, 0),
+                                          (0, 0),
+                                          (max_height_right - int(X_data_single_basin.shape[2] / 2),
+                                           max_height_left - math.ceil(X_data_single_basin.shape[2] / 2))),
+                                         "constant",
+                                         constant_values=0)
+        return X_data_single_basin
 
     def __len__(self):
         return self.dataset_length
@@ -285,7 +292,7 @@ class Dataset_ERA5(Dataset):
                     X_data_non_spatial, _ = self.read_single_station_file(station_id)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         continue
-                    X_data_spatial = self.pad_np_array_equally_from_sides(X_data_spatial, max_width, max_length)
+                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_width, max_length)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
                         continue

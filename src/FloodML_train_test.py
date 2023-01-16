@@ -515,10 +515,10 @@ def run_training_and_test(
         optim_name="SGD"
 ):
     train_dataloader = DataLoader(
-        training_data, batch_size=256, shuffle=False,
+        training_data, batch_size=512, shuffle=False,
     )
     test_dataloader = DataLoader(
-        test_data, batch_size=256, shuffle=False,
+        test_data, batch_size=512, shuffle=False,
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running with model: {model_name}")

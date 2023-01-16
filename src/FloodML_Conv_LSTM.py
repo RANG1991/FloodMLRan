@@ -12,8 +12,8 @@ class Conv_LSTM(torch.nn.Module):
         self.sequence_length = sequence_length
         self.in_channels_cnn = in_channels_cnn
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = 4
-        self.channels_out_conv_2 = 16
+        self.channels_out_conv_1 = 2
+        self.channels_out_conv_2 = 4
         self.filter_size_conv = 3
         self.filter_size_pool = 4
         self.stride_size_conv = 1
@@ -56,7 +56,7 @@ class Conv_LSTM(torch.nn.Module):
             output_cnn = self.pool(F.relu(self.conv2(output_cnn)))
             output_cnn = output_cnn.reshape(batch_size, -1)
             output_cnn = self.fc_after_cnn(output_cnn)
-            x_input_to_lstm_cell = torch.cat([x_non_spatial, output_cnn], axis=1)
+            x_input_to_lstm_cell = torch.cat([x_non_spatial, output_cnn], dim=1)
             h_i, c_i = self.lstm_cell(x_input_to_lstm_cell, (h_i, c_i))
             output_lstm.append(h_i)
         output_lstm = torch.stack(output_lstm, dim=0)

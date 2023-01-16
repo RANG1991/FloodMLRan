@@ -19,8 +19,8 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = 16
-        self.channels_out_conv_2 = 32
+        self.channels_out_conv_1 = 2
+        self.channels_out_conv_2 = 4
         self.filter_size_conv = 3
         self.filter_size_pool = 2
         self.stride_size_conv = 1
@@ -127,7 +127,7 @@ class CNN_LSTM(nn.Module):
         batch_size, time_steps, _ = x.size()
         # getting the "image" part of the input
         # (removing the last 4 static features)
-        image = x[:, :, :self.num_channels * self.lat * self.lon]
+        image = x[:, :, -self.num_channels * self.lat * self.lon:]
         # reshaping the image to 4 dimensional tensor of (batch_size, time_steps, num_channels, H_LAT*W_LON)
         image = image.view(batch_size, time_steps, self.num_channels, self.lat * self.lon)
         # reshaping the image to 5 dimensional tensor of (batch_size, time_steps, num_channels, H_LAT, W_LON)
@@ -140,9 +140,9 @@ class CNN_LSTM(nn.Module):
         cnn_out = c_out.view(batch_size, time_steps, -1)
         # getting the "non-image" part of the input (last 4 attributes)
         # (removing the "image" part)
-        a_in = x[:, :, self.num_channels * self.lat * self.lon:]
-        r_in = torch.cat((cnn_out, a_in), 2)
+        a_in = x[:, :, :-self.num_channels * self.lat * self.lon]
+        r_in = torch.cat([cnn_out, a_in], dim=2)
         output, (h_n, c_n) = self.lstm(r_in)
         # perform prediction only at the end of the input sequence
-        pred = self.fc(self.dropout(h_n[-1, :, :]))
+        pred = self.fc(self.dropout(output))
         return pred
