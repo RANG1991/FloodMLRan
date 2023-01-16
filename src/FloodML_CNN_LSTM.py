@@ -19,31 +19,31 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
+        self.channels_out_conv_1 = 16
+        self.channels_out_conv_2 = 32
         self.filter_size_conv = 3
         self.filter_size_pool = 2
         self.stride_size_conv = 1
-        self.stride_size_pool = 2
+        self.stride_size_pool = self.filter_size_pool
         # The operation list - the operation type to how many times we
         # are doing this operation (how much filter applications)
-        self.op_list = [("conv", 16), ("pool", 1), ("conv", 32), ("pool", 1)]
+        self.op_list = [("conv", self.channels_out_conv_1), ("pool", 1), ("conv", self.channels_out_conv_2),
+                        ("pool", 1)]
         dims_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.op_list)
-        # declaring convolution with 3 by 3 filter matrix
-        # the input is: 1 or 2 or 3 channels (depending on the number of channels) -
-        # this is the number of channel of the input image
-        # the output is: 16 channels (the number of filters we apply)
-        self.conv1 = nn.Conv2d(self.initial_num_channels, 16, 3)
-        # declaring max pooling to the output matrix of the previous stage
-        # (getting the max of the pool of 2 by 2 matrix going
-        # over the large matrix from previous stage)
-        self.pool = nn.MaxPool2d(2, 2)
-        # declaring convolution with 3 by 3 filter matrix
-        # the input is: 16 channels
-        # the output is: 32 channels (the number of filters we apply)
-        self.conv2 = nn.Conv2d(16, 32, 3)
-        size_for_fc = dims_fc[0] * dims_fc[1] * 32
+        size_for_fc = dims_fc[0] * dims_fc[1] * self.channels_out_conv_2
         self.size_for_fc = int(size_for_fc)
         self.fc1 = nn.Linear(self.size_for_fc, 120)
         self.fc2 = nn.Linear(120, output_size_cnn)
+        self.conv1 = torch.nn.Conv2d(
+            in_channels=num_channels, out_channels=self.channels_out_conv_1,
+            kernel_size=(self.filter_size_conv, self.filter_size_conv)
+        )
+        self.conv2 = torch.nn.Conv2d(
+            in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+            kernel_size=(self.filter_size_conv, self.filter_size_conv)
+        )
+        self.pool = torch.nn.MaxPool2d(self.filter_size_pool, self.filter_size_pool)
+        self.dropout = torch.nn.Dropout(0.4)
         self.dropout1 = nn.Dropout()
 
     def forward(self, x):

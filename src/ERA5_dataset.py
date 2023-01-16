@@ -143,8 +143,8 @@ class Dataset_ERA5(Dataset):
         )
         if max_length <= 0 or max_width <= 0:
             raise Exception("max length or max width are not greater than 0")
-        self.max_width = max_width
-        self.max_length = max_length
+        self.max_width = max(max_width, max_length)
+        self.max_length = max(max_width, max_length)
         (self.dict_station_id_to_data,
          x_means,
          x_stds,
@@ -152,7 +152,7 @@ class Dataset_ERA5(Dataset):
          y_std
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type,
-                                              max_width=max_width, max_length=max_length)
+                                              max_width=self.max_width, max_length=self.max_length)
 
         self.y_mean = y_mean if stage == "train" else self.y_mean
         self.y_std = y_std if stage == "train" else self.y_std
@@ -233,8 +233,8 @@ class Dataset_ERA5(Dataset):
             X_data, y_data = self.dict_station_id_to_data[self.current_basin]
         else:
             X_data, X_data_spatial, y_data = self.dict_station_id_to_data[self.current_basin]
-            X_data = np.tile(np.expand_dims(X_data, axis=(2, 3)), (1, 1, self.max_width, self.max_length))
-            X_data = np.concatenate([X_data, np.expand_dims(X_data_spatial, axis=(1,))], axis=1)
+            X_data_spatial = X_data_spatial.reshape(-1, self.max_width * self.max_length)
+            X_data = np.concatenate([X_data, X_data_spatial], axis=1)
         X_data_tensor = torch.tensor(
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
