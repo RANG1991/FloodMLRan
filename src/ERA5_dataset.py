@@ -149,7 +149,9 @@ class Dataset_ERA5(Dataset):
          x_means,
          x_stds,
          y_mean,
-         y_std
+         y_std,
+         min_spatial,
+         max_spatial
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_length=self.max_length)
@@ -192,8 +194,7 @@ class Dataset_ERA5(Dataset):
                                                             + (len(self.list_static_attributes_names))):].reshape(-1,
                                                                                                                   self.max_width,
                                                                                                                   self.max_length)
-                current_x_data_spatial = ((current_x_data_spatial - self.x_means[-1])
-                                          / (self.x_stds[-1] + (10 ** (-6))))
+                current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
@@ -280,8 +281,8 @@ class Dataset_ERA5(Dataset):
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length):
         cumm_m_x = 0
         cumm_s_x = 0
-        cumm_m_x_spatial = 0
-        cumm_s_x_spatial = 0
+        min_spatial = -1
+        max_spatial = -1
         cumm_m_y = 0
         cumm_s_y = 0
         count_of_samples = 0
@@ -318,26 +319,21 @@ class Dataset_ERA5(Dataset):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
-                    prev_mean_x_spatial = cumm_m_x_spatial
-                    count_of_samples = count_of_samples + (len(y_data))
-                    cumm_m_x_spatial = cumm_m_x_spatial + ((X_data_spatial.mean((-2, -1)) - cumm_m_x_spatial)
-                                                           / count_of_samples)
-                    cumm_s_x_spatial = cumm_s_x_spatial + ((X_data_spatial.std((-2, -1)) - cumm_m_x_spatial)
-                                                           * (X_data_spatial - prev_mean_x_spatial))
-                if (specific_model_type.lower() == "conv" or
-                        specific_model_type.lower() == "cnn" or
-                        specific_model_type.lower() == "transformer"):
-                    X_data = np.concatenate([X_data, X_data_spatial.reshape(X_data.shape[0],
-                                                                            max_length * max_width)], axis=1)
-                    cumm_m_x = np.concatenate([cumm_m_x, cumm_m_x_spatial])
-                    cumm_s_x = np.concatenate([cumm_s_x, cumm_s_x_spatial])
+                    X_data_spatial = np.array(X_data_spatial.reshape(X_data.shape[0], max_length * max_width),
+                                              dtype=np.float64)
+                    max_spatial = X_data_spatial.max().item() if (
+                            X_data_spatial.max().item() > max_spatial or max_spatial == -1) else max_spatial
+                    min_spatial = X_data_spatial.min().item() if (
+                            X_data_spatial.min().item() < min_spatial or min_spatial == -1) else min_spatial
+                    X_data = np.concatenate([X_data, X_data_spatial], axis=1)
+
                 dict_station_id_to_data[station_id] = (X_data, y_data)
 
             else:
                 print(f"station with id: {station_id} has no valid file")
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1))
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y.item(), std_y.item()
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y.item(), std_y.item(), min_spatial, max_spatial
 
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static
