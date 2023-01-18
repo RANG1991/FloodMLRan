@@ -23,12 +23,26 @@ from FloodML_Conv_LSTM import Conv_LSTM
 from FloodML_CNN_LSTM import CNN_LSTM
 from pathlib import Path
 import random
+import torch
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.multiprocessing as mp
 
 matplotlib.use("AGG")
 
 K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
+
+
+def setup(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+    dist.init_process_group("gloo", rank=rank, world_size=world_size)
+
+
+def cleanup():
+    dist.destroy_process_group()
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
@@ -65,23 +79,8 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     return running_loss / (len(loader))
 
 
-def eval_model(
-        model, loader, device, preds_obs_dict_per_basin, loss_func, epoch,
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Evaluate the model.
-
-    :param model: A torch.nn.Module implementing the LSTM model
-    :param loader: A PyTorch DataLoader, providing the data.
-
-    :return: Two torch Tensors, containing the observations and
-        model predictions
-
-    Parameters
-    ----------
-    loss_func
-    device
-    preds_obs_dict_per_basin
-    """
+def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor]:
+    preds_obs_dict_per_basin = {}
     # set model to eval mode (important for dropout)
     model.eval()
     pbar = tqdm(loader, file=sys.stdout)
@@ -143,9 +142,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     return float(nse_val)
 
 
-def calc_validation_basins_nse(
-        preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10, device="cpu"
-):
+def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10):
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
     for stations_id in stations_ids:
@@ -512,7 +509,9 @@ def run_training_and_test(
         dynamic_attributes_names,
         model_name,
         calc_nse_interval=1,
-        optim_name="SGD"
+        optim_name="SGD",
+        rank=0,
+        world_size=1
 ):
     train_dataloader = DataLoader(
         training_data, batch_size=1024, shuffle=True,
@@ -526,8 +525,7 @@ def run_training_and_test(
         model = ERA5_Transformer(sequence_length=sequence_length,
                                  image_input_size=(training_data.max_length, training_data.max_width),
                                  in_features=len(dynamic_attributes_names) + len(static_attributes_names),
-                                 out_features=1,
-                                 out_features_cnn=512).to(device)
+                                 out_features_cnn=64)
     elif model_name.lower() == "conv_lstm":
         model = Conv_LSTM(
             num_features_non_spatial=len(dynamic_attributes_names) + len(static_attributes_names),
@@ -535,42 +533,44 @@ def run_training_and_test(
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
             in_channels_cnn=1
-        ).to(device)
+        )
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             hidden_dim=num_hidden_units,
-            dropout=dropout).to(device)
+            dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
-        model = CNN_LSTM(lat=training_data.max_length, lon=training_data.max_width, hidden_size=num_hidden_units,
+        model = CNN_LSTM(lat=training_data.max_length,
+                         lon=training_data.max_width,
+                         hidden_size=num_hidden_units,
                          num_channels=1,
                          dropout_rate=dropout,
                          num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
-                         image_input_size=(training_data.max_length, training_data.max_width)).to(device)
+                         image_input_size=(training_data.max_length, training_data.max_width))
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
+    setup(rank, world_size)
+    # create model and move it to GPU with id rank
+    ddp_model = DDP(model, device_ids=[rank])
     if optim_name.lower() == "sgd":
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+        optimizer = torch.optim.SGD(ddp_model.parameters(), lr=learning_rate, momentum=0.9)
     else:
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(ddp_model.parameters(), lr=learning_rate)
     loss_list_training = []
     nse_list = []
     preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
         loss_on_training_epoch = train_epoch(
-            model, optimizer, train_dataloader, calc_nse_star, epoch=(i + 1), device=device
-        )
+            ddp_model, optimizer, train_dataloader, calc_nse_star, epoch=(i + 1), device=rank)
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            eval_model(
-                model, test_dataloader, device, preds_obs_dict_per_basin, calc_nse, epoch=(i + 1)
-            )
-            nse_list_epoch = calc_validation_basins_nse(
-                preds_obs_dict_per_basin, (i + 1), device=device
-            )
+            eval_model(ddp_model, test_dataloader, device=rank,
+                       preds_obs_dict_per_basin=preds_obs_dict_per_basin, epoch=(i + 1))
+            nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             nse_list = nse_list_epoch[:]
             preds_obs_dict_per_basin.clear()
+    cleanup()
     if len(nse_list) > 0:
         print(
             f"parameters are: dropout={dropout} sequence_length={sequence_length} "

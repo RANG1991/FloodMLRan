@@ -20,21 +20,38 @@ def get_subsequent_mask(seq):
 
 class ERA5_Transformer(nn.Module):
 
-    def __init__(self, out_features_cnn, image_input_size, in_features, out_features=512, sequence_length=270):
+    def __init__(self, out_features_cnn, image_input_size, in_features, sequence_length=270):
         super(ERA5_Transformer, self).__init__()
         self.out_features_cnn = out_features_cnn
         self.num_channels = 1
         self.image_width = image_input_size[0]
         self.image_height = image_input_size[1]
         self.cnn = CNN(1, out_features_cnn, image_input_size)
-        self.encoder_1 = Encoder(in_features_dim=in_features, out_features_dim=512,
-                                 n_layers=6, d_k=512 // 8,
-                                 d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
-        self.encoder_2 = Encoder(in_features_dim=out_features_cnn, out_features_dim=512,
-                                 n_layers=6, d_k=512 // 8,
-                                 d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
-        self.decoder = DecoderCrossAttention(n_layers=6, d_k=512 // 8, d_v=512 // 8, n_head=8, d_model=512, d_inner=512)
-        self.fc = nn.Linear(512, 1)
+        assert out_features_cnn % 8 == 0
+        self.encoder_1 = Encoder(in_features_dim=in_features,
+                                 out_features_dim=out_features_cnn,
+                                 n_layers=6,
+                                 d_k=out_features_cnn // 8,
+                                 d_v=out_features_cnn // 8,
+                                 n_head=8,
+                                 d_model=out_features_cnn,
+                                 d_inner=out_features_cnn,
+                                 sequence_length=sequence_length)
+        self.encoder_2 = Encoder(in_features_dim=out_features_cnn,
+                                 out_features_dim=out_features_cnn,
+                                 n_layers=6, d_k=out_features_cnn // 8,
+                                 d_v=out_features_cnn // 8,
+                                 n_head=8,
+                                 d_model=out_features_cnn,
+                                 d_inner=out_features_cnn,
+                                 sequence_length=sequence_length)
+        self.decoder = DecoderCrossAttention(n_layers=6,
+                                             d_k=out_features_cnn // 8,
+                                             d_v=out_features_cnn // 8,
+                                             n_head=8,
+                                             d_model=out_features_cnn,
+                                             d_inner=out_features_cnn)
+        self.fc = nn.Linear(out_features_cnn, 1)
 
     def forward(self, x):
         batch_size, time_steps, _ = x.size()
