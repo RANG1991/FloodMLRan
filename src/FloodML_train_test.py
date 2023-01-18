@@ -171,7 +171,7 @@ def calc_validation_basins_nse(
     ax.legend()
     ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
     plt.savefig(
-        f"../data/images/Hydrograph_of_basin_{median_nse_basin}_in_epoch_{num_epoch}.png"
+        f"../data/results/Hydrograph_of_basin_{median_nse_basin}_in_epoch_{num_epoch}.png"
     )
     plt.close()
     return nse_list_basins
@@ -419,7 +419,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
     plt.plot(training_loss_list.mean(axis=0), label="training")
     plt.legend(loc="upper left")
     plt.savefig(
-        f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
+        f"../data/results/training_loss_in_{num_epochs}_with_parameters: "
         f"{str(dropout_rate).replace('.', '_')};"
         f"{sequence_length};"
         f"{num_hidden_units}"
@@ -490,7 +490,7 @@ def run_single_parameters_check_with_val_on_years(
     plt.plot(training_loss_list_single_pass, label="training")
     plt.legend(loc="upper left")
     plt.savefig(
-        f"../data/images/training_loss_in_{num_epochs}_with_parameters: "
+        f"../data/results/training_loss_in_{num_epochs}_with_parameters: "
         f"{str(dropout_rate).replace('.', '_')};"
         f"{sequence_length};"
         f"{num_hidden_units}"
@@ -685,14 +685,14 @@ def choose_hyper_parameters_validation(
         plot_NSE_CDF(list_nse_lists_basins[-1], list_plots_titles[-1])
         plt.grid()
         plt.savefig(
-            "../data/images/parameters_comparison" + f"_{list_plots_titles[-1]}" + ".png"
+            "../data/results/parameters_comparison" + f"_{list_plots_titles[-1]}" + ".png"
         )
         plt.close()
         df_results = pd.DataFrame(data=dict_results)
         df_results.to_csv(
-            f"../data/images/results_{curr_datetime_str}.csv",
+            f"../data/results/results_{curr_datetime_str}.csv",
             mode="a",
-            header=not os.path.exists(f"../data/images/results_{curr_datetime_str}.csv"),
+            header=not os.path.exists(f"../data/results/results_{curr_datetime_str}.csv"),
         )
         print(f"best parameters: {best_parameters}")
     return best_parameters
