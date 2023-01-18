@@ -27,6 +27,7 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
+from functools import reduce
 
 matplotlib.use("AGG")
 
@@ -38,7 +39,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
-    dist.init_process_group("gloo", rank=rank, world_size=world_size)
+    dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
 def cleanup():
@@ -47,6 +48,7 @@ def cleanup():
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # set model to train mode (important for dropout)
+    torch.cuda.empty_cache()
     model.train()
     pbar = tqdm(loader, file=sys.stdout)
     pbar.set_description(f"Epoch {epoch}")
@@ -80,6 +82,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
 
 
 def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor]:
+    torch.cuda.empty_cache()
     preds_obs_dict_per_basin = {}
     # set model to eval mode (important for dropout)
     model.eval()
@@ -104,6 +107,7 @@ def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor
                 if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
                 preds_obs_dict_per_basin[station_id].append((pred_expected[i], pred_actual[i]))
+    return preds_obs_dict_per_basin
 
 
 def calc_nse_star(obs, sim, stds):
@@ -389,24 +393,28 @@ def run_single_parameters_check_with_cross_val_on_basins(
         )
         training_data.set_sequence_length(sequence_length)
         test_data.set_sequence_length(sequence_length)
-        (
-            nse_list_single_pass,
-            training_loss_list_single_pass,
-        ) = run_training_and_test(
-            learning_rate,
-            sequence_length,
-            num_hidden_units,
-            num_epochs,
-            training_data,
-            test_data,
-            dropout_rate,
-            static_attributes,
-            dynamic_attributes,
-            calc_nse_interval=1,
-            model_name=model_name
-        )
-        training_loss_list[i] = training_loss_list_single_pass
-        nse_list_single_cross_val.extend(nse_list_single_pass)
+        nse_list_single_pass = []
+        training_loss_list_single_pass = []
+        mp.spawn(run_training_and_test,
+                 args=(3,
+                       learning_rate,
+                       sequence_length,
+                       num_hidden_units,
+                       num_epochs,
+                       training_data,
+                       test_data,
+                       dropout_rate,
+                       static_attributes,
+                       dynamic_attributes,
+                       model_name,
+                       nse_list_single_pass,
+                       training_loss_list_single_pass,
+                       1,
+                       ),
+                 nprocs=3,
+                 join=True)
+        training_loss_list[i] = training_loss_list_single_pass[0][:]
+        nse_list_single_cross_val.extend(nse_list_single_pass[0][:])
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
         f"{dropout_rate};"
@@ -461,30 +469,33 @@ def run_single_parameters_check_with_val_on_years(
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
-    (
-        nse_list_single_pass,
-        training_loss_list_single_pass,
-    ) = run_training_and_test(
-        learning_rate,
-        sequence_length,
-        num_hidden_units,
-        num_epochs,
-        training_data,
-        test_data,
-        dropout_rate,
-        static_attributes_names,
-        dynamic_attributes_names,
-        calc_nse_interval=1,
-        model_name=model_name,
-        optim_name=optim_name
-    )
+    nse_list_single_pass = []
+    training_loss_list_single_pass = []
+    mp.spawn(run_training_and_test,
+             args=(3,
+                   learning_rate,
+                   sequence_length,
+                   num_hidden_units,
+                   num_epochs,
+                   training_data,
+                   test_data,
+                   dropout_rate,
+                   static_attributes_names,
+                   dynamic_attributes_names,
+                   model_name,
+                   nse_list_single_pass,
+                   training_loss_list_single_pass,
+                   1,
+                   optim_name),
+             nprocs=3,
+             join=True)
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
         f"{dropout_rate};"
         f"{sequence_length};"
         f"{num_hidden_units}"
     )
-    plt.plot(training_loss_list_single_pass, label="training")
+    plt.plot(training_loss_list_single_pass[0][:], label="training")
     plt.legend(loc="upper left")
     plt.savefig(
         f"../data/results/training_loss_in_{num_epochs}_with_parameters: "
@@ -494,10 +505,12 @@ def run_single_parameters_check_with_val_on_years(
     )
     plt.show()
     plt.close()
-    return nse_list_single_pass
+    return nse_list_single_pass[0][:]
 
 
 def run_training_and_test(
+        rank,
+        world_size,
         learning_rate,
         sequence_length,
         num_hidden_units,
@@ -508,18 +521,17 @@ def run_training_and_test(
         static_attributes_names,
         dynamic_attributes_names,
         model_name,
+        nse_list_single_pass,
+        training_loss_list_single_pass,
         calc_nse_interval=1,
         optim_name="SGD",
-        rank=0,
-        world_size=1
 ):
     train_dataloader = DataLoader(
-        training_data, batch_size=1024, shuffle=True,
+        training_data, batch_size=64, shuffle=True,
     )
     test_dataloader = DataLoader(
         test_data, batch_size=512, shuffle=False,
     )
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
         model = ERA5_Transformer(sequence_length=sequence_length,
@@ -550,33 +562,41 @@ def run_training_and_test(
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
+    dict_preds_dicts_ranks = {}
     setup(rank, world_size)
+    model.to(device=rank)
     # create model and move it to GPU with id rank
-    ddp_model = DDP(model, device_ids=[rank])
+    ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(ddp_model.parameters(), lr=learning_rate, momentum=0.9)
     else:
         optimizer = torch.optim.Adam(ddp_model.parameters(), lr=learning_rate)
     loss_list_training = []
     nse_list = []
-    preds_obs_dict_per_basin = {}
     for i in range(num_epochs):
-        loss_on_training_epoch = train_epoch(
-            ddp_model, optimizer, train_dataloader, calc_nse_star, epoch=(i + 1), device=rank)
+        loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
+                                             epoch=(i + 1), device=rank)
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            eval_model(ddp_model, test_dataloader, device=rank,
-                       preds_obs_dict_per_basin=preds_obs_dict_per_basin, epoch=(i + 1))
-            nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
-            nse_list = nse_list_epoch[:]
-            preds_obs_dict_per_basin.clear()
+            preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
+            dict_preds_dicts_ranks[rank] = preds_obs_dict_per_basin
+            dist.barrier()
+            if rank == 0:
+                output_dicts_list = [None for _ in range(world_size)]
+                dist.all_gather_object(output_dicts_list,
+                                       [dict_preds_dicts_ranks[r] for r in dict_preds_dicts_ranks.keys()])
+                preds_obs_dict_per_basin_all_ranks = reduce(lambda a, b: dict(a, **b), output_dicts_list)
+                nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
+                nse_list = nse_list_epoch[:]
     cleanup()
-    if len(nse_list) > 0:
-        print(
-            f"parameters are: dropout={dropout} sequence_length={sequence_length} "
-            f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}"
-        )
-    return nse_list, loss_list_training
+    if rank == 0:
+        if len(nse_list) > 0:
+            print(
+                f"parameters are: dropout={dropout} sequence_length={sequence_length} "
+                f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: {statistics.median(nse_list)}"
+            )
+    nse_list_single_pass.append(nse_list)
+    training_loss_list_single_pass.append(loss_list_training)
 
 
 def choose_hyper_parameters_validation(
@@ -595,7 +615,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:10]
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):

@@ -148,16 +148,15 @@ class DecoderCrossAttention(nn.Module):
 
     def forward(self, enc_1_output, enc_2_output, src_mask=None, return_attns=False):
 
-        dec_slf_attn_list, dec_enc_attn_list = [], []
+        dec_enc_attn_list = []
 
         for dec_layer in self.layer_stack:
-            enc_1_output, dec_slf_attn, dec_enc_attn = dec_layer(
+            enc_1_output, dec_enc_attn = dec_layer(
                 enc_1_output, enc_2_output, dec_enc_attn_mask=src_mask)
-            dec_slf_attn_list += [dec_slf_attn] if return_attns else []
             dec_enc_attn_list += [dec_enc_attn] if return_attns else []
 
         if return_attns:
-            return enc_1_output, dec_slf_attn_list, dec_enc_attn_list
+            return enc_1_output, dec_enc_attn_list
         return enc_1_output,
 
 
