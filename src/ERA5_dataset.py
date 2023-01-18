@@ -192,6 +192,8 @@ class Dataset_ERA5(Dataset):
                                                             + (len(self.list_static_attributes_names))):].reshape(-1,
                                                                                                                   self.max_width,
                                                                                                                   self.max_length)
+                current_x_data_spatial = ((current_x_data_spatial - self.x_means[-1])
+                                          / (self.x_stds[-1] + (10 ** (-6))))
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
@@ -278,6 +280,8 @@ class Dataset_ERA5(Dataset):
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length):
         cumm_m_x = 0
         cumm_s_x = 0
+        cumm_m_x_spatial = 0
+        cumm_s_x_spatial = 0
         cumm_m_y = 0
         cumm_s_y = 0
         count_of_samples = 0
@@ -287,23 +291,19 @@ class Dataset_ERA5(Dataset):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
-                    X_data_spatial, y_data = self.read_single_station_file_spatial(
-                        station_id)
-                    X_data_non_spatial, _ = self.read_single_station_file(station_id)
-                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
+                    X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
+                    X_data, _ = self.read_single_station_file(station_id)
+                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data) == 0:
                         continue
                     X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_width, max_length)
-                    if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
+                    if X_data.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
                         continue
-                    X_data = np.concatenate([X_data_spatial.reshape(X_data_non_spatial.shape[0],
-                                                                    max_length * max_width),
-                                             np.stack(X_data_non_spatial)], axis=1)
                 else:
                     X_data, y_data = self.read_single_station_file(station_id)
                     if len(X_data) == 0 or len(y_data) == 0:
                         continue
-                dict_station_id_to_data[station_id] = (X_data, y_data)
+
                 prev_mean_x = cumm_m_x
                 count_of_samples = count_of_samples + (len(y_data))
                 cumm_m_x = cumm_m_x + (
@@ -311,10 +311,28 @@ class Dataset_ERA5(Dataset):
                     axis=0)
                 cumm_s_x = cumm_s_x + ((X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
                         X_data[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
-
                 prev_mean_y = cumm_m_y
                 cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0)
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0)
+
+                if (specific_model_type.lower() == "conv" or
+                        specific_model_type.lower() == "cnn" or
+                        specific_model_type.lower() == "transformer"):
+                    prev_mean_x_spatial = cumm_m_x_spatial
+                    count_of_samples = count_of_samples + (len(y_data))
+                    cumm_m_x_spatial = cumm_m_x_spatial + ((X_data_spatial.mean((-2, -1)) - cumm_m_x_spatial)
+                                                           / count_of_samples)
+                    cumm_s_x_spatial = cumm_s_x_spatial + ((X_data_spatial.std((-2, -1)) - cumm_m_x_spatial)
+                                                           * (X_data_spatial - prev_mean_x_spatial))
+                if (specific_model_type.lower() == "conv" or
+                        specific_model_type.lower() == "cnn" or
+                        specific_model_type.lower() == "transformer"):
+                    X_data = np.concatenate([X_data, X_data_spatial.reshape(X_data.shape[0],
+                                                                            max_length * max_width)], axis=1)
+                    cumm_m_x = np.concatenate([cumm_m_x, cumm_m_x_spatial])
+                    cumm_s_x = np.concatenate([cumm_s_x, cumm_s_x_spatial])
+                dict_station_id_to_data[station_id] = (X_data, y_data)
+
             else:
                 print(f"station with id: {station_id} has no valid file")
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))

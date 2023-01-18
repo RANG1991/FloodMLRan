@@ -19,8 +19,8 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = 2
-        self.channels_out_conv_2 = 4
+        self.channels_out_conv_1 = 16
+        self.channels_out_conv_2 = 32
         self.filter_size_conv = 3
         self.filter_size_pool = 2
         self.stride_size_conv = 1

@@ -515,7 +515,7 @@ def run_training_and_test(
         optim_name="SGD"
 ):
     train_dataloader = DataLoader(
-        training_data, batch_size=512, shuffle=False,
+        training_data, batch_size=1024, shuffle=True,
     )
     test_dataloader = DataLoader(
         test_data, batch_size=512, shuffle=False,
@@ -607,7 +607,7 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.25, 0.4, 0.0, 0.5]
-    sequence_lengths = [270, 365]
+    sequence_lengths = [30, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
@@ -756,7 +756,7 @@ def main():
             num_epochs=command_args.num_epochs
         )
     elif command_args.dataset == "CARAVAN":
-        if command_args.model == "CONV_LSTM":
+        if command_args.model == "CONV_LSTM" or command_args.model == "CNN_LSTM":
             ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[1:]
         choose_hyper_parameters_validation(
             ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
