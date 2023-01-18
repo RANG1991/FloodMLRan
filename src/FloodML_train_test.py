@@ -607,7 +607,7 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.25, 0.4, 0.0, 0.5]
-    sequence_lengths = [30, 365]
+    sequence_lengths = [270, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:

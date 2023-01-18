@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import math
 from Transformer.Layers import EncoderLayer
 from Transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 from FloodML_CNN_LSTM import CNN
@@ -22,6 +23,9 @@ class ERA5_Transformer(nn.Module):
     def __init__(self, out_features_cnn, image_input_size, in_features, out_features=512, sequence_length=270):
         super(ERA5_Transformer, self).__init__()
         self.out_features_cnn = out_features_cnn
+        self.num_channels = 1
+        self.image_width = image_input_size[0]
+        self.image_height = image_input_size[1]
         self.cnn = CNN(1, out_features_cnn, image_input_size)
         self.encoder_1 = Encoder(in_features_dim=in_features, out_features_dim=out_features,
                                  n_layers=6, d_k=512 // 8,
@@ -32,11 +36,13 @@ class ERA5_Transformer(nn.Module):
         self.decoder = DecoderCrossAttention(n_layers=6, d_k=512 // 8, d_v=512 // 8, n_head=8, d_model=512, d_inner=512)
         self.fc = nn.Linear(512, 1)
 
-    def forward(self, x_daily, x_spatial):
-        B, L, C, W, H = x_spatial.shape
-        x_spatial = x_spatial.reshape(B * L, C, W, H)
+    def forward(self, x):
+        batch_size, time_steps, _ = x.size()
+        x_spatial = x[:, :, -self.num_channels * self.image_width * self.image_height:]
+        x_daily = x[:, :, :-self.num_channels * self.image_width * self.image_height]
+        x_spatial = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.image_width, self.image_height)
         x_spatial = self.cnn(x_spatial)
-        x_spatial = x_spatial.reshape(B, L, self.out_features_cnn)
+        x_spatial = x_spatial.reshape(batch_size, time_steps, self.out_features_cnn)
         enc_output_1, *_ = self.encoder_1(x_daily)
         enc_output_2, *_ = self.encoder_2(x_spatial)
         dec_output, *_ = self.decoder(enc_output_1, enc_output_2)
@@ -57,7 +63,7 @@ class PositionalEncoding(nn.Module):
         # TODO: make it with torch instead of numpy
 
         def get_position_angle_vec(position):
-            return torch.tensor([position / torch.pow(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)])
+            return torch.FloatTensor([position / math.pow(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)])
 
         sinusoid_table = torch.cat([get_position_angle_vec(pos_i) for pos_i in range(sequence_length)])
         sinusoid_table[:, 0::2] = torch.sin(sinusoid_table[:, 0::2])  # dim 2i
