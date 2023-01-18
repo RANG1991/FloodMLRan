@@ -27,10 +27,10 @@ class ERA5_Transformer(nn.Module):
         self.image_width = image_input_size[0]
         self.image_height = image_input_size[1]
         self.cnn = CNN(1, out_features_cnn, image_input_size)
-        self.encoder_1 = Encoder(in_features_dim=in_features, out_features_dim=out_features,
+        self.encoder_1 = Encoder(in_features_dim=in_features, out_features_dim=512,
                                  n_layers=6, d_k=512 // 8,
                                  d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
-        self.encoder_2 = Encoder(in_features_dim=out_features_cnn, out_features_dim=out_features,
+        self.encoder_2 = Encoder(in_features_dim=out_features_cnn, out_features_dim=512,
                                  n_layers=6, d_k=512 // 8,
                                  d_v=512 // 8, n_head=8, d_model=512, d_inner=512, sequence_length=sequence_length)
         self.decoder = DecoderCrossAttention(n_layers=6, d_k=512 // 8, d_v=512 // 8, n_head=8, d_model=512, d_inner=512)
@@ -65,11 +65,11 @@ class PositionalEncoding(nn.Module):
         def get_position_angle_vec(position):
             return torch.FloatTensor([position / math.pow(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)])
 
-        sinusoid_table = torch.cat([get_position_angle_vec(pos_i) for pos_i in range(sequence_length)])
+        sinusoid_table = torch.vstack([get_position_angle_vec(pos_i) for pos_i in range(sequence_length)])
         sinusoid_table[:, 0::2] = torch.sin(sinusoid_table[:, 0::2])  # dim 2i
         sinusoid_table[:, 1::2] = torch.cos(sinusoid_table[:, 1::2])  # dim 2i+1
 
-        return torch.FloatTensor(sinusoid_table).unsqueeze(0)
+        return sinusoid_table.unsqueeze(0)
 
     def forward(self, x):
         return x + self.pos_table[:, :x.size(1)].clone().detach()

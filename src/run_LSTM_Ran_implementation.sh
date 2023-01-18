@@ -2,10 +2,10 @@
 
 # Change number of tasks, amount of memory and time limit according to your needs
 
-#SBATCH -n 2
+#SBATCH -n 3
 #SBATCH --time=50:0:0
 #SBATCH --mem=80G
-#SBATCH --gres gpu
+#SBATCH --gres gpu:a100
 
 # Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
