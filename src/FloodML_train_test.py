@@ -530,7 +530,7 @@ def run_training_and_test(
         optim_name="SGD",
 ):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
-    train_dataloader = DataLoader(training_data, batch_size=32, shuffle=True)
+    train_dataloader = DataLoader(training_data, batch_size=32, shuffle=False)
     test_dataloader = DataLoader(test_data, batch_size=32, shuffle=False)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":

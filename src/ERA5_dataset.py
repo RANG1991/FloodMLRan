@@ -13,6 +13,9 @@ from tqdm import tqdm
 import sys
 import psutil
 import gc
+import pickle
+from os import listdir
+from os.path import isfile, join
 
 matplotlib.use("AGG")
 
@@ -149,7 +152,7 @@ class Dataset_ERA5(Dataset):
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max(max_width, max_length)
         self.max_length = max(max_width, max_length)
-        (self.dict_station_id_to_data,
+        (dict_station_id_to_data,
          x_means,
          x_stds,
          y_mean,
@@ -165,16 +168,16 @@ class Dataset_ERA5(Dataset):
         self.x_means = x_means if stage == "train" else self.x_means
         self.x_stds = x_stds if stage == "train" else self.x_stds
 
-        self.dataset_length, self.lookup_table = self.create_look_table()
+        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data)
         x_data_mean_dynamic = self.x_means[:(len(self.list_dynamic_attributes_names))]
         x_data_std_dynamic = self.x_stds[:(len(self.list_dynamic_attributes_names))]
 
         x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
-        for key in self.dict_station_id_to_data.keys():
-            current_x_data = self.dict_station_id_to_data[key][0]
-            current_y_data = self.dict_station_id_to_data[key][1]
+        for key in dict_station_id_to_data.keys():
+            current_x_data = dict_station_id_to_data[key][0]
+            current_y_data = dict_station_id_to_data[key][1]
 
             indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
 
@@ -192,7 +195,7 @@ class Dataset_ERA5(Dataset):
             current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
             if specific_model_type.lower() == "lstm":
-                self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
+                dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
             else:
                 current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                             + (len(self.list_static_attributes_names))):].reshape(-1,
@@ -203,7 +206,12 @@ class Dataset_ERA5(Dataset):
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
                 current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
-                self.dict_station_id_to_data[key] = (current_x_data_non_spatial, current_x_data_spatial, current_y_data)
+                del current_x_data
+                dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
+                                   "x_data_spatial": current_x_data_spatial}
+            with open(f"../data/ERA5/pickled_basins_data/{key}_{self.stage}.pkl", 'wb') as f:
+                pickle.dump(dict_curr_basin, f)
+        del dict_station_id_to_data
 
     @staticmethod
     def crop_or_pad_precip_spatial(X_data_single_basin, max_width, max_height):
@@ -243,10 +251,14 @@ class Dataset_ERA5(Dataset):
         if self.current_basin != next_basin:
             self.current_basin = next_basin
             self.inner_index_in_data_of_basin = 0
+            self.dict_curr_basin = {}
+            with open(f"../data/ERA5/pickled_basins_data/{self.current_basin}_{self.stage}.pkl", 'rb') as f:
+                pickle.load(self.dict_curr_basin, f)
         if self.specific_model_type.lower() == "lstm":
-            X_data, y_data = self.dict_station_id_to_data[self.current_basin]
+            X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
         else:
-            X_data, X_data_spatial, y_data = self.dict_station_id_to_data[self.current_basin]
+            X_data, X_data_spatial, y_data = \
+                self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
             X_data_spatial = X_data_spatial.reshape(-1, self.max_width * self.max_length)
             X_data = np.concatenate([X_data, X_data_spatial], axis=1)
             del X_data_spatial
@@ -497,13 +509,13 @@ class Dataset_ERA5(Dataset):
             ]
         return df_dynamic_data
 
-    def create_look_table(self):
+    def create_look_table(self, dict_station_id_to_data):
         self.inner_index_in_data_of_basin = 0
         lookup_table_basins = {}
         length_of_dataset = 0
-        self.current_basin = list(self.dict_station_id_to_data.keys())[0]
-        for key in self.dict_station_id_to_data.keys():
-            for _ in range(len(self.dict_station_id_to_data[key][0]) - self.sequence_length):
+        self.current_basin = list(dict_station_id_to_data.keys())[0]
+        for key in dict_station_id_to_data.keys():
+            for _ in range(len(dict_station_id_to_data[key][0]) - self.sequence_length):
                 lookup_table_basins[length_of_dataset] = key
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
@@ -579,7 +591,14 @@ class Dataset_ERA5(Dataset):
 
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
-        self.dataset_length, self.lookup_table = self.create_look_table()
+        dict_station_id_to_data = {}
+        basins_data_files = [f for f in listdir("../data/ERA5/pickled_basins_data") if
+                             isfile(join("../data/ERA5/pickled_basins_data", f))]
+        for file_name in basins_data_files:
+            with open(join("../data/ERA5/pickled_basins_data", file_name), "rb") as f:
+                pickled_data = pickle.load(f)
+                dict_station_id_to_data[str(file_name.replace(".pkl", "").replace(f"_{self.stage}"), "")] = pickled_data
+        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data)
 
     def get_x_stds(self):
         return self.x_stds
