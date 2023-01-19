@@ -577,8 +577,8 @@ def run_training_and_test(
     distributed_sampler_train = DistributedSampler(training_data)
     distributed_sampler_test = DistributedSampler(test_data)
     for i in range(num_epochs):
-        train_dataloader = DataLoader(training_data, batch_size=64, shuffle=False, sampler=distributed_sampler_train)
-        test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False, sampler=distributed_sampler_test)
+        train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, sampler=distributed_sampler_train)
+        test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, sampler=distributed_sampler_test)
         distributed_sampler_train.set_epoch(i)
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)

@@ -16,6 +16,8 @@ import gc
 import pickle
 from os import listdir
 from os.path import isfile, join
+import codecs
+import json
 
 matplotlib.use("AGG")
 
@@ -94,6 +96,8 @@ DISCHARGE_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
 
 STATIC_DATA_FOLDER = "../data/ERA5/Caravan/attributes"
 
+JSON_FILE_MEAN_STD_COUNT = "../data/ERA5/pickled_basins_data/mean_std_count_of_data.json"
+
 
 class Dataset_ERA5(Dataset):
     def __init__(
@@ -164,6 +168,9 @@ class Dataset_ERA5(Dataset):
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_length=self.max_length)
 
+        dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
+        dict_station_id_to_data.update(dict_station_id_to_data_from_file)
+
         self.all_station_ids = list(dict_station_id_to_data.keys())
 
         self.y_mean = y_mean if stage == "train" else self.y_mean
@@ -212,8 +219,9 @@ class Dataset_ERA5(Dataset):
                 del current_x_data
                 dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                    "x_data_spatial": current_x_data_spatial}
-            with open(f"../data/ERA5/pickled_basins_data/{key}_{self.stage}.pkl", 'wb') as f:
-                pickle.dump(dict_curr_basin, f)
+            if not os.path.exists(f"../data/ERA5/pickled_basins_data/{key}_{self.stage}.pkl"):
+                with open(f"../data/ERA5/pickled_basins_data/{key}_{self.stage}.pkl", 'wb') as f:
+                    pickle.dump(dict_curr_basin, f)
         del dict_station_id_to_data
 
     @staticmethod
@@ -299,13 +307,24 @@ class Dataset_ERA5(Dataset):
         return df_attr, df_attr["gauge_id"].values.tolist()
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length):
-        cumm_m_x = 0
-        cumm_s_x = 0
-        min_spatial = -1
-        max_spatial = -1
-        cumm_m_y = 0
-        cumm_s_y = 0
-        count_of_samples = 0
+        if os.path.exists(JSON_FILE_MEAN_STD_COUNT):
+            obj_text = codecs.open(JSON_FILE_MEAN_STD_COUNT, 'r', encoding='utf-8').read()
+            json_obj = json.loads(obj_text)
+            cumm_m_x = np.array(json_obj["cumm_m_x"])
+            cumm_s_x = np.array(json_obj["cumm_s_x"])
+            min_spatial = float(json_obj["min_spatial"])
+            max_spatial = float(json_obj["max_spatial"])
+            cumm_m_y = float(json_obj["cumm_m_y"])
+            cumm_s_y = float(json_obj["cumm_s_y"])
+            count_of_samples = int(json_obj["count_of_samples"])
+        else:
+            cumm_m_x = 0
+            cumm_s_x = 0
+            min_spatial = -1
+            max_spatial = -1
+            cumm_m_y = 0
+            cumm_s_y = 0
+            count_of_samples = 0
         dict_station_id_to_data = {}
         pbar = tqdm(all_stations_ids, file=sys.stdout)
         pbar.set_description(f"processing basins - {self.stage}")
@@ -345,8 +364,8 @@ class Dataset_ERA5(Dataset):
                 cumm_s_x = cumm_s_x + ((X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
                         X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
                 prev_mean_y = cumm_m_y
-                cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0)
-                cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0)
+                cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0).item()
+                cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
 
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn" or
@@ -363,16 +382,29 @@ class Dataset_ERA5(Dataset):
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data}
 
             else:
-                print(f"station with id: {station_id} has no valid file")
+                print(f"station with id: {station_id} has no valid file or the file already exists")
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
-        std_y = np.sqrt(cumm_s_y / (count_of_samples - 1))
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y.item(), std_y.item(), min_spatial, max_spatial
+        std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
+        with codecs.open(JSON_FILE_MEAN_STD_COUNT, 'w', encoding='utf-8') as json_file:
+            json_obj = {
+                "cumm_m_x": cumm_m_x.tolist(),
+                "cumm_s_x": cumm_s_x.tolist(),
+                "min_spatial": min_spatial,
+                "max_spatial": max_spatial,
+                "cumm_m_y": cumm_m_y,
+                "cumm_s_y": cumm_s_y,
+                "count_of_samples": count_of_samples
+            }
+            json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, min_spatial, max_spatial
 
     def check_is_valid_station_id(self, station_id):
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
-                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc"))
+                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
+                and (not os.path.exists(f"../data/ERA5/pickled_basins_data/{station_id}_{self.stage}.pkl")
+                     or (not os.path.exists(JSON_FILE_MEAN_STD_COUNT))))
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (
@@ -593,8 +625,7 @@ class Dataset_ERA5(Dataset):
         print(f"max height is: {max_height}")
         return int(max_width), int(max_height)
 
-    def set_sequence_length(self, sequence_length):
-        self.sequence_length = sequence_length
+    def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
         for basin_id in self.all_station_ids:
             file_name = join("../data/ERA5/pickled_basins_data", f"{basin_id}_{self.stage}.pkl")
@@ -602,6 +633,11 @@ class Dataset_ERA5(Dataset):
                 with open(file_name, "rb") as f:
                     pickled_data = pickle.load(f)
                     dict_station_id_to_data[basin_id] = pickled_data
+        return dict_station_id_to_data
+
+    def set_sequence_length(self, sequence_length):
+        self.sequence_length = sequence_length
+        dict_station_id_to_data = self.load_basins_dicts_from_pickles()
         self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data)
 
     def get_x_stds(self):
