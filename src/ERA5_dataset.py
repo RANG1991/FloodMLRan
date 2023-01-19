@@ -96,7 +96,17 @@ DISCHARGE_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
 
 STATIC_DATA_FOLDER = "../data/ERA5/Caravan/attributes"
 
-JSON_FILE_MEAN_STD_COUNT = "../data/ERA5/pickled_basins_data/mean_std_count_of_data.json"
+FOLDER_WITH_BASINS_PICKLES = "../data/ERA5/pickled_basins_data"
+
+JSON_FILE_MEAN_STD_COUNT = f"{FOLDER_WITH_BASINS_PICKLES}/mean_std_count_of_data.json"
+
+X_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_mean_dict.pkl"
+
+X_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_std_dict.pkl"
+
+Y_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_mean_dict.pkl"
+
+Y_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_std_dict.pkl"
 
 
 class Dataset_ERA5(Dataset):
@@ -124,12 +134,12 @@ class Dataset_ERA5(Dataset):
             use_Caravan_dataset=True,
 
     ):
-        self.x_mean_dict = {}
-        self.x_std_dict = {}
+        self.x_mean_dict = self.read_pickle_if_exists(X_MEAN_DICT_FILE)
+        self.x_std_dict = self.read_pickle_if_exists(X_STD_DICT_FILE)
         self.x_means = x_means if x_means is not None else None
         self.x_stds = x_stds if x_stds is not None else None
-        self.y_mean_dict = {}
-        self.y_std_dict = {}
+        self.y_mean_dict = self.read_pickle_if_exists(Y_MEAN_DICT_FILE)
+        self.y_std_dict = self.read_pickle_if_exists(Y_STD_DICT_FILE)
         self.y_mean = y_mean if y_mean is not None else None
         self.y_std = y_std if y_std is not None else None
         self.sequence_length = sequence_length
@@ -167,6 +177,11 @@ class Dataset_ERA5(Dataset):
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_length=self.max_length)
+
+        self.save_pickle_if_not_exists(X_MEAN_DICT_FILE, self.x_mean_dict)
+        self.save_pickle_if_not_exists(X_STD_DICT_FILE, self.x_std_dict)
+        self.save_pickle_if_not_exists(Y_MEAN_DICT_FILE, self.y_mean_dict)
+        self.save_pickle_if_not_exists(Y_STD_DICT_FILE, self.y_std_dict)
 
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
         dict_station_id_to_data.update(dict_station_id_to_data_from_file)
@@ -219,10 +234,24 @@ class Dataset_ERA5(Dataset):
                 del current_x_data
                 dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                    "x_data_spatial": current_x_data_spatial}
-            if not os.path.exists(f"../data/ERA5/pickled_basins_data/{key}_{self.stage}.pkl"):
-                with open(f"../data/ERA5/pickled_basins_data/{key}_{self.stage}.pkl", 'wb') as f:
+            if not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl"):
+                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl", 'wb') as f:
                     pickle.dump(dict_curr_basin, f)
         del dict_station_id_to_data
+
+    @staticmethod
+    def read_pickle_if_exists(pickle_file_name):
+        dict_obj = {}
+        if os.path.exists(pickle_file_name):
+            with open(pickle_file_name, "rb") as f:
+                dict_obj = pickle.load(f)
+        return dict_obj
+
+    @staticmethod
+    def save_pickle_if_not_exists(pickle_file_name, obj_to_save, force=False):
+        if not os.path.exists(pickle_file_name) or force:
+            with open(pickle_file_name, "wb") as f:
+                pickle.dump(obj_to_save, f)
 
     @staticmethod
     def crop_or_pad_precip_spatial(X_data_single_basin, max_width, max_height):
@@ -263,7 +292,7 @@ class Dataset_ERA5(Dataset):
             self.current_basin = next_basin
             self.inner_index_in_data_of_basin = 0
             self.dict_curr_basin = {}
-            with open(f"../data/ERA5/pickled_basins_data/{self.current_basin}_{self.stage}.pkl", 'rb') as f:
+            with open(f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}.pkl", 'rb') as f:
                 self.dict_curr_basin = pickle.load(f)
         if self.specific_model_type.lower() == "lstm":
             X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
@@ -403,7 +432,7 @@ class Dataset_ERA5(Dataset):
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
-                and (not os.path.exists(f"../data/ERA5/pickled_basins_data/{station_id}_{self.stage}.pkl")
+                and (not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}.pkl")
                      or (not os.path.exists(JSON_FILE_MEAN_STD_COUNT))))
 
     def read_single_station_file_spatial(self, station_id):
@@ -628,7 +657,7 @@ class Dataset_ERA5(Dataset):
     def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
         for basin_id in self.all_station_ids:
-            file_name = join("../data/ERA5/pickled_basins_data", f"{basin_id}_{self.stage}.pkl")
+            file_name = join(f"{FOLDER_WITH_BASINS_PICKLES}", f"{basin_id}_{self.stage}.pkl")
             if os.path.exists(file_name):
                 with open(file_name, "rb") as f:
                     pickled_data = pickle.load(f)
