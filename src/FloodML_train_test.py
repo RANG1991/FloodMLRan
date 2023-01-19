@@ -593,9 +593,7 @@ def run_training_and_test(
                     for key in preds_obs_dict_per_basin:
                         if key not in preds_obs_dict_per_basin_all_ranks:
                             preds_obs_dict_per_basin_all_ranks[key] = []
-                        preds_obs_dict_per_basin_all_ranks[key].append(preds_obs_dict_per_basin[key])
-                for key, values in preds_obs_dict_per_basin_all_ranks.items():
-                    preds_obs_dict_per_basin_all_ranks[key] = mean(values)
+                        preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
                 nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_list = nse_list_epoch[:]
             dist.barrier()

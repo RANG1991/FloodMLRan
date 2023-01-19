@@ -164,6 +164,8 @@ class Dataset_ERA5(Dataset):
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_length=self.max_length)
 
+        self.all_station_ids = list(dict_station_id_to_data.keys())
+
         self.y_mean = y_mean if stage == "train" else self.y_mean
         self.y_std = y_std if stage == "train" else self.y_std
         self.x_means = x_means if stage == "train" else self.x_means
