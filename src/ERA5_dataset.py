@@ -9,6 +9,10 @@ from datetime import datetime
 import matplotlib
 import os
 import math
+from tqdm import tqdm
+import sys
+import psutil
+import gc
 
 matplotlib.use("AGG")
 
@@ -287,31 +291,43 @@ class Dataset_ERA5(Dataset):
         cumm_s_y = 0
         count_of_samples = 0
         dict_station_id_to_data = {}
-        for station_id in all_stations_ids:
+        pbar = tqdm(all_stations_ids, file=sys.stdout)
+        pbar.set_description(f"processing basins - {self.stage}")
+        for station_id in pbar:
+            print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
             if self.check_is_valid_station_id(station_id):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
                     X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
-                    X_data, _ = self.read_single_station_file(station_id)
-                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data) == 0:
+                    X_data_non_spatial, _ = self.read_single_station_file(station_id)
+                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
+                        del X_data_spatial
+                        del X_data_non_spatial
+                        del y_data
                         continue
                     X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_width, max_length)
-                    if X_data.shape[0] != X_data_spatial.shape[0]:
+                    if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
+                        del X_data_spatial
+                        del X_data_non_spatial
+                        del y_data
                         continue
                 else:
-                    X_data, y_data = self.read_single_station_file(station_id)
-                    if len(X_data) == 0 or len(y_data) == 0:
+                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
+                    if len(X_data_non_spatial) == 0 or len(y_data) == 0:
+                        del X_data_non_spatial
+                        del y_data
                         continue
 
                 prev_mean_x = cumm_m_x
                 count_of_samples = count_of_samples + (len(y_data))
                 cumm_m_x = cumm_m_x + (
-                        (X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) / count_of_samples).sum(
+                        (X_data_non_spatial[:,
+                         :len(self.list_dynamic_attributes_names)] - cumm_m_x) / count_of_samples).sum(
                     axis=0)
-                cumm_s_x = cumm_s_x + ((X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
-                        X_data[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
+                cumm_s_x = cumm_s_x + ((X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
+                        X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
                 prev_mean_y = cumm_m_y
                 cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0)
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0)
@@ -319,18 +335,20 @@ class Dataset_ERA5(Dataset):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
-                    X_data_spatial = np.array(X_data_spatial.reshape(X_data.shape[0], max_length * max_width),
-                                              dtype=np.float64)
+                    X_data_spatial = np.array(
+                        X_data_spatial.reshape(X_data_non_spatial.shape[0], max_length * max_width),
+                        dtype=np.float64)
                     max_spatial = X_data_spatial.max().item() if (
                             X_data_spatial.max().item() > max_spatial or max_spatial == -1) else max_spatial
                     min_spatial = X_data_spatial.min().item() if (
                             X_data_spatial.min().item() < min_spatial or min_spatial == -1) else min_spatial
-                    X_data = np.concatenate([X_data, X_data_spatial], axis=1)
-
-                dict_station_id_to_data[station_id] = (X_data, y_data)
+                    X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
+                    del X_data_spatial
+                dict_station_id_to_data[station_id] = (X_data_non_spatial, y_data)
 
             else:
                 print(f"station with id: {station_id} has no valid file")
+        gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1))
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y.item(), std_y.item(), min_spatial, max_spatial

@@ -28,6 +28,8 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 from functools import reduce
+import multiprocessing
+import psutil
 
 matplotlib.use("AGG")
 
@@ -339,6 +341,7 @@ def prepare_datasets(
                 dict_boxplots_data,
                 plot_title=f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}",
             )
+    print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     return training_data, test_data
 
 
@@ -396,7 +399,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
         nse_list_single_pass = []
         training_loss_list_single_pass = []
         mp.spawn(run_training_and_test,
-                 args=(3,
+                 args=(torch.cuda.device_count(),
                        learning_rate,
                        sequence_length,
                        num_hidden_units,
@@ -411,7 +414,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
                        training_loss_list_single_pass,
                        1,
                        ),
-                 nprocs=3,
+                 nprocs=torch.cuda.device_count(),
                  join=True)
         training_loss_list[i] = training_loss_list_single_pass[0][:]
         nse_list_single_cross_val.extend(nse_list_single_pass[0][:])
@@ -472,7 +475,7 @@ def run_single_parameters_check_with_val_on_years(
     nse_list_single_pass = []
     training_loss_list_single_pass = []
     mp.spawn(run_training_and_test,
-             args=(3,
+             args=(torch.cuda.device_count(),
                    learning_rate,
                    sequence_length,
                    num_hidden_units,
@@ -487,7 +490,7 @@ def run_single_parameters_check_with_val_on_years(
                    training_loss_list_single_pass,
                    1,
                    optim_name),
-             nprocs=3,
+             nprocs=torch.cuda.device_count(),
              join=True)
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -526,12 +529,8 @@ def run_training_and_test(
         calc_nse_interval=1,
         optim_name="SGD",
 ):
-    train_dataloader = DataLoader(
-        training_data, batch_size=64, shuffle=True,
-    )
-    test_dataloader = DataLoader(
-        test_data, batch_size=512, shuffle=False,
-    )
+    train_dataloader = DataLoader(training_data, batch_size=32, shuffle=True, num_workers=1)
+    test_dataloader = DataLoader(test_data, batch_size=32, shuffle=False, num_workers=1)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
         model = ERA5_Transformer(sequence_length=sequence_length,
@@ -564,6 +563,7 @@ def run_training_and_test(
     print(f"running with optimizer: {optim_name}")
     dict_preds_dicts_ranks = {}
     setup(rank, world_size)
+    print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     model.to(device=rank)
     # create model and move it to GPU with id rank
     ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=True)
@@ -615,7 +615,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:10]
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):
