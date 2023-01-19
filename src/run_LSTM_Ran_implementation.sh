@@ -5,7 +5,7 @@
 #SBATCH -n 3
 #SBATCH --time=50:0:0
 #SBATCH --mem=80G
-#SBATCH --gres gpu:a100-1-10
+#SBATCH --gres gpu:a30:3
 
 # Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
