@@ -136,6 +136,7 @@ class Dataset_ERA5(Dataset):
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
         self.train_end_date = train_end_date
+        self.all_station_ids = all_stations_ids
         self.validation_start_date = validation_start_date
         self.validation_end_date = validation_end_date
         self.test_start_date = test_start_date
@@ -176,8 +177,8 @@ class Dataset_ERA5(Dataset):
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
         for key in dict_station_id_to_data.keys():
-            current_x_data = dict_station_id_to_data[key][0]
-            current_y_data = dict_station_id_to_data[key][1]
+            current_x_data = dict_station_id_to_data[key]["x_data"]
+            current_y_data = dict_station_id_to_data[key]["y_data"]
 
             indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
 
@@ -253,7 +254,7 @@ class Dataset_ERA5(Dataset):
             self.inner_index_in_data_of_basin = 0
             self.dict_curr_basin = {}
             with open(f"../data/ERA5/pickled_basins_data/{self.current_basin}_{self.stage}.pkl", 'rb') as f:
-                pickle.load(self.dict_curr_basin, f)
+                self.dict_curr_basin = pickle.load(f)
         if self.specific_model_type.lower() == "lstm":
             X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
         else:
@@ -357,7 +358,7 @@ class Dataset_ERA5(Dataset):
                             X_data_spatial.min().item() < min_spatial or min_spatial == -1) else min_spatial
                     X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
                     del X_data_spatial
-                dict_station_id_to_data[station_id] = (X_data_non_spatial, y_data)
+                dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data}
 
             else:
                 print(f"station with id: {station_id} has no valid file")
@@ -514,8 +515,9 @@ class Dataset_ERA5(Dataset):
         lookup_table_basins = {}
         length_of_dataset = 0
         self.current_basin = list(dict_station_id_to_data.keys())[0]
+        self.dict_curr_basin = dict_station_id_to_data[self.current_basin]
         for key in dict_station_id_to_data.keys():
-            for _ in range(len(dict_station_id_to_data[key][0]) - self.sequence_length):
+            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
                 lookup_table_basins[length_of_dataset] = key
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
@@ -592,12 +594,12 @@ class Dataset_ERA5(Dataset):
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
         dict_station_id_to_data = {}
-        basins_data_files = [f for f in listdir("../data/ERA5/pickled_basins_data") if
-                             isfile(join("../data/ERA5/pickled_basins_data", f))]
-        for file_name in basins_data_files:
-            with open(join("../data/ERA5/pickled_basins_data", file_name), "rb") as f:
-                pickled_data = pickle.load(f)
-                dict_station_id_to_data[str(file_name.replace(".pkl", "").replace(f"_{self.stage}"), "")] = pickled_data
+        for basin_id in self.all_station_ids:
+            file_name = join("../data/ERA5/pickled_basins_data", f"{basin_id}_{self.stage}.pkl")
+            if os.path.exists(file_name):
+                with open(file_name, "rb") as f:
+                    pickled_data = pickle.load(f)
+                    dict_station_id_to_data[basin_id] = pickled_data
         self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data)
 
     def get_x_stds(self):

@@ -25,6 +25,7 @@ from pathlib import Path
 import random
 import torch
 import torch.distributed as dist
+from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 from functools import reduce
@@ -530,8 +531,6 @@ def run_training_and_test(
         optim_name="SGD",
 ):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
-    train_dataloader = DataLoader(training_data, batch_size=32, shuffle=False)
-    test_dataloader = DataLoader(test_data, batch_size=32, shuffle=False)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
         model = ERA5_Transformer(sequence_length=sequence_length,
@@ -573,11 +572,17 @@ def run_training_and_test(
         optimizer = torch.optim.Adam(ddp_model.parameters(), lr=learning_rate)
     loss_list_training = []
     nse_list = []
+    distributed_sampler_train = DistributedSampler(training_data)
+    distributed_sampler_test = DistributedSampler(test_data)
     for i in range(num_epochs):
+        train_dataloader = DataLoader(training_data, batch_size=64, shuffle=False, sampler=distributed_sampler_train)
+        test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False, sampler=distributed_sampler_test)
+        distributed_sampler_train.set_epoch(i)
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
+            distributed_sampler_test.set_epoch(i)
             preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
             dict_preds_dicts_ranks[rank] = preds_obs_dict_per_basin
             dist.barrier()
@@ -615,7 +620,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:10]
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):
