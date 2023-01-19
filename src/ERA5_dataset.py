@@ -249,6 +249,7 @@ class Dataset_ERA5(Dataset):
             X_data, X_data_spatial, y_data = self.dict_station_id_to_data[self.current_basin]
             X_data_spatial = X_data_spatial.reshape(-1, self.max_width * self.max_length)
             X_data = np.concatenate([X_data, X_data_spatial], axis=1)
+            del X_data_spatial
         X_data_tensor = torch.tensor(
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)

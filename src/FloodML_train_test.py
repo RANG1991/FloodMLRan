@@ -529,8 +529,9 @@ def run_training_and_test(
         calc_nse_interval=1,
         optim_name="SGD",
 ):
-    train_dataloader = DataLoader(training_data, batch_size=32, shuffle=True, num_workers=1)
-    test_dataloader = DataLoader(test_data, batch_size=32, shuffle=False, num_workers=1)
+    print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
+    train_dataloader = DataLoader(training_data, batch_size=32, shuffle=True)
+    test_dataloader = DataLoader(test_data, batch_size=32, shuffle=False)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
         model = ERA5_Transformer(sequence_length=sequence_length,
@@ -563,7 +564,6 @@ def run_training_and_test(
     print(f"running with optimizer: {optim_name}")
     dict_preds_dicts_ranks = {}
     setup(rank, world_size)
-    print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     model.to(device=rank)
     # create model and move it to GPU with id rank
     ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=True)
