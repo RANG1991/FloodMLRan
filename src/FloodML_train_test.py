@@ -41,7 +41,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+    os.environ['MASTER_PORT'] = '10005'
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
@@ -561,11 +561,13 @@ def run_training_and_test(
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
-    dict_preds_dicts_ranks = {}
+    list_preds_dicts_ranks = []
+    if torch.cuda.is_available():
+        torch.cuda.set_device(rank)
     setup(rank, world_size)
     model.to(device=rank)
     # create model and move it to GPU with id rank
-    ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=True)
+    ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=False)
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(ddp_model.parameters(), lr=learning_rate, momentum=0.9)
     else:
@@ -584,15 +586,19 @@ def run_training_and_test(
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             distributed_sampler_test.set_epoch(i)
             preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
-            dict_preds_dicts_ranks[rank] = preds_obs_dict_per_basin
-            dist.barrier()
+            list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
             if rank == 0:
-                output_dicts_list = [None for _ in range(world_size)]
-                dist.all_gather_object(output_dicts_list,
-                                       [dict_preds_dicts_ranks[r] for r in dict_preds_dicts_ranks.keys()])
-                preds_obs_dict_per_basin_all_ranks = reduce(lambda a, b: dict(a, **b), output_dicts_list)
+                preds_obs_dict_per_basin_all_ranks = {}
+                for preds_obs_dict_per_basin in list_preds_dicts_ranks:
+                    for key in preds_obs_dict_per_basin:
+                        if key not in preds_obs_dict_per_basin_all_ranks:
+                            preds_obs_dict_per_basin_all_ranks[key] = []
+                        preds_obs_dict_per_basin_all_ranks[key].append(preds_obs_dict_per_basin[key])
+                for key, values in preds_obs_dict_per_basin_all_ranks.items():
+                    preds_obs_dict_per_basin_all_ranks[key] = mean(values)
                 nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_list = nse_list_epoch[:]
+            dist.barrier()
     cleanup()
     if rank == 0:
         if len(nse_list) > 0:
@@ -620,7 +626,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:10]
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):
