@@ -178,10 +178,10 @@ class Dataset_ERA5(Dataset):
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_length=self.max_length)
 
-        self.save_pickle_if_not_exists(X_MEAN_DICT_FILE, self.x_mean_dict)
-        self.save_pickle_if_not_exists(X_STD_DICT_FILE, self.x_std_dict)
-        self.save_pickle_if_not_exists(Y_MEAN_DICT_FILE, self.y_mean_dict)
-        self.save_pickle_if_not_exists(Y_STD_DICT_FILE, self.y_std_dict)
+        self.save_pickle_if_not_exists(X_MEAN_DICT_FILE, self.x_mean_dict, force=True)
+        self.save_pickle_if_not_exists(X_STD_DICT_FILE, self.x_std_dict, force=True)
+        self.save_pickle_if_not_exists(Y_MEAN_DICT_FILE, self.y_mean_dict, force=True)
+        self.save_pickle_if_not_exists(Y_STD_DICT_FILE, self.y_std_dict, force=True)
 
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
         dict_station_id_to_data.update(dict_station_id_to_data_from_file)
@@ -433,7 +433,12 @@ class Dataset_ERA5(Dataset):
                 and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
                 and (not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}.pkl")
-                     or (not os.path.exists(JSON_FILE_MEAN_STD_COUNT))))
+                     or any([not os.path.exists(JSON_FILE_MEAN_STD_COUNT),
+                             station_id not in self.x_mean_dict,
+                             station_id not in self.x_std_dict,
+                             station_id not in self.y_mean_dict,
+                             station_id not in self.y_std_dict,
+                             ])))
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (

@@ -400,7 +400,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
         nse_list_single_pass = []
         training_loss_list_single_pass = []
         mp.spawn(run_training_and_test,
-                 args=(torch.cuda.device_count(),
+                 args=(1,
                        learning_rate,
                        sequence_length,
                        num_hidden_units,
@@ -415,7 +415,7 @@ def run_single_parameters_check_with_cross_val_on_basins(
                        training_loss_list_single_pass,
                        1,
                        ),
-                 nprocs=torch.cuda.device_count(),
+                 nprocs=1,
                  join=True)
         training_loss_list[i] = training_loss_list_single_pass[0][:]
         nse_list_single_cross_val.extend(nse_list_single_pass[0][:])
@@ -476,7 +476,7 @@ def run_single_parameters_check_with_val_on_years(
     nse_list_single_pass = []
     training_loss_list_single_pass = []
     mp.spawn(run_training_and_test,
-             args=(torch.cuda.device_count(),
+             args=(1,
                    learning_rate,
                    sequence_length,
                    num_hidden_units,
@@ -491,7 +491,7 @@ def run_single_parameters_check_with_val_on_years(
                    training_loss_list_single_pass,
                    1,
                    optim_name),
-             nprocs=torch.cuda.device_count(),
+             nprocs=1,
              join=True)
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
