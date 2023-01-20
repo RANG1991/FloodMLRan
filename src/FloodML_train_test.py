@@ -41,8 +41,8 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '10005'
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+    os.environ['MASTER_PORT'] = '8888'
+    dist.init_process_group(backend="nccl", rank=rank, world_size=world_size, init_method='env://')
 
 
 def cleanup():
@@ -385,7 +385,7 @@ def run_single_parameters_check_with_val_on_years(
     nse_list_single_pass = []
     training_loss_list_single_pass = []
     mp.spawn(run_training_and_test,
-             args=(1,
+             args=(torch.cuda.device_count(),
                    learning_rate,
                    sequence_length,
                    num_hidden_units,
@@ -400,7 +400,7 @@ def run_single_parameters_check_with_val_on_years(
                    training_loss_list_single_pass,
                    1,
                    optim_name),
-             nprocs=1,
+             nprocs=torch.cuda.device_count(),
              join=True)
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -419,6 +419,18 @@ def run_single_parameters_check_with_val_on_years(
     plt.show()
     plt.close()
     return nse_list_single_pass[0][:]
+
+
+class DistributedSamplerNoDuplicate(DistributedSampler):
+    """ A distributed sampler that doesn't add duplicates. Arguments are the same as DistributedSampler """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.drop_last and len(self.dataset) % self.num_replicas != 0:
+            # some ranks may have less samples, that's fine
+            if rank >= len(self.dataset) % self.num_replicas:
+                self.num_samples -= 1
+            self.total_size = len(self.dataset)
 
 
 def run_training_and_test(
@@ -473,29 +485,25 @@ def run_training_and_test(
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
     list_preds_dicts_ranks = []
-    if torch.cuda.is_available():
-        torch.cuda.set_device(rank)
     setup(rank, world_size)
-    distributed_sampler_train = DistributedSampler(training_data)
-    distributed_sampler_test = DistributedSampler(test_data)
-    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, sampler=distributed_sampler_train)
-    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, sampler=distributed_sampler_test)
+    torch.cuda.set_device(rank)
     model.to(device=rank)
-    # create model and move it to GPU with id rank
-    ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=False)
     if optim_name.lower() == "sgd":
-        optimizer = torch.optim.SGD(ddp_model.parameters(), lr=learning_rate, momentum=0.9)
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
-        optimizer = torch.optim.Adam(ddp_model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=False)
+    distributed_sampler_train = DistributedSampler(training_data, num_replicas=world_size, rank=rank)
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False,
+                                  sampler=distributed_sampler_train, pin_memory=True)
+    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False)
     loss_list_training = []
     nse_list = []
     for i in range(num_epochs):
-        train_dataloader.sampler.set_epoch(i)
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            test_dataloader.sampler.set_epoch(i)
             preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
             list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
             if rank == 0:
@@ -536,7 +544,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:10]
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):
