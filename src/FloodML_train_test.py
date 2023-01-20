@@ -73,7 +73,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # calculate gradients
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
@@ -399,14 +399,18 @@ def run_single_parameters_check_with_cross_val_on_basins(
         test_data.set_sequence_length(sequence_length)
         nse_list_single_pass = []
         training_loss_list_single_pass = []
+        distributed_sampler_train = DistributedSampler(training_data)
+        distributed_sampler_test = DistributedSampler(test_data)
+        train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, sampler=distributed_sampler_train)
+        test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, sampler=distributed_sampler_test)
         mp.spawn(run_training_and_test,
                  args=(1,
                        learning_rate,
                        sequence_length,
                        num_hidden_units,
                        num_epochs,
-                       training_data,
-                       test_data,
+                       train_dataloader,
+                       test_dataloader,
                        dropout_rate,
                        static_attributes,
                        dynamic_attributes,
@@ -534,13 +538,14 @@ def run_training_and_test(
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
         model = ERA5_Transformer(sequence_length=sequence_length,
-                                 image_input_size=(training_data.max_length, training_data.max_width),
+                                 image_input_size=(training_data.max_length,
+                                                   training_data.max_width),
                                  in_features=len(dynamic_attributes_names) + len(static_attributes_names),
                                  out_features_cnn=64)
     elif model_name.lower() == "conv_lstm":
         model = Conv_LSTM(
             num_features_non_spatial=len(dynamic_attributes_names) + len(static_attributes_names),
-            image_input_size=(training_data.max_length, training_data.max_width),
+            image_input_size=(training_data.dataset.max_length, training_data.max_width),
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
             in_channels_cnn=1
@@ -557,7 +562,8 @@ def run_training_and_test(
                          num_channels=1,
                          dropout_rate=dropout,
                          num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
-                         image_input_size=(training_data.max_length, training_data.max_width))
+                         image_input_size=(
+                             training_data.dataset.max_length, training_data.max_width))
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -565,6 +571,10 @@ def run_training_and_test(
     if torch.cuda.is_available():
         torch.cuda.set_device(rank)
     setup(rank, world_size)
+    distributed_sampler_train = DistributedSampler(training_data)
+    distributed_sampler_test = DistributedSampler(test_data)
+    train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, sampler=distributed_sampler_train)
+    test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, sampler=distributed_sampler_test)
     model.to(device=rank)
     # create model and move it to GPU with id rank
     ddp_model = DDP(model, device_ids=[rank], find_unused_parameters=False)
@@ -574,17 +584,13 @@ def run_training_and_test(
         optimizer = torch.optim.Adam(ddp_model.parameters(), lr=learning_rate)
     loss_list_training = []
     nse_list = []
-    distributed_sampler_train = DistributedSampler(training_data)
-    distributed_sampler_test = DistributedSampler(test_data)
     for i in range(num_epochs):
-        train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, sampler=distributed_sampler_train)
-        test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, sampler=distributed_sampler_test)
-        distributed_sampler_train.set_epoch(i)
+        train_dataloader.sampler.set_epoch(i)
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
         loss_list_training.append(loss_on_training_epoch)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            distributed_sampler_test.set_epoch(i)
+            test_dataloader.sampler.set_epoch(i)
             preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
             list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
             if rank == 0:
@@ -594,6 +600,7 @@ def run_training_and_test(
                         if key not in preds_obs_dict_per_basin_all_ranks:
                             preds_obs_dict_per_basin_all_ranks[key] = []
                         preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
+                list_preds_dicts_ranks = []
                 nse_list_epoch = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_list = nse_list_epoch[:]
             dist.barrier()
@@ -624,7 +631,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:10]
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):
