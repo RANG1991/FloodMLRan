@@ -385,7 +385,7 @@ def run_single_parameters_check_with_val_on_years(
     nse_list_single_pass = []
     training_loss_list_single_pass = []
     mp.spawn(run_training_and_test,
-             args=(1,
+             args=(torch.cuda.device_count(),
                    learning_rate,
                    sequence_length,
                    num_hidden_units,
@@ -400,7 +400,7 @@ def run_single_parameters_check_with_val_on_years(
                    training_loss_list_single_pass,
                    1,
                    optim_name),
-             nprocs=1,
+             nprocs=torch.cuda.device_count(),
              join=True)
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -428,7 +428,7 @@ class DistributedSamplerNoDuplicate(DistributedSampler):
         super().__init__(*args, **kwargs)
         if not self.drop_last and len(self.dataset) % self.num_replicas != 0:
             # some ranks may have less samples, that's fine
-            if rank >= len(self.dataset) % self.num_replicas:
+            if self.rank >= len(self.dataset) % self.num_replicas:
                 self.num_samples -= 1
             self.total_size = len(self.dataset)
 
@@ -480,7 +480,7 @@ def run_training_and_test(
                          dropout_rate=dropout,
                          num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
                          image_input_size=(
-                             training_data.dataset.max_length, training_data.max_width))
+                             training_data.max_length, training_data.max_width))
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -497,8 +497,8 @@ def run_training_and_test(
                                                               shuffle=False)
     distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
                                                              shuffle=False)
-    train_dataloader = DataLoader(training_data, batch_size=265, sampler=distributed_sampler_train, pin_memory=True)
-    test_dataloader = DataLoader(test_data, batch_size=265, sampler=distributed_sampler_test, pin_memory=True)
+    train_dataloader = DataLoader(training_data, batch_size=128, sampler=distributed_sampler_train, pin_memory=True)
+    test_dataloader = DataLoader(test_data, batch_size=128, sampler=distributed_sampler_test, pin_memory=True)
     loss_list_training = []
     nse_list = []
     for i in range(num_epochs):
