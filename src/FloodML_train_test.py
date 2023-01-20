@@ -493,9 +493,12 @@ def run_training_and_test(
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     ddp_model = DDP(model, device_ids=[rank])
-    distributed_sampler_train = DistributedSampler(training_data, num_replicas=world_size, rank=rank)
-    train_dataloader = DataLoader(training_data, batch_size=1024, shuffle=False, sampler=distributed_sampler_train)
-    test_dataloader = DataLoader(test_data, batch_size=1024, shuffle=False)
+    distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, num_replicas=world_size, rank=rank,
+                                                              shuffle=False)
+    distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
+                                                             shuffle=False)
+    train_dataloader = DataLoader(training_data, batch_size=265, sampler=distributed_sampler_train, pin_memory=True)
+    test_dataloader = DataLoader(test_data, batch_size=265, sampler=distributed_sampler_test, pin_memory=True)
     loss_list_training = []
     nse_list = []
     for i in range(num_epochs):
