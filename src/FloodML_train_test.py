@@ -73,7 +73,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # calculate gradients
         loss.backward()
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
@@ -344,101 +344,6 @@ def prepare_datasets(
             )
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     return training_data, test_data
-
-
-def run_single_parameters_check_with_cross_val_on_basins(
-        all_stations_list,
-        sequence_length,
-        learning_rate,
-        num_hidden_units,
-        num_epochs,
-        dropout_rate,
-        static_attributes,
-        dynamic_attributes,
-        static_attributes_names,
-        dynamic_attributes_names,
-        discharge_str,
-        dynamic_data_folder_train,
-        static_data_folder,
-        discharge_data_folder,
-        dataset_to_use,
-        model_name
-):
-    split_stations_list = [
-        all_stations_list[
-        i: (i + math.ceil(len(all_stations_list) / K_VALUE_CROSS_VALIDATION))
-        ]
-        for i in range(
-            0,
-            len(all_stations_list),
-            math.ceil(len(all_stations_list) / K_VALUE_CROSS_VALIDATION),
-        )
-    ]
-    training_loss_list = np.zeros((K_VALUE_CROSS_VALIDATION, num_epochs))
-    nse_list_single_cross_val = []
-    for i in range(len(split_stations_list)):
-        train_stations_list = list(
-            itertools.chain.from_iterable(
-                split_stations_list[:i] + split_stations_list[i + 1:]
-            )
-        )
-        training_data, test_data = prepare_datasets(
-            sequence_length,
-            train_stations_list,
-            split_stations_list[i],
-            static_attributes_names,
-            dynamic_attributes_names,
-            discharge_str,
-            dynamic_data_folder_train,
-            static_data_folder,
-            discharge_data_folder,
-            specific_model_type=model_name,
-            dataset_to_use=dataset_to_use,
-        )
-        training_data.set_sequence_length(sequence_length)
-        test_data.set_sequence_length(sequence_length)
-        nse_list_single_pass = []
-        training_loss_list_single_pass = []
-        distributed_sampler_train = DistributedSampler(training_data)
-        distributed_sampler_test = DistributedSampler(test_data)
-        train_dataloader = DataLoader(training_data, batch_size=256, shuffle=False, sampler=distributed_sampler_train)
-        test_dataloader = DataLoader(test_data, batch_size=256, shuffle=False, sampler=distributed_sampler_test)
-        mp.spawn(run_training_and_test,
-                 args=(1,
-                       learning_rate,
-                       sequence_length,
-                       num_hidden_units,
-                       num_epochs,
-                       train_dataloader,
-                       test_dataloader,
-                       dropout_rate,
-                       static_attributes,
-                       dynamic_attributes,
-                       model_name,
-                       nse_list_single_pass,
-                       training_loss_list_single_pass,
-                       1,
-                       ),
-                 nprocs=1,
-                 join=True)
-        training_loss_list[i] = training_loss_list_single_pass[0][:]
-        nse_list_single_cross_val.extend(nse_list_single_pass[0][:])
-    plt.title(
-        f"loss in {num_epochs} epochs for the parameters: "
-        f"{dropout_rate};"
-        f"{sequence_length};"
-        f"{num_hidden_units}"
-    )
-    plt.plot(training_loss_list.mean(axis=0), label="training")
-    plt.legend(loc="upper left")
-    plt.savefig(
-        f"../data/results/training_loss_in_{num_epochs}_with_parameters: "
-        f"{str(dropout_rate).replace('.', '_')};"
-        f"{sequence_length};"
-        f"{num_hidden_units}"
-    )
-    plt.close()
-    return nse_list_single_cross_val
 
 
 def run_single_parameters_check_with_val_on_years(
