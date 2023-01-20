@@ -497,8 +497,8 @@ def run_training_and_test(
                                                               shuffle=False)
     distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
                                                              shuffle=False)
-    train_dataloader = DataLoader(training_data, batch_size=128, sampler=distributed_sampler_train, pin_memory=True)
-    test_dataloader = DataLoader(test_data, batch_size=128, sampler=distributed_sampler_test, pin_memory=True)
+    train_dataloader = DataLoader(training_data, batch_size=160, sampler=distributed_sampler_train, pin_memory=True)
+    test_dataloader = DataLoader(test_data, batch_size=160, sampler=distributed_sampler_test, pin_memory=True)
     loss_list_training = []
     nse_list = []
     for i in range(num_epochs):
