@@ -31,6 +31,7 @@ import torch.multiprocessing as mp
 from functools import reduce
 import multiprocessing
 import psutil
+from torch.profiler import profile, record_function, ProfilerActivity
 
 matplotlib.use("AGG")
 
@@ -38,7 +39,7 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-NUMBER_OF_PROCESSES = 1
+NUMBER_OF_PROCESSES = 6
 
 
 def setup(rank, world_size):
@@ -59,18 +60,13 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     running_loss = 0.0
-    for station_id_batch, xs, ys in pbar:
+    for stds, station_id_batch, xs, ys in pbar:
         # delete previously stored gradients from the model
         optimizer.zero_grad()
         # push data to GPU (if available)
         xs, ys = xs.to(device), ys.to(device)
         # get model predictions
         y_hat = model(xs)
-        stds = []
-        for i in range(len(station_id_batch)):
-            station_id = station_id_batch[i]
-            stds.append(loader.dataset.y_std_dict[station_id])
-        stds = torch.cat(stds, dim=0)
         # calculate loss
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # calculate gradients
@@ -96,7 +92,7 @@ def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor
     # in inference mode, we don't need to store intermediate steps for backprob
     with torch.no_grad():
         # request mini-batch of data from the loader
-        for station_id_batch, xs, ys in pbar:
+        for _, station_id_batch, xs, ys in pbar:
             # push data to GPU (if available)
             xs = xs.to(device)
             # get model predictions
@@ -522,9 +518,18 @@ def run_training_and_test(
                                                              shuffle=False)
     train_dataloader = DataLoader(training_data, batch_size=128, sampler=distributed_sampler_train, pin_memory=True)
     test_dataloader = DataLoader(test_data, batch_size=128, sampler=distributed_sampler_test, pin_memory=True)
+    if rank == 0:
+        p = profile(
+            activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            schedule=torch.profiler.schedule(
+                wait=1,
+                warmup=1,
+                active=2), on_trace_ready=trace_handler)
     for i in range(num_epochs):
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
+        if rank == 0:
+            p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
@@ -540,6 +545,8 @@ def run_training_and_test(
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_queue_single_pass.put(nse_list_single_pass)
         dist.barrier()
+    if rank == 0:
+        p.close()
     cleanup()
 
 
@@ -559,7 +566,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:10]
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())[:1]
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     # for i in range(len(all_stations_list_sorted)):
@@ -660,6 +667,12 @@ def choose_hyper_parameters_validation(
         )
         print(f"best parameters: {best_parameters}")
     return best_parameters
+
+
+def trace_handler(p):
+    output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
+    print(output)
+    p.export_chrome_trace("/tmp/trace_" + str(p.step_num) + ".json")
 
 
 def main():
