@@ -22,7 +22,7 @@ class CNN(nn.Module):
         self.channels_out_conv_1 = 16
         self.channels_out_conv_2 = 32
         self.filter_size_conv = 3
-        self.filter_size_pool = 2
+        self.filter_size_pool = 4
         self.stride_size_conv = 1
         self.stride_size_pool = self.filter_size_pool
         # The operation list - the operation type to how many times we
