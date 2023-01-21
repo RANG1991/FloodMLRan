@@ -38,6 +38,8 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
+NUMBER_OF_PROCESSES = 1
+
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
@@ -382,10 +384,11 @@ def run_single_parameters_check_with_val_on_years(
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
-    nse_list_single_pass = []
-    training_loss_list_single_pass = []
+    ctx = multiprocessing.get_context('spawn')
+    nse_queue_single_pass = ctx.Queue()
+    training_loss_queue_single_pass = ctx.Queue()
     mp.spawn(run_training_and_test,
-             args=(torch.cuda.device_count(),
+             args=(NUMBER_OF_PROCESSES,
                    learning_rate,
                    sequence_length,
                    num_hidden_units,
@@ -396,19 +399,39 @@ def run_single_parameters_check_with_val_on_years(
                    static_attributes_names,
                    dynamic_attributes_names,
                    model_name,
-                   nse_list_single_pass,
-                   training_loss_list_single_pass,
+                   nse_queue_single_pass,
+                   training_loss_queue_single_pass,
                    1,
                    optim_name),
-             nprocs=torch.cuda.device_count(),
+             nprocs=NUMBER_OF_PROCESSES,
              join=True)
+    training_loss_dict_single_pass = {}
+    while not training_loss_queue_single_pass.empty():
+        epoch_num, loss = training_loss_queue_single_pass.get()
+        if epoch_num not in training_loss_dict_single_pass.keys():
+            training_loss_dict_single_pass[epoch_num] = []
+        training_loss_dict_single_pass[epoch_num].append(loss)
+    training_loss_list_single_pass = []
+    for i in range(1, num_epochs + 1):
+        training_loss_list_single_pass.append((sum(training_loss_dict_single_pass[i])
+                                               / len(training_loss_dict_single_pass[i])))
+    nse_list_single_pass = []
+    nse_list_single_pass_temp = nse_queue_single_pass.get()
+    nse_list_single_pass.extend(nse_list_single_pass_temp)
+    del nse_list_single_pass_temp
+    if len(nse_list_single_pass) > 0:
+        print(
+            f"parameters are: dropout={dropout_rate} sequence_length={sequence_length} "
+            f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: "
+            f"{statistics.median(nse_list_single_pass)}"
+        )
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
         f"{dropout_rate};"
         f"{sequence_length};"
         f"{num_hidden_units}"
     )
-    plt.plot(training_loss_list_single_pass[:], label="training")
+    plt.plot(training_loss_list_single_pass, label="training")
     plt.legend(loc="upper left")
     plt.savefig(
         f"../data/results/training_loss_in_{num_epochs}_with_parameters: "
@@ -418,7 +441,7 @@ def run_single_parameters_check_with_val_on_years(
     )
     plt.show()
     plt.close()
-    return nse_list_single_pass
+    return nse_queue_single_pass
 
 
 class DistributedSamplerNoDuplicate(DistributedSampler):
@@ -446,8 +469,8 @@ def run_training_and_test(
         static_attributes_names,
         dynamic_attributes_names,
         model_name,
-        nse_list_single_pass,
-        training_loss_list_single_pass,
+        nse_queue_single_pass,
+        training_loss_queue_single_pass,
         calc_nse_interval=1,
         optim_name="SGD",
 ):
@@ -485,7 +508,6 @@ def run_training_and_test(
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
     list_preds_dicts_ranks = []
-    loss_list_training_ranks = []
     setup(rank, world_size)
     torch.cuda.set_device(rank)
     model.to(device=rank)
@@ -503,10 +525,7 @@ def run_training_and_test(
     for i in range(num_epochs):
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
-        loss_list_training_ranks.append(loss_on_training_epoch)
-        if rank == 0:
-            training_loss_list_single_pass.append(np.average(loss_list_training_ranks))
-            loss_list_training_ranks = []
+        training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
             list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
@@ -519,14 +538,9 @@ def run_training_and_test(
                         preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
                 list_preds_dicts_ranks = []
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
-            dist.barrier()
+                nse_queue_single_pass.put(nse_list_single_pass)
+        dist.barrier()
     cleanup()
-    if len(nse_list_single_pass) > 0:
-        print(
-            f"parameters are: dropout={dropout} sequence_length={sequence_length} "
-            f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: "
-            f"{statistics.median(nse_list_single_pass)}"
-        )
 
 
 def choose_hyper_parameters_validation(
