@@ -39,7 +39,9 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-NUMBER_OF_PROCESSES = 6
+NUMBER_OF_PROCESSES = 1
+
+NUMBER_OF_WORKERS = 4
 
 
 def setup(rank, world_size):
@@ -413,7 +415,7 @@ def run_single_parameters_check_with_val_on_years(
                                                / len(training_loss_dict_single_pass[i])))
     nse_list_single_pass = []
     nse_list_single_pass_temp = nse_queue_single_pass.get()
-    nse_list_single_pass.extend(nse_list_single_pass_temp)
+    nse_list_single_pass.extend(nse_list_single_pass_temp[:])
     del nse_list_single_pass_temp
     if len(nse_list_single_pass) > 0:
         print(
@@ -437,7 +439,7 @@ def run_single_parameters_check_with_val_on_years(
     )
     plt.show()
     plt.close()
-    return nse_queue_single_pass
+    return nse_list_single_pass
 
 
 class DistributedSamplerNoDuplicate(DistributedSampler):
@@ -516,15 +518,18 @@ def run_training_and_test(
                                                               shuffle=False)
     distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
                                                              shuffle=False)
-    train_dataloader = DataLoader(training_data, batch_size=128, sampler=distributed_sampler_train, pin_memory=True)
-    test_dataloader = DataLoader(test_data, batch_size=128, sampler=distributed_sampler_test, pin_memory=True)
+    train_dataloader = DataLoader(training_data, batch_size=128, sampler=distributed_sampler_train, pin_memory=True,
+                                  num_workers=NUMBER_OF_WORKERS)
+    test_dataloader = DataLoader(test_data, batch_size=128, sampler=distributed_sampler_test, pin_memory=True,
+                                 num_workers=NUMBER_OF_WORKERS)
     if rank == 0:
         p = profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             schedule=torch.profiler.schedule(
                 wait=1,
                 warmup=1,
-                active=2), on_trace_ready=trace_handler)
+                active=2), on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"))
+        p.start()
     for i in range(num_epochs):
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
@@ -545,6 +550,8 @@ def run_training_and_test(
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_queue_single_pass.put(nse_list_single_pass)
         dist.barrier()
+    if rank == 0:
+        p.stop()
     cleanup()
 
 
