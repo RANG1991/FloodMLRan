@@ -223,9 +223,7 @@ class Dataset_ERA5(Dataset):
                 dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
             else:
                 current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
-                                                            + (len(self.list_static_attributes_names))):].reshape(-1,
-                                                                                                                  self.max_width,
-                                                                                                                  self.max_length)
+                                                            + (len(self.list_static_attributes_names))):]
                 current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
@@ -299,7 +297,6 @@ class Dataset_ERA5(Dataset):
         else:
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
-            X_data_spatial = X_data_spatial.reshape(-1, self.max_width * self.max_length)
             X_data = np.concatenate([X_data, X_data_spatial], axis=1)
             del X_data_spatial
         X_data_tensor = torch.tensor(
