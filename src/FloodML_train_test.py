@@ -545,8 +545,6 @@ def run_training_and_test(
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_queue_single_pass.put(nse_list_single_pass)
         dist.barrier()
-    if rank == 0:
-        p.close()
     cleanup()
 
 
@@ -672,7 +670,7 @@ def choose_hyper_parameters_validation(
 def trace_handler(p):
     output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
     print(output)
-    p.export_chrome_trace("/tmp/trace_" + str(p.step_num) + ".json")
+    p.export_chrome_trace("./trace_" + str(p.step_num) + ".json")
 
 
 def main():
