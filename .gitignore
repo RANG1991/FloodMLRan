@@ -18,3 +18,4 @@ output.log
 neuralhydrology/runs/**
 **/.tmp.driveupload/*
 **/runs/*
+**/profiler_logs/**
