@@ -41,7 +41,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 NUMBER_OF_PROCESSES_FOR_DDP = 3
 
-NUMBER_OF_WORKERS_FOR_DATA_LOADER = 8
+NUMBER_OF_WORKERS_FOR_DATA_LOADER = 2
 
 
 def setup(rank, world_size):
@@ -383,8 +383,8 @@ def run_single_parameters_check_with_val_on_years(
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
     ctx = multiprocessing.get_context('spawn')
-    nse_queue_single_pass = ctx.Queue()
-    training_loss_queue_single_pass = ctx.Queue()
+    nse_queue_single_pass = ctx.Queue(1000)
+    training_loss_queue_single_pass = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
              args=(NUMBER_OF_PROCESSES_FOR_DDP,
                    learning_rate,
