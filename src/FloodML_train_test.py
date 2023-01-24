@@ -41,8 +41,6 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 NUMBER_OF_PROCESSES_FOR_DDP = torch.cuda.device_count()
 
-NUMBER_OF_WORKERS_FOR_DATA_LOADER = 4
-
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
@@ -363,7 +361,8 @@ def run_single_parameters_check_with_val_on_years(
         dataset_to_use,
         optim_name,
         shared_model,
-        num_epochs=15,
+        num_epochs,
+        num_workers_data_loader
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer" if "Transformer" in model_name else "LSTM"
@@ -400,7 +399,8 @@ def run_single_parameters_check_with_val_on_years(
                    nse_queue_single_pass,
                    training_loss_queue_single_pass,
                    1,
-                   optim_name),
+                   optim_name,
+                   num_workers_data_loader),
              nprocs=NUMBER_OF_PROCESSES_FOR_DDP,
              join=True)
     training_loss_dict_single_pass = {}
@@ -469,8 +469,9 @@ def run_training_and_test(
         model_name,
         nse_queue_single_pass,
         training_loss_queue_single_pass,
-        calc_nse_interval=1,
-        optim_name="SGD",
+        calc_nse_interval,
+        optim_name,
+        num_workers_data_loader
 ):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
@@ -519,9 +520,9 @@ def run_training_and_test(
     distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
                                                              shuffle=False)
     train_dataloader = DataLoader(training_data, batch_size=64, sampler=distributed_sampler_train, pin_memory=True,
-                                  num_workers=NUMBER_OF_WORKERS_FOR_DATA_LOADER)
+                                  num_workers=num_workers_data_loader)
     test_dataloader = DataLoader(test_data, batch_size=64, sampler=distributed_sampler_test, pin_memory=True,
-                                 num_workers=NUMBER_OF_WORKERS_FOR_DATA_LOADER)
+                                 num_workers=num_workers_data_loader)
     if rank == 0:
         p = profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
@@ -566,7 +567,8 @@ def choose_hyper_parameters_validation(
         dataset_to_use,
         optim_name,
         shared_model,
-        num_epochs=15
+        num_epochs,
+        num_workers_data_loader
 ):
     train_stations_list = []
     val_stations_list = []
@@ -631,7 +633,8 @@ def choose_hyper_parameters_validation(
             model_name=model_name,
             dataset_to_use=dataset_to_use,
             optim_name=optim_name,
-            shared_model=shared_model
+            shared_model=shared_model,
+            num_workers_data_loader=num_workers_data_loader,
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -708,6 +711,7 @@ def main():
                              "training and validation stations are not the same",
                         choices=["True", "False"], default="False")
     parser.add_argument("--num_epochs", help="num epochs for training", default=15, type=int)
+    parser.add_argument("--num_workers_data_loader", help="number of workers for data loader", default=1, type=int)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -721,7 +725,8 @@ def main():
             dataset_to_use="CAMELS",
             optim_name=command_args.optim,
             shared_model=bool(command_args.shared_model),
-            num_epochs=command_args.num_epochs
+            num_epochs=command_args.num_epochs,
+            num_workers_data_loader=command_args.num_workers_data_loader
         )
     elif command_args.dataset == "CARAVAN":
         if command_args.model == "CONV_LSTM" or command_args.model == "CNN_LSTM":
@@ -737,7 +742,8 @@ def main():
             dataset_to_use="CARAVAN",
             optim_name=command_args.optim,
             shared_model=bool(command_args.shared_model),
-            num_epochs=command_args.num_epochs
+            num_epochs=command_args.num_epochs,
+            num_workers_data_loader=command_args.num_workers_data_loader
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
