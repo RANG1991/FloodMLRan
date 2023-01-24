@@ -4,7 +4,7 @@
 
 #SBATCH -n 3
 #SBATCH --time=50:0:0
-#SBATCH --mem=80G
+#SBATCH --mem=160G
 #SBATCH --gres gpu:a30:3
 
 # Uncomment and enter path of code

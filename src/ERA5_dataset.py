@@ -134,12 +134,13 @@ class Dataset_ERA5(Dataset):
             use_Caravan_dataset=True,
 
     ):
-        self.x_mean_dict = self.read_pickle_if_exists(X_MEAN_DICT_FILE)
-        self.x_std_dict = self.read_pickle_if_exists(X_STD_DICT_FILE)
+        self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
+        self.x_mean_dict = self.read_pickle_if_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}")
+        self.x_std_dict = self.read_pickle_if_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}")
         self.x_means = x_means if x_means is not None else None
         self.x_stds = x_stds if x_stds is not None else None
-        self.y_mean_dict = self.read_pickle_if_exists(Y_MEAN_DICT_FILE)
-        self.y_std_dict = self.read_pickle_if_exists(Y_STD_DICT_FILE)
+        self.y_mean_dict = self.read_pickle_if_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}")
+        self.y_std_dict = self.read_pickle_if_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}")
         self.y_mean = y_mean if y_mean is not None else None
         self.y_std = y_std if y_std is not None else None
         self.sequence_length = sequence_length
@@ -160,7 +161,6 @@ class Dataset_ERA5(Dataset):
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
-        self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
         max_width, max_length = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data"
         )
@@ -179,10 +179,10 @@ class Dataset_ERA5(Dataset):
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_length=self.max_length)
 
-        self.save_pickle_if_not_exists(X_MEAN_DICT_FILE, self.x_mean_dict, force=True)
-        self.save_pickle_if_not_exists(X_STD_DICT_FILE, self.x_std_dict, force=True)
-        self.save_pickle_if_not_exists(Y_MEAN_DICT_FILE, self.y_mean_dict, force=True)
-        self.save_pickle_if_not_exists(Y_STD_DICT_FILE, self.y_std_dict, force=True)
+        self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.x_mean_dict, force=True)
+        self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}", self.x_std_dict, force=True)
+        self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.y_mean_dict, force=True)
+        self.save_pickle_if_not_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}", self.y_std_dict, force=True)
 
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
         dict_station_id_to_data.update(dict_station_id_to_data_from_file)
@@ -662,7 +662,7 @@ class Dataset_ERA5(Dataset):
     def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
         for basin_id in self.all_station_ids:
-            file_name = join(f"{FOLDER_WITH_BASINS_PICKLES}", f"{basin_id}_{self.stage}.pkl")
+            file_name = join(f"{FOLDER_WITH_BASINS_PICKLES}", f"{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl")
             if os.path.exists(file_name):
                 with open(file_name, "rb") as f:
                     pickled_data = pickle.load(f)

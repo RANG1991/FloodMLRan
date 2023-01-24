@@ -39,9 +39,9 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-NUMBER_OF_PROCESSES_FOR_DDP = 3
+NUMBER_OF_PROCESSES_FOR_DDP = torch.cuda.device_count()
 
-NUMBER_OF_WORKERS_FOR_DATA_LOADER = 2
+NUMBER_OF_WORKERS_FOR_DATA_LOADER = 4
 
 
 def setup(rank, world_size):
