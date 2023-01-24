@@ -160,6 +160,7 @@ class Dataset_ERA5(Dataset):
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
         self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
+        self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
         max_width, max_length = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data"
         )
@@ -232,8 +233,8 @@ class Dataset_ERA5(Dataset):
                 del current_x_data
                 dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                    "x_data_spatial": current_x_data_spatial}
-            if not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl"):
-                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl", 'wb') as f:
+            if not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl"):
+                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl", 'wb') as f:
                     pickle.dump(dict_curr_basin, f)
         del dict_station_id_to_data
 
@@ -290,7 +291,8 @@ class Dataset_ERA5(Dataset):
             self.current_basin = next_basin
             self.inner_index_in_data_of_basin = 0
             self.dict_curr_basin = {}
-            with open(f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}.pkl", 'rb') as f:
+            with open(f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}{self.suffix_pickle_file}.pkl",
+                      'rb') as f:
                 self.dict_curr_basin = pickle.load(f)
         if self.specific_model_type.lower() == "lstm":
             X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
@@ -429,7 +431,8 @@ class Dataset_ERA5(Dataset):
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
-                and (not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}.pkl")
+                and (not os.path.exists(
+                    f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(JSON_FILE_MEAN_STD_COUNT),
                              station_id not in self.x_mean_dict,
                              station_id not in self.x_std_dict,

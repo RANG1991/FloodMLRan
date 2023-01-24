@@ -518,9 +518,9 @@ def run_training_and_test(
                                                               shuffle=False)
     distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
                                                              shuffle=False)
-    train_dataloader = DataLoader(training_data, batch_size=128, sampler=distributed_sampler_train, pin_memory=True,
+    train_dataloader = DataLoader(training_data, batch_size=64, sampler=distributed_sampler_train, pin_memory=True,
                                   num_workers=NUMBER_OF_WORKERS_FOR_DATA_LOADER)
-    test_dataloader = DataLoader(test_data, batch_size=128, sampler=distributed_sampler_test, pin_memory=True,
+    test_dataloader = DataLoader(test_data, batch_size=64, sampler=distributed_sampler_test, pin_memory=True,
                                  num_workers=NUMBER_OF_WORKERS_FOR_DATA_LOADER)
     if rank == 0:
         p = profile(
