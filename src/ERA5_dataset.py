@@ -335,8 +335,8 @@ class Dataset_ERA5(Dataset):
         return df_attr, df_attr["gauge_id"].values.tolist()
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length):
-        if os.path.exists(JSON_FILE_MEAN_STD_COUNT):
-            obj_text = codecs.open(JSON_FILE_MEAN_STD_COUNT, 'r', encoding='utf-8').read()
+        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}"):
+            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}", 'r', encoding='utf-8').read()
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
@@ -414,7 +414,7 @@ class Dataset_ERA5(Dataset):
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
-        with codecs.open(JSON_FILE_MEAN_STD_COUNT, 'w', encoding='utf-8') as json_file:
+        with codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}", 'w', encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
@@ -433,7 +433,7 @@ class Dataset_ERA5(Dataset):
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
                 and (not os.path.exists(
                     f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
-                     or any([not os.path.exists(JSON_FILE_MEAN_STD_COUNT),
+                     or any([not os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}"),
                              station_id not in self.x_mean_dict,
                              station_id not in self.x_std_dict,
                              station_id not in self.y_mean_dict,

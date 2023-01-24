@@ -688,7 +688,7 @@ def main():
     parser.add_argument(
         "--dataset",
         help="which dataset to train and test on",
-        choices=["CAMELS", "ERA5", "CARAVAN"],
+        choices=["CAMELS", "CARAVAN"],
         default="ERA5",
     )
     parser.add_argument(
@@ -719,20 +719,6 @@ def main():
             CAMELS_dataset.DISCHARGE_DATA_FOLDER,
             model_name=command_args.model,
             dataset_to_use="CAMELS",
-            optim_name=command_args.optim,
-            shared_model=bool(command_args.shared_model),
-            num_epochs=command_args.num_epochs
-        )
-    elif command_args.dataset == "ERA5":
-        choose_hyper_parameters_validation(
-            ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
-            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_ERA5,
-            ERA5_dataset.DISCHARGE_STR_ERA5,
-            ERA5_dataset.DYNAMIC_DATA_FOLDER_ERA5,
-            ERA5_dataset.STATIC_DATA_FOLDER,
-            ERA5_dataset.DISCHARGE_DATA_FOLDER_ERA5,
-            model_name=command_args.model,
-            dataset_to_use="ERA5",
             optim_name=command_args.optim,
             shared_model=bool(command_args.shared_model),
             num_epochs=command_args.num_epochs
