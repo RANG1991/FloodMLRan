@@ -97,9 +97,8 @@ def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor
             xs = xs.to(device)
             # get model predictions
             y_hat = model(xs).squeeze()
-            ys = ys.to(device)[:, -1]
-            pred_actual = (
-                    (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
+            ys = ys.to(device)
+            pred_actual = y_hat
             pred_expected = (
                     (ys * loader.dataset.y_std) + loader.dataset.y_mean)
             # print(torch.cat([y_hat.cpu(), ys], dim=1))
