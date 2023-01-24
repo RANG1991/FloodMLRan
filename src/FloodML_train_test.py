@@ -362,7 +362,8 @@ def run_single_parameters_check_with_val_on_years(
         optim_name,
         shared_model,
         num_epochs,
-        num_workers_data_loader
+        num_workers_data_loader,
+        profile_code
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer" if "Transformer" in model_name else "LSTM"
@@ -400,7 +401,8 @@ def run_single_parameters_check_with_val_on_years(
                    training_loss_queue_single_pass,
                    1,
                    optim_name,
-                   num_workers_data_loader),
+                   num_workers_data_loader,
+                   profile_code),
              nprocs=NUMBER_OF_PROCESSES_FOR_DDP,
              join=True)
     training_loss_dict_single_pass = {}
@@ -471,7 +473,8 @@ def run_training_and_test(
         training_loss_queue_single_pass,
         calc_nse_interval,
         optim_name,
-        num_workers_data_loader
+        num_workers_data_loader,
+        profile_code
 ):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
@@ -523,9 +526,9 @@ def run_training_and_test(
                                   num_workers=num_workers_data_loader)
     test_dataloader = DataLoader(test_data, batch_size=64, sampler=distributed_sampler_test, pin_memory=True,
                                  num_workers=num_workers_data_loader)
-    if rank == 0:
+    if rank == 0 and profile_code:
         p = profile(
-            activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            activities=[ProfilerActivity.CUDA],
             schedule=torch.profiler.schedule(
                 wait=1,
                 warmup=1,
@@ -534,7 +537,7 @@ def run_training_and_test(
     for i in range(num_epochs):
         loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
-        if rank == 0:
+        if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
@@ -551,8 +554,8 @@ def run_training_and_test(
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_queue_single_pass.put(nse_list_single_pass)
         dist.barrier()
-    if rank == 0:
-        p.stop()
+        if rank == 0 and i == 3 and profile_code:
+            p.stop()
     cleanup()
 
 
@@ -568,7 +571,9 @@ def choose_hyper_parameters_validation(
         optim_name,
         shared_model,
         num_epochs,
-        num_workers_data_loader
+        num_workers_data_loader,
+        num_basins,
+        profile_code
 ):
     train_stations_list = []
     val_stations_list = []
@@ -576,6 +581,7 @@ def choose_hyper_parameters_validation(
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
+    all_stations_list_sorted = all_stations_list_sorted[:num_basins] if num_basins else all_stations_list_sorted
     # for i in range(len(all_stations_list_sorted)):
     #     if i % 5 != 0:
     #         train_stations_list.append(all_stations_list_sorted[i])
@@ -635,6 +641,7 @@ def choose_hyper_parameters_validation(
             optim_name=optim_name,
             shared_model=shared_model,
             num_workers_data_loader=num_workers_data_loader,
+            profile_code=profile_code
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -710,8 +717,12 @@ def main():
                         help="whether to run in shared model scenario - when the "
                              "training and validation stations are not the same",
                         choices=["True", "False"], default="False")
-    parser.add_argument("--num_epochs", help="num epochs for training", default=15, type=int)
-    parser.add_argument("--num_workers_data_loader", help="number of workers for data loader", default=1, type=int)
+    parser.add_argument("--num_epochs", help="num epochs for training", default=30, type=int)
+    parser.add_argument("--num_workers_data_loader", help="number of workers for data loader", default=0, type=int)
+    parser.add_argument("--num_basins", help="number of basins to include "
+                                             "in training and test q validation", default=None, type=int)
+    parser.add_argument('--profile_code', action='store_true')
+    parser.set_defaults(profile_code=False)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -726,7 +737,9 @@ def main():
             optim_name=command_args.optim,
             shared_model=bool(command_args.shared_model),
             num_epochs=command_args.num_epochs,
-            num_workers_data_loader=command_args.num_workers_data_loader
+            num_workers_data_loader=command_args.num_workers_data_loader,
+            num_basins=command_args.num_basins,
+            profile_code=command_args.profile_code
         )
     elif command_args.dataset == "CARAVAN":
         if command_args.model == "CONV_LSTM" or command_args.model == "CNN_LSTM":
@@ -743,7 +756,9 @@ def main():
             optim_name=command_args.optim,
             shared_model=bool(command_args.shared_model),
             num_epochs=command_args.num_epochs,
-            num_workers_data_loader=command_args.num_workers_data_loader
+            num_workers_data_loader=command_args.num_workers_data_loader,
+            num_basins=command_args.num_basins,
+            profile_code=command_args.profile_code
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
