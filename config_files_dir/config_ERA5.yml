@@ -58,13 +58,13 @@ output_activation: linear
 # ----> General settings <----
 
 # Number of cell states of the LSTM
-hidden_size: 96
+hidden_size: 156
 
 # Initial bias value of the forget gate
 initial_forget_bias:
 
 # Dropout applied to the output of the LSTM
-output_dropout: 0.4
+output_dropout: 0.25
 
 # --- Training configuration -----------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ predict_last_n: 1
 
 # Length of the input sequence
 # If use_frequencies is used, this needs to be a dict mapping each frequency to a seq_length, else an int.
-seq_length: 365
+seq_length: 270
 
 # Number of parallel workers used in the data pipeline
 num_workers: 0

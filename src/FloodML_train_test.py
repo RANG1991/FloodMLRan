@@ -39,7 +39,7 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-NUMBER_OF_PROCESSES_FOR_DDP = torch.cuda.device_count()
+NUMBER_OF_PROCESSES_FOR_DDP = 1
 
 
 def setup(rank, world_size):
@@ -96,7 +96,7 @@ def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor
             # push data to GPU (if available)
             xs = xs.to(device)
             # get model predictions
-            y_hat = model(xs).squeeze()[:, -1]
+            y_hat = model(xs).squeeze()
             ys = ys.to(device)[:, -1]
             pred_actual = (
                     (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
@@ -117,7 +117,7 @@ def calc_nse_star(obs, sim, stds):
     mask = ~torch.isnan(obs)
     y_hat = sim.squeeze() * mask.int().float()
     y = obs * mask.int().float()
-    per_basin_target_stds = stds[torch.all(mask, dim=1)]
+    per_basin_target_stds = stds[torch.all(mask, dim=0)]
     squared_error = (y_hat - y) ** 2
     weights = 1 / (per_basin_target_stds + 0.1) ** 2
     scaled_loss = weights * squared_error
@@ -522,9 +522,9 @@ def run_training_and_test(
                                                               shuffle=False)
     distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
                                                              shuffle=False)
-    train_dataloader = DataLoader(training_data, batch_size=64, sampler=distributed_sampler_train, pin_memory=True,
+    train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train, pin_memory=True,
                                   num_workers=num_workers_data_loader)
-    test_dataloader = DataLoader(test_data, batch_size=64, sampler=distributed_sampler_test, pin_memory=True,
+    test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test, pin_memory=True,
                                  num_workers=num_workers_data_loader)
     if rank == 0 and profile_code:
         p = profile(
@@ -578,7 +578,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins_ERA5.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     all_stations_list_sorted = all_stations_list_sorted[:num_basins] if num_basins else all_stations_list_sorted
