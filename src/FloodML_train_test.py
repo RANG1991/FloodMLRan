@@ -43,9 +43,9 @@ NUMBER_OF_PROCESSES_FOR_DDP = torch.cuda.device_count()
 
 
 def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = '127.0.0.1'
-    os.environ['MASTER_PORT'] = '8888'
-    dist.init_process_group(backend="nccl", rank=rank, world_size=world_size, init_method='env://')
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '10005'
+    dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
 def cleanup():
