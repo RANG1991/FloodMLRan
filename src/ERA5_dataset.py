@@ -160,7 +160,7 @@ class Dataset_ERA5(Dataset):
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
-        self.prefix_dynamic_data_file = "us_" if use_Caravan_dataset else "data24_"
+        self.prefix_dynamic_data_file = "us_"
         max_width, max_length = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data"
         )
@@ -553,7 +553,7 @@ class Dataset_ERA5(Dataset):
         df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
         dynamic_attributes_to_get_from_df = self.list_dynamic_attributes_names[0] if len(
             self.list_dynamic_attributes_names) == 1 else self.list_dynamic_attributes_names
-        # df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
+        df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
         start_date = (

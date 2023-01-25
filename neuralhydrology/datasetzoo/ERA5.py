@@ -90,7 +90,7 @@ class ERA5(BaseDataset):
         df_discharge = df_discharge.fillna(np.nan)
         if len(df_forcings) == 0 or len(df_discharge) == 0:
             return None
-        df_discharge.loc[df_discharge["flow"] < 0, "flow"] = np.nan
+        df_discharge.loc[df_discharge["streamflow"] < 0, "streamflow"] = np.nan
         if df_forcings.empty or df_discharge.empty:
             return pd.DataFrame()
         df_forcings = df_forcings.merge(df_discharge, on="date")
@@ -124,11 +124,11 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     -------
 
     """
-    forcing_path = data_dir / 'ERA5/ERA_5_all_data'
+    forcing_path = data_dir / 'ERA5/Caravan/timeseries/csv/us/'
     if not forcing_path.is_dir():
         raise OSError(f"{forcing_path} does not exist")
 
-    file_path = list(forcing_path.glob(f'**/data24_{basin}.csv'))
+    file_path = list(forcing_path.glob(f'**/us_{basin}.csv'))
     if file_path:
         file_path = file_path[0]
     else:
@@ -137,7 +137,7 @@ def load_ERA5_forcings(data_dir: Path, basin: str) -> pd.DataFrame:
     print(file_path)
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
-        df = df.loc[:, df.columns != 'flow']
+        df = df.loc[:, df.columns != 'streamflow']
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
     return df
 
@@ -154,8 +154,8 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.DataFrame:
     -------
 
     """
-    discharge_path = data_dir / 'ERA5/ERA_5_all_data'
-    file_path = list(discharge_path.glob(f'**/data24_{basin}.csv'))
+    discharge_path = data_dir / 'ERA5/Caravan/timeseries/csv/us/'
+    file_path = list(discharge_path.glob(f'**/us_{basin}.csv'))
     if file_path:
         file_path = file_path[0]
     else:
@@ -164,7 +164,7 @@ def load_ERA5_discharge(data_dir: Path, basin: str) -> pd.DataFrame:
     with open(file_path, 'r') as fp:
         df = pd.read_csv(fp, sep=',')
         df["date"] = pd.to_datetime(df.date, format="%Y-%m-%d")
-        df = df[["date", "flow"]]
+        df = df[["date", "streamflow"]]
     return df
 
 

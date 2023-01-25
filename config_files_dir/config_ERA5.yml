@@ -132,11 +132,11 @@ forcings:
 # Note: In case of multiple input forcing products, you have to append the forcing product behind
 # each variable. E.g. 'prcp(mm/day)' of the daymet product is 'prcp(mm/day)_daymet'
 dynamic_inputs:
-  - precip
+  - total_precipitation_sum
 
 # which columns to use as target
 target_variables:
-  - flow
+  - streamflow
 
 static_attributes:
   - ele_mt_sav

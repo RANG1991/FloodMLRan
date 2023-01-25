@@ -98,7 +98,8 @@ def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor
             # get model predictions
             y_hat = model(xs).squeeze()
             ys = ys.to(device)
-            pred_actual = y_hat
+            pred_actual = (
+                    (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
             pred_expected = (
                     (ys * loader.dataset.y_std) + loader.dataset.y_mean)
             # print(torch.cat([y_hat.cpu(), ys], dim=1))
@@ -690,6 +691,7 @@ def trace_handler(p):
 
 
 def main():
+    torch.cuda.manual_seed(123)
     torch.manual_seed(123)
     random.seed(123)
     np.random.seed(123)
