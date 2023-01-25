@@ -23,7 +23,7 @@ class CNN(nn.Module):
         self.channels_out_conv_2 = 32
         self.filter_size_conv = 3
         self.stride_size_conv = 1
-        self.filter_size_pool = (2, 1)
+        self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
         # The operation list - the operation type to how many times we
         # are doing this operation (how much filter applications)
@@ -145,4 +145,4 @@ class CNN_LSTM(nn.Module):
         output, (h_n, c_n) = self.lstm(r_in)
         # perform prediction only at the end of the input sequence
         pred = self.fc(self.dropout(output))
-        return pred
+        return pred[:, -1, :]

@@ -109,6 +109,9 @@ Y_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_mean_dict.pkl"
 
 Y_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_std_dict.pkl"
 
+RESIZE_WIDTH = 10
+RESIZE_HEIGHT = 10
+
 
 class Dataset_ERA5(Dataset):
     def __init__(
@@ -186,6 +189,7 @@ class Dataset_ERA5(Dataset):
         self.save_pickle_if_not_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}", self.y_std_dict, force=True)
 
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
+        create_new_files = len(dict_station_id_to_data) > 0
         dict_station_id_to_data.update(dict_station_id_to_data_from_file)
 
         self.all_station_ids = list(dict_station_id_to_data.keys())
@@ -202,44 +206,53 @@ class Dataset_ERA5(Dataset):
         x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
-        for key in dict_station_id_to_data.keys():
-            current_x_data = dict_station_id_to_data[key]["x_data"]
-            current_y_data = dict_station_id_to_data[key]["y_data"]
+        if create_new_files:
+            for key in dict_station_id_to_data.keys():
+                current_x_data = dict_station_id_to_data[key]["x_data"]
+                current_y_data = dict_station_id_to_data[key]["y_data"]
 
-            indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
+                indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
 
-            current_x_data[:, indices_features_dynamic_non_spatial] = \
-                (current_x_data[:, indices_features_dynamic_non_spatial] - x_data_mean_dynamic) / \
-                (x_data_std_dynamic + (10 ** (-6)))
+                current_x_data[:, indices_features_dynamic_non_spatial] = \
+                    (current_x_data[:, indices_features_dynamic_non_spatial] - x_data_mean_dynamic) / \
+                    (x_data_std_dynamic + (10 ** (-6)))
 
-            indices_features_static = range((len(self.list_dynamic_attributes_names)),
-                                            (len(self.list_dynamic_attributes_names))
-                                            + (len(self.list_static_attributes_names)))
+                indices_features_static = range((len(self.list_dynamic_attributes_names)),
+                                                (len(self.list_dynamic_attributes_names))
+                                                + (len(self.list_static_attributes_names)))
 
-            current_x_data[:, indices_features_static] = \
-                (current_x_data[:, indices_features_static] - x_data_mean_static) / (x_data_std_static + (10 ** (-6)))
+                current_x_data[:, indices_features_static] = \
+                    (current_x_data[:, indices_features_static] - x_data_mean_static) / (
+                                x_data_std_static + (10 ** (-6)))
 
-            current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
+                current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
-            if specific_model_type.lower() == "lstm":
-                dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
-            else:
-                current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
-                                                            + (len(self.list_static_attributes_names))):]
-                current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
-                current_x_data_spatial = cv2.resize(current_x_data_spatial.reshape(-1, max_width, max_length),
-                                                    dsize=(10, 10),
-                                                    interpolation=cv2.INTER_CUBIC).reshape(-1, max_width * max_length)
-                indices_all_features_non_spatial = range(0,
-                                                         (len(self.list_dynamic_attributes_names))
-                                                         + (len(self.list_static_attributes_names)))
-                current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
-                del current_x_data
-                dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
-                                   "x_data_spatial": current_x_data_spatial}
-            if not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl"):
-                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl", 'wb') as f:
-                    pickle.dump(dict_curr_basin, f)
+                if specific_model_type.lower() == "lstm":
+                    dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
+                else:
+                    current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
+                                                                + (len(self.list_static_attributes_names))):]
+                    current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
+                    current_x_data_spatial_reshaped = current_x_data_spatial.reshape(
+                        current_x_data_spatial.shape[0], self.max_width, self.max_length)
+                    current_x_data_spatial_resized = np.empty(
+                        (current_x_data_spatial.shape[0], RESIZE_WIDTH, RESIZE_HEIGHT))
+                    for (k, image) in enumerate(current_x_data_spatial_reshaped):
+                        current_x_data_spatial_resized[k] = cv2.resize(image, dsize=(RESIZE_WIDTH, RESIZE_HEIGHT),
+                                                                       interpolation=cv2.INTER_CUBIC)
+                    current_x_data_spatial = current_x_data_spatial_resized.reshape(current_x_data_spatial.shape[0],
+                                                                                    RESIZE_WIDTH * RESIZE_HEIGHT)
+                    indices_all_features_non_spatial = range(0,
+                                                             (len(self.list_dynamic_attributes_names))
+                                                             + (len(self.list_static_attributes_names)))
+                    current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
+                    del current_x_data
+                    dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
+                                       "x_data_spatial": current_x_data_spatial}
+                if not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl"):
+                    with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
+                              'wb') as f:
+                        pickle.dump(dict_curr_basin, f)
         del dict_station_id_to_data
 
     @staticmethod
@@ -555,9 +568,9 @@ class Dataset_ERA5(Dataset):
             self.discharge_str
         ].apply(lambda x: float(x))
         df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
-        dynamic_attributes_to_get_from_df = self.list_dynamic_attributes_names[0] if len(
-            self.list_dynamic_attributes_names) == 1 else self.list_dynamic_attributes_names
-        df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
+        # dynamic_attributes_to_get_from_df = self.list_dynamic_attributes_names[0] if len(
+        #     self.list_dynamic_attributes_names) == 1 else self.list_dynamic_attributes_names
+        # df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
         start_date = (

@@ -487,7 +487,7 @@ def run_training_and_test(
     elif model_name.lower() == "conv_lstm":
         model = Conv_LSTM(
             num_features_non_spatial=len(dynamic_attributes_names) + len(static_attributes_names),
-            image_input_size=(training_data.dataset.max_length, training_data.max_width),
+            image_input_size=(10, 10),
             hidden_dim_lstm=num_hidden_units,
             sequence_length=sequence_length,
             in_channels_cnn=1
@@ -498,14 +498,13 @@ def run_training_and_test(
             hidden_dim=num_hidden_units,
             dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
-        model = CNN_LSTM(lat=training_data.max_length,
-                         lon=training_data.max_width,
+        model = CNN_LSTM(lat=10,
+                         lon=10,
                          hidden_size=num_hidden_units,
                          num_channels=1,
                          dropout_rate=dropout,
                          num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
-                         image_input_size=(
-                             training_data.max_length, training_data.max_width))
+                         image_input_size=(10, 10))
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
