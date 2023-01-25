@@ -39,7 +39,7 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-NUMBER_OF_PROCESSES_FOR_DDP = 1
+NUMBER_OF_PROCESSES_FOR_DDP = torch.cuda.device_count()
 
 
 def setup(rank, world_size):
@@ -578,7 +578,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins_ERA5.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     all_stations_list_sorted = all_stations_list_sorted[:num_basins] if num_basins else all_stations_list_sorted
