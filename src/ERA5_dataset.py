@@ -18,6 +18,7 @@ from os import listdir
 from os.path import isfile, join
 import codecs
 import json
+import cv2
 
 matplotlib.use("AGG")
 
@@ -226,6 +227,9 @@ class Dataset_ERA5(Dataset):
                 current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                             + (len(self.list_static_attributes_names))):]
                 current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
+                current_x_data_spatial = cv2.resize(current_x_data_spatial.reshape(-1, max_width, max_length),
+                                                    dsize=(10, 10),
+                                                    interpolation=cv2.INTER_CUBIC).reshape(-1, max_width * max_length)
                 indices_all_features_non_spatial = range(0,
                                                          (len(self.list_dynamic_attributes_names))
                                                          + (len(self.list_static_attributes_names)))
@@ -305,7 +309,7 @@ class Dataset_ERA5(Dataset):
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(
-            y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
+            y_data[self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.y_std_dict[self.current_basin], self.current_basin, X_data_tensor, y_data_tensor
