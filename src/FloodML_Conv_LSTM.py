@@ -12,11 +12,11 @@ class Conv_LSTM(torch.nn.Module):
         self.sequence_length = sequence_length
         self.in_channels_cnn = in_channels_cnn
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = 2
-        self.channels_out_conv_2 = 4
+        self.channels_out_conv_1 = 16
+        self.channels_out_conv_2 = 32
         self.filter_size_conv = 3
-        self.filter_size_pool = 4
         self.stride_size_conv = 1
+        self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
         # The operation list - the operation type to how many times we
         # are doing this operation (how much filter applications)
@@ -71,8 +71,12 @@ class Conv_LSTM(torch.nn.Module):
         width = input_image_shape[0]
         height = input_image_shape[1]
         new_dims = np.zeros(2)
-        new_dims[0] = ((width - filter_size) // stride) + 1
-        new_dims[1] = ((height - filter_size) // stride) + 1
+        if type(stride) is tuple:
+            new_dims[0] = ((width - filter_size) // stride[0]) + 1
+            new_dims[1] = ((height - filter_size) // stride[1]) + 1
+        else:
+            new_dims[0] = ((width - filter_size) // stride) + 1
+            new_dims[1] = ((height - filter_size) // stride) + 1
         return new_dims
 
     def calc_dims_after_all_conv_op(self, input_image_shape: [int], ops_list: [str]):

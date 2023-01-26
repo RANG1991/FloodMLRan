@@ -556,6 +556,8 @@ def run_training_and_test(
         if rank == 0 and i == 3 and profile_code:
             p.stop()
     cleanup()
+    if rank == 0:
+        return preds_obs_dict_per_basin_all_ranks
 
 
 def choose_hyper_parameters_validation(
@@ -697,7 +699,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
-        help="which dataset to train and test on",
+        help="which dataset to train and test / validate on",
         choices=["CAMELS", "CARAVAN"],
         default="ERA5",
     )
@@ -717,10 +719,10 @@ def main():
                         help="whether to run in shared model scenario - when the "
                              "training and validation stations are not the same",
                         choices=["True", "False"], default="False")
-    parser.add_argument("--num_epochs", help="num epochs for training", default=30, type=int)
+    parser.add_argument("--num_epochs", help="number of epochs for training", default=30, type=int)
     parser.add_argument("--num_workers_data_loader", help="number of workers for data loader", default=0, type=int)
     parser.add_argument("--num_basins", help="number of basins to include "
-                                             "in training and test q validation", default=None, type=int)
+                                             "in training and test / validation", default=None, type=int)
     parser.add_argument('--profile_code', action='store_true')
     parser.set_defaults(profile_code=False)
     command_args = parser.parse_args()
