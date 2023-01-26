@@ -136,7 +136,7 @@ class Dataset_ERA5(Dataset):
             y_mean=None,
             y_std=None,
             use_Caravan_dataset=True,
-
+            create_new_files=False,
     ):
         self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
         self.x_mean_dict = self.read_pickle_if_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}")
@@ -181,7 +181,8 @@ class Dataset_ERA5(Dataset):
          max_spatial
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type,
-                                              max_width=self.max_width, max_length=self.max_length)
+                                              max_width=self.max_width, max_length=self.max_length,
+                                              create_new_files=create_new_files)
 
         self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.x_mean_dict, force=True)
         self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}", self.x_std_dict, force=True)
@@ -223,7 +224,7 @@ class Dataset_ERA5(Dataset):
 
                 current_x_data[:, indices_features_static] = \
                     (current_x_data[:, indices_features_static] - x_data_mean_static) / (
-                                x_data_std_static + (10 ** (-6)))
+                            x_data_std_static + (10 ** (-6)))
 
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
@@ -249,10 +250,9 @@ class Dataset_ERA5(Dataset):
                     del current_x_data
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                        "x_data_spatial": current_x_data_spatial}
-                if not os.path.exists(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl"):
-                    with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
-                              'wb') as f:
-                        pickle.dump(dict_curr_basin, f)
+                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
+                          'wb') as f:
+                    pickle.dump(dict_curr_basin, f)
         del dict_station_id_to_data
 
     @staticmethod
@@ -351,7 +351,8 @@ class Dataset_ERA5(Dataset):
         ).to_numpy()
         return df_attr, df_attr["gauge_id"].values.tolist()
 
-    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length):
+    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length,
+                                    create_new_files):
         if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}"):
             obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}", 'r', encoding='utf-8').read()
             json_obj = json.loads(obj_text)
@@ -375,7 +376,7 @@ class Dataset_ERA5(Dataset):
         pbar.set_description(f"processing basins - {self.stage}")
         for station_id in pbar:
             print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
-            if self.check_is_valid_station_id(station_id):
+            if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
@@ -444,7 +445,7 @@ class Dataset_ERA5(Dataset):
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, min_spatial, max_spatial
 
-    def check_is_valid_station_id(self, station_id):
+    def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
@@ -455,7 +456,7 @@ class Dataset_ERA5(Dataset):
                              station_id not in self.x_std_dict,
                              station_id not in self.y_mean_dict,
                              station_id not in self.y_std_dict,
-                             ])))
+                             ]) or create_new_files))
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (

@@ -509,22 +509,30 @@ def run_training_and_test(
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
     list_preds_dicts_ranks = []
-    setup(rank, world_size)
+    if world_size > 1:
+        setup(rank, world_size)
     torch.cuda.set_device(rank)
     model.to(device=rank)
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    ddp_model = DDP(model, device_ids=[rank])
-    distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, num_replicas=world_size, rank=rank,
-                                                              shuffle=False)
-    distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
-                                                             shuffle=False)
-    train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train, pin_memory=True,
-                                  num_workers=num_workers_data_loader)
-    test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test, pin_memory=True,
-                                 num_workers=num_workers_data_loader)
+    if world_size > 1:
+        model = DDP(model, device_ids=[rank])
+    if world_size > 1:
+        distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, num_replicas=world_size, rank=rank,
+                                                                  shuffle=False)
+        distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
+                                                                 shuffle=False)
+        train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train, pin_memory=True,
+                                      num_workers=num_workers_data_loader)
+        test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test, pin_memory=True,
+                                     num_workers=num_workers_data_loader)
+    else:
+        train_dataloader = DataLoader(training_data, batch_size=256, pin_memory=True,
+                                      num_workers=num_workers_data_loader)
+        test_dataloader = DataLoader(test_data, batch_size=256, pin_memory=True,
+                                     num_workers=num_workers_data_loader)
     if rank == 0 and profile_code:
         p = profile(
             activities=[ProfilerActivity.CUDA],
@@ -534,13 +542,13 @@ def run_training_and_test(
                 active=2), on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"))
         p.start()
     for i in range(num_epochs):
-        loss_on_training_epoch = train_epoch(ddp_model, optimizer, train_dataloader, calc_nse_star,
+        loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
         if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            preds_obs_dict_per_basin = eval_model(ddp_model, test_dataloader, device=rank, epoch=(i + 1))
+            preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1))
             list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
             if rank == 0:
                 preds_obs_dict_per_basin_all_ranks = {}
