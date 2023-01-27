@@ -258,7 +258,8 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            use_Caravan_dataset=use_Caravan_dataset
+            use_Caravan_dataset=use_Caravan_dataset,
+            create_new_files=True
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -278,7 +279,10 @@ def prepare_datasets(
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
             y_std=training_data.y_std,
-            y_mean=training_data.y_mean
+            y_mean=training_data.y_mean,
+            x_means=training_data.x_means,
+            x_stds=training_data.x_stds,
+            create_new_files=True
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -315,7 +319,9 @@ def prepare_datasets(
             sequence_length=sequence_length,
             discharge_str=discharge_str,
             y_std=training_data.y_std,
-            y_mean=training_data.y_mean
+            y_mean=training_data.y_mean,
+            x_means=training_data.x_means,
+            x_stds=training_data.x_stds,
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")

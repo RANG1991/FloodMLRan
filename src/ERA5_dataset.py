@@ -454,7 +454,7 @@ class Dataset_ERA5(Dataset):
                              station_id not in self.x_std_dict,
                              station_id not in self.y_mean_dict,
                              station_id not in self.y_std_dict,
-                             ]) or create_new_files))
+                             create_new_files])))
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (
@@ -567,9 +567,6 @@ class Dataset_ERA5(Dataset):
             self.discharge_str
         ].apply(lambda x: float(x))
         df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
-        dynamic_attributes_to_get_from_df = self.list_dynamic_attributes_names[0] if len(
-            self.list_dynamic_attributes_names) == 1 else self.list_dynamic_attributes_names
-        df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
         start_date = (
