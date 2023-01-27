@@ -189,25 +189,18 @@ class Dataset_ERA5(Dataset):
         self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.y_mean_dict, force=True)
         self.save_pickle_if_not_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}", self.y_std_dict, force=True)
 
-        dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
-        create_new_files = len(dict_station_id_to_data) > 0
-        dict_station_id_to_data.update(dict_station_id_to_data_from_file)
-
-        self.all_station_ids = list(dict_station_id_to_data.keys())
-
         self.y_mean = y_mean if stage == "train" else self.y_mean
         self.y_std = y_std if stage == "train" else self.y_std
         self.x_means = x_means if stage == "train" else self.x_means
         self.x_stds = x_stds if stage == "train" else self.x_stds
 
-        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data)
         x_data_mean_dynamic = self.x_means[:(len(self.list_dynamic_attributes_names))]
         x_data_std_dynamic = self.x_stds[:(len(self.list_dynamic_attributes_names))]
 
         x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
-        if create_new_files:
+        if create_new_files or len(dict_station_id_to_data) > 0:
             for key in dict_station_id_to_data.keys():
                 current_x_data = dict_station_id_to_data[key]["x_data"]
                 current_y_data = dict_station_id_to_data[key]["y_data"]
@@ -253,6 +246,9 @@ class Dataset_ERA5(Dataset):
                 with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
                           'wb') as f:
                     pickle.dump(dict_curr_basin, f)
+        dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
+        self.all_station_ids = list(dict_station_id_to_data_from_file.keys())
+        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
         del dict_station_id_to_data
 
     @staticmethod
@@ -322,7 +318,7 @@ class Dataset_ERA5(Dataset):
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(
-            y_data[self.inner_index_in_data_of_basin + self.sequence_length]
+            y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
         ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.y_std_dict[self.current_basin], self.current_basin, X_data_tensor, y_data_tensor
@@ -353,8 +349,9 @@ class Dataset_ERA5(Dataset):
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length,
                                     create_new_files):
-        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}"):
-            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}", 'r', encoding='utf-8').read()
+        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
+            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'r',
+                                   encoding='utf-8').read()
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
@@ -380,8 +377,8 @@ class Dataset_ERA5(Dataset):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
-                    X_data_spatial, y_data = self.read_single_station_file_spatial(station_id)
-                    X_data_non_spatial, _ = self.read_single_station_file(station_id)
+                    X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
+                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         del X_data_spatial
                         del X_data_non_spatial
@@ -432,7 +429,8 @@ class Dataset_ERA5(Dataset):
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
-        with codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}", 'w', encoding='utf-8') as json_file:
+        with codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'w',
+                         encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
@@ -451,7 +449,7 @@ class Dataset_ERA5(Dataset):
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
                 and (not os.path.exists(
                     f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
-                     or any([not os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}{self.suffix_pickle_file}"),
+                     or any([not os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}"),
                              station_id not in self.x_mean_dict,
                              station_id not in self.x_std_dict,
                              station_id not in self.y_mean_dict,
@@ -569,9 +567,9 @@ class Dataset_ERA5(Dataset):
             self.discharge_str
         ].apply(lambda x: float(x))
         df_dynamic_data = df_dynamic_data[df_dynamic_data[self.discharge_str] >= 0]
-        # dynamic_attributes_to_get_from_df = self.list_dynamic_attributes_names[0] if len(
-        #     self.list_dynamic_attributes_names) == 1 else self.list_dynamic_attributes_names
-        # df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
+        dynamic_attributes_to_get_from_df = self.list_dynamic_attributes_names[0] if len(
+            self.list_dynamic_attributes_names) == 1 else self.list_dynamic_attributes_names
+        df_dynamic_data = df_dynamic_data[df_dynamic_data[dynamic_attributes_to_get_from_df] >= 0]
         df_dynamic_data = df_dynamic_data.dropna()
         df_dynamic_data["date"] = pd.to_datetime(df_dynamic_data.date)
         start_date = (

@@ -64,7 +64,7 @@ hidden_size: 156
 initial_forget_bias:
 
 # Dropout applied to the output of the LSTM
-output_dropout: 0.25
+output_dropout: 0
 
 # --- Training configuration -----------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ seed: 123
 batch_size: 256
 
 # Number of training epochs
-epochs: 10
+epochs: 1
 
 # If a value, clips the gradients during training to that norm.
 clip_gradient_norm: 2

@@ -61,14 +61,14 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     # request mini-batch of data from the loader
     running_loss = 0.0
     for stds, station_id_batch, xs, ys in pbar:
-        # delete previously stored gradients from the model
-        optimizer.zero_grad()
         # push data to GPU (if available)
         xs, ys = xs.to(device), ys.to(device)
         # get model predictions
         y_hat = model(xs)
         # calculate loss
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
+        # delete previously stored gradients from the model
+        optimizer.zero_grad()
         # calculate gradients
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
@@ -120,7 +120,7 @@ def calc_nse_star(obs, sim, stds):
     per_basin_target_stds = stds[torch.all(mask, dim=0)]
     squared_error = (y_hat - y) ** 2
     weights = 1 / (per_basin_target_stds + 0.1) ** 2
-    scaled_loss = weights * squared_error
+    scaled_loss = weights.squeeze() * squared_error
     return torch.mean(scaled_loss)
 
 
@@ -277,8 +277,6 @@ def prepare_datasets(
             discharge_str=discharge_str,
             specific_model_type=specific_model_type,
             use_Caravan_dataset=use_Caravan_dataset,
-            x_means=training_data.x_means,
-            x_stds=training_data.x_stds,
             y_std=training_data.y_std,
             y_mean=training_data.y_mean
         )
@@ -316,8 +314,6 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            x_means=training_data.x_means,
-            x_stds=training_data.x_stds,
             y_std=training_data.y_std,
             y_mean=training_data.y_mean
         )
@@ -511,7 +507,7 @@ def run_training_and_test(
     list_preds_dicts_ranks = []
     if world_size > 1:
         setup(rank, world_size)
-    torch.cuda.set_device(rank)
+        torch.cuda.set_device(rank)
     model.to(device=rank)
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
@@ -546,7 +542,8 @@ def run_training_and_test(
                                              epoch=(i + 1), device=rank)
         if rank == 0 and profile_code:
             p.step()
-        training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
+        if training_loss_queue_single_pass is not None:
+            training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1))
             list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
@@ -559,13 +556,14 @@ def run_training_and_test(
                         preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
                 list_preds_dicts_ranks = []
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
-                nse_queue_single_pass.put(nse_list_single_pass)
-        dist.barrier()
+                if nse_queue_single_pass is not None:
+                    nse_queue_single_pass.put(nse_list_single_pass)
+        if world_size > 1:
+            dist.barrier()
         if rank == 0 and i == 3 and profile_code:
             p.stop()
-    cleanup()
-    if rank == 0:
-        return preds_obs_dict_per_basin_all_ranks
+    if world_size > 1:
+        cleanup()
 
 
 def choose_hyper_parameters_validation(
