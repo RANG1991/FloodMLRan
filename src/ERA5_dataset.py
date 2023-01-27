@@ -318,7 +318,7 @@ class Dataset_ERA5(Dataset):
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(
-            y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
+            y_data[self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.y_std_dict[self.current_basin], self.current_basin, X_data_tensor, y_data_tensor
