@@ -70,7 +70,7 @@ def test_FloodML():
                                              training_loss_queue_single_pass=None,
                                              calc_nse_interval=1,
                                              optim_name="Adam",
-                                             num_workers_data_loader=2,
+                                             num_workers_data_loader=0,
                                              profile_code=False)
 
 

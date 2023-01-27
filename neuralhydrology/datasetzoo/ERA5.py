@@ -86,7 +86,7 @@ class ERA5(BaseDataset):
         df_forcings = load_ERA5_forcings(data_dir=self.cfg.data_dir, basin=basin)
         df_discharge = load_ERA5_discharge(data_dir=self.cfg.data_dir, basin=basin)
         df_forcings = df_forcings.fillna(np.nan)
-        df_forcings = df_forcings.apply(lambda x: np.nan if type(x) == float and x < 0 else x)
+        # df_forcings = df_forcings.apply(lambda x: np.nan if type(x) == float and x < 0 else x)
         df_discharge = df_discharge.fillna(np.nan)
         if len(df_forcings) == 0 or len(df_discharge) == 0:
             return None

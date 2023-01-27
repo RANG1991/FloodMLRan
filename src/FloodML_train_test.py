@@ -532,9 +532,9 @@ def run_training_and_test(
                                      num_workers=num_workers_data_loader)
     else:
         train_dataloader = DataLoader(training_data, batch_size=256, pin_memory=True,
-                                      num_workers=num_workers_data_loader)
+                                      num_workers=num_workers_data_loader, shuffle=False)
         test_dataloader = DataLoader(test_data, batch_size=256, pin_memory=True,
-                                     num_workers=num_workers_data_loader)
+                                     num_workers=num_workers_data_loader, shuffle=False)
     if rank == 0 and profile_code:
         p = profile(
             activities=[ProfilerActivity.CUDA],
