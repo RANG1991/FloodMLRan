@@ -39,7 +39,7 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-NUMBER_OF_PROCESSES_FOR_DDP = torch.cuda.device_count()
+NUMBER_OF_PROCESSES_FOR_DDP = 1
 
 
 def setup(rank, world_size):
@@ -548,11 +548,12 @@ def run_training_and_test(
                                              epoch=(i + 1), device=rank)
         if rank == 0 and profile_code:
             p.step()
-        if training_loss_queue_single_pass is not None:
-            training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
+        training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1))
             list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
+            if world_size > 1:
+                dist.barrier()
             if rank == 0:
                 preds_obs_dict_per_basin_all_ranks = {}
                 for preds_obs_dict_per_basin in list_preds_dicts_ranks:
@@ -562,10 +563,9 @@ def run_training_and_test(
                         preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
                 list_preds_dicts_ranks = []
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
-                if nse_queue_single_pass is not None:
-                    nse_queue_single_pass.put(nse_list_single_pass)
-        if world_size > 1:
-            dist.barrier()
+                nse_queue_single_pass.put(nse_list_single_pass)
+            if world_size > 1:
+                dist.barrier()
         if rank == 0 and i == 3 and profile_code:
             p.stop()
     if world_size > 1:

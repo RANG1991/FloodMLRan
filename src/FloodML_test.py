@@ -3,6 +3,7 @@ import ERA5_dataset
 import torch
 import random
 import numpy as np
+from queue import Queue
 
 
 def test_FloodML():
@@ -53,6 +54,8 @@ def test_FloodML():
         x_stds=training_data.x_stds,
         create_new_files=True
     )
+    nse_queue_single_pass = Queue()
+    training_loss_queue_single_pass = Queue()
     FloodML_train_test.run_training_and_test(rank=0,
                                              world_size=1,
                                              learning_rate=5 * (10 ** -4),
@@ -66,12 +69,20 @@ def test_FloodML():
                                              dynamic_attributes_names=[
                                                  ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[0]],
                                              model_name="LSTM",
-                                             nse_queue_single_pass=None,
-                                             training_loss_queue_single_pass=None,
+                                             nse_queue_single_pass=nse_queue_single_pass,
+                                             training_loss_queue_single_pass=training_loss_queue_single_pass,
                                              calc_nse_interval=1,
                                              optim_name="Adam",
                                              num_workers_data_loader=0,
                                              profile_code=False)
+    # nse_saved_list = []
+    # while not nse_queue_single_pass.empty():
+    #     nse_saved_list.append(nse_queue_single_pass.get())
+    # np.save("./saved_nse_list_for_testing", nse_saved_list)
+    nse_saved_list = np.load("./saved_nse_list_for_testing.npy")
+    while not nse_queue_single_pass.empty():
+        np.testing.assert_equal(nse_queue_single_pass.get(), nse_saved_list[-1], verbose=True)
+        nse_saved_list = nse_saved_list[:-1]
 
 
 if __name__ == "__main__":
