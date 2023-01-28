@@ -300,14 +300,25 @@ class Dataset_ERA5(Dataset):
                 self.dict_curr_basin = pickle.load(f)
         if self.specific_model_type.lower() == "lstm":
             X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
+            X_data_tensor = torch.tensor(
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32)
+        elif self.specific_model_type.lower() == "conv":
+            X_data, X_data_spatial, y_data = \
+                self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
+            X_data = np.concatenate([X_data[:-30], X_data_spatial[-30:]], axis=1)
+            X_data_tensor = torch.tensor(
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32)
+            del X_data_spatial
         else:
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
             X_data = np.concatenate([X_data, X_data_spatial], axis=1)
             del X_data_spatial
-        X_data_tensor = torch.tensor(
-            X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
-        ).to(torch.float32)
+            X_data_tensor = torch.tensor(
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32)
         y_data_tensor = torch.tensor(
             y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
         ).to(torch.float32).squeeze()

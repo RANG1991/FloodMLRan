@@ -14,25 +14,27 @@ class TWO_LSTM(torch.nn.Module):
             hidden_size=self.hidden_dim,
             batch_first=True
         )
-        self.head = torch.nn.Linear(in_features=self.hidden_dim, out_features=1)
+        self.head = torch.nn.Linear(in_features=num_channels * self.image_width * self.image_height,
+                                    out_features=1)
         self.conv_lstm = FloodML_Conv_LSTM(in_channels_cnn, sequence_length_conv_lstm, image_width, image_height)
         self.image_width = image_width
         self.image_height = image_height
         self.num_channels = num_channels
         self.sequence_length_conv_lstm = sequence_length_conv_lstm
-        self.linear = torch.nn.Linear(self.image_width * self.image_height, self.hidden_dim)
+        self.linear_states = torch.nn.Linear(self.hidden_dim, num_channels * self.image_width * self.image_height)
 
     def forward(self, x):
+        x_non_spatial = x[:, :-self.sequence_length_conv_lstm, :]
+        _, (h_n, c_n) = self.lstm(x_non_spatial)
         batch_size, time_steps, _ = x.size()
-        x_spatial = x[:, :, -self.num_channels * self.image_width * self.image_height:]
-        x_spatial = x_spatial.view(batch_size, time_steps, self.num_channels, self.image_width * self.image_height)
-        x_spatial = x_spatial.view(batch_size, time_steps, self.num_channels, self.image_width, self.image_height)
-        x_spatial = x_spatial[:, :self.sequence_length_conv_lstm, :, :]
-        c, h = self.conv_lstm(x_spatial)
-        c = c.reshape(1, -1, self.image_width * self.image_height)
-        h = h.reshape(1, -1, self.image_width * self.image_height)
-        x_non_spatial = x[:, :, :-self.num_channels * self.image_width * self.image_height]
-        output, (h_n, c_n) = self.lstm(x_non_spatial, self.linear(h), self.linear(c))
+        x_spatial = x[:, -self.sequence_length_conv_lstm:, :]
+        x_spatial = x_spatial.view(batch_size, self.sequence_length_conv_lstm, self.num_channels,
+                                   self.image_width * self.image_height)
+        x_spatial = x_spatial.view(batch_size, self.sequence_length_conv_lstm, self.num_channels, self.image_width,
+                                   self.image_height)
+        h_n = self.linear_states(h_n).reshape(batch_size, 1, self.num_channels, self.image_width, self.image_height)
+        c_n = self.linear_states(c_n).reshape(batch_size, 1, self.num_channels, self.image_width, self.image_height)
+        output = self.conv_lstm(x_spatial, h_n, c_n)
         output = self.dropout(output)
         pred = self.head(output)
-        return pred[:, -1, :]
+        return pred
