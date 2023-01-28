@@ -234,7 +234,8 @@ def prepare_datasets(
         discharge_data_folder,
         dataset_to_use,
         specific_model_type,
-        create_box_plots=False
+        create_box_plots=False,
+        create_new_files=False
 ):
     print(f"running with dataset: {dataset_to_use}")
     if dataset_to_use == "ERA5" or dataset_to_use == "CARAVAN":
@@ -256,7 +257,7 @@ def prepare_datasets(
             sequence_length=sequence_length,
             discharge_str=discharge_str,
             use_Caravan_dataset=use_Caravan_dataset,
-            create_new_files=False
+            create_new_files=create_new_files
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -279,7 +280,7 @@ def prepare_datasets(
             y_mean=training_data.y_mean,
             x_means=training_data.x_means,
             x_stds=training_data.x_stds,
-            create_new_files=False
+            create_new_files=create_new_files
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -363,7 +364,8 @@ def run_single_parameters_check_with_val_on_years(
         num_epochs,
         num_workers_data_loader,
         profile_code,
-        num_processes_ddp
+        num_processes_ddp,
+        create_new_files
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer" if "Transformer" in model_name else "LSTM"
@@ -379,6 +381,7 @@ def run_single_parameters_check_with_val_on_years(
         discharge_data_folder,
         dataset_to_use,
         specific_model_type=specific_model_type,
+        create_new_files=create_new_files
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
@@ -402,7 +405,8 @@ def run_single_parameters_check_with_val_on_years(
                    1,
                    optim_name,
                    num_workers_data_loader,
-                   profile_code),
+                   profile_code
+                   ),
              nprocs=num_processes_ddp,
              join=True)
     training_loss_dict_single_pass = {}
@@ -581,12 +585,13 @@ def choose_hyper_parameters_validation(
         num_workers_data_loader,
         num_basins,
         profile_code,
-        num_processes_ddp
+        num_processes_ddp,
+        create_new_files
 ):
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins_ERA5.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
     all_stations_list_sorted = all_stations_list_sorted[:num_basins] if num_basins else all_stations_list_sorted
@@ -650,7 +655,8 @@ def choose_hyper_parameters_validation(
             shared_model=shared_model,
             num_workers_data_loader=num_workers_data_loader,
             profile_code=profile_code,
-            num_processes_ddp=num_processes_ddp
+            num_processes_ddp=num_processes_ddp,
+            create_new_files=create_new_files
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -735,7 +741,9 @@ def main():
     parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
                                                     " parallelism", default=torch.cuda.device_count(),
                         type=int)
+    parser.add_argument("--create_new_files", action="store_true")
     parser.set_defaults(profile_code=False)
+    parser.set_defaults(create_new_files=False)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -753,7 +761,8 @@ def main():
             num_workers_data_loader=command_args.num_workers_data_loader,
             num_basins=command_args.num_basins,
             profile_code=command_args.profile_code,
-            num_processes_ddp=command_args.num_processes_ddp
+            num_processes_ddp=command_args.num_processes_ddp,
+            create_new_files=command_args.create_new_files
         )
     elif command_args.dataset == "CARAVAN":
         if command_args.model == "CNN_LSTM":
@@ -773,7 +782,8 @@ def main():
             num_workers_data_loader=command_args.num_workers_data_loader,
             num_basins=command_args.num_basins,
             profile_code=command_args.profile_code,
-            num_processes_ddp=command_args.num_processes_ddp
+            num_processes_ddp=command_args.num_processes_ddp,
+            create_new_files=command_args.create_new_files
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
