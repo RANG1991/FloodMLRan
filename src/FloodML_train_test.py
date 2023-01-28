@@ -756,7 +756,7 @@ def main():
             num_processes_ddp=command_args.num_processes_ddp
         )
     elif command_args.dataset == "CARAVAN":
-        if command_args.model == "CONV_LSTM" or command_args.model == "CNN_LSTM":
+        if command_args.model == "CNN_LSTM":
             ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[1:]
         choose_hyper_parameters_validation(
             ERA5_dataset.STATIC_ATTRIBUTES_NAMES,

@@ -306,7 +306,9 @@ class Dataset_ERA5(Dataset):
         elif self.specific_model_type.lower() == "conv":
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
-            X_data = np.concatenate([X_data[:-30], X_data_spatial[-30:]], axis=1)
+            X_data = np.hstack([np.pad(X_data[:-30], [(0, 0), (0, X_data_spatial.shape[1] - X_data.shape[1])],
+                                       mode='constant', constant_values=0),
+                                X_data_spatial[-30:]])
             X_data_tensor = torch.tensor(
                 X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)
