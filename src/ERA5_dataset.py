@@ -227,15 +227,6 @@ class Dataset_ERA5(Dataset):
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                                 + (len(self.list_static_attributes_names))):]
                     current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
-                    current_x_data_spatial_reshaped = current_x_data_spatial.reshape(
-                        current_x_data_spatial.shape[0], self.max_width, self.max_length)
-                    current_x_data_spatial_resized = np.empty(
-                        (current_x_data_spatial.shape[0], RESIZE_WIDTH, RESIZE_HEIGHT))
-                    for (k, image) in enumerate(current_x_data_spatial_reshaped):
-                        current_x_data_spatial_resized[k] = cv2.resize(image, dsize=(RESIZE_WIDTH, RESIZE_HEIGHT),
-                                                                       interpolation=cv2.INTER_CUBIC)
-                    current_x_data_spatial = current_x_data_spatial_resized.reshape(current_x_data_spatial.shape[0],
-                                                                                    RESIZE_WIDTH * RESIZE_HEIGHT)
                     indices_all_features_non_spatial = range(0,
                                                              (len(self.list_dynamic_attributes_names))
                                                              + (len(self.list_static_attributes_names)))

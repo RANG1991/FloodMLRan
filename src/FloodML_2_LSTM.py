@@ -1,12 +1,13 @@
 import torch
+from FloodML_Conv_LSTM import FloodML_Conv_LSTM
 
 
 class TWO_LSTM(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, dropout):
+    def __init__(self, input_dim, hidden_dim, dropout, in_channels_cnn,
+                 sequence_length_conv_lstm, image_width, image_height):
         super(TWO_LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-
         self.dropout = torch.nn.Dropout(dropout)
         self.lstm = torch.nn.LSTM(
             input_size=self.input_dim,
@@ -14,8 +15,20 @@ class TWO_LSTM(torch.nn.Module):
             batch_first=True
         )
         self.head = torch.nn.Linear(in_features=self.hidden_dim, out_features=1)
+        self.conv_lstm = FloodML_Conv_LSTM(in_channels_cnn, sequence_length_conv_lstm, image_width, image_height)
+        self.image_width = image_width
+        self.image_height = image_height
+        self.sequence_length_conv_lstm = sequence_length_conv_lstm
 
     def forward(self, x):
-        output, (h_n, c_n) = self.lstm(x)
+        batch_size, time_steps, _ = x.size()
+        x_spatial = x[:, :, -self.num_channels * self.image_width * self.image_height:]
+        x_spatial = x_spatial.view(batch_size, time_steps, self.num_channels, self.image_width * self.image_height)
+        x_spatial = x_spatial.view(batch_size, time_steps, self.num_channels, self.image_width, self.image_height)
+        x_spatial = x_spatial[:, :self.sequence_length_conv_lstm, :, :]
+        c, h = self.conv_lstm(x_spatial)
+        x_non_spatial = x[:, :, :-self.num_channels * self.image_width * self.image_height]
+        output, (h_n, c_n) = self.lstm(x_non_spatial)
         output = self.dropout(output)
-        return self.head(output)
+        pred = self.head(output)
+        return pred[:, -1, :]

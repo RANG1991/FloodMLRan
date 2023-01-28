@@ -19,7 +19,7 @@ import statistics
 import argparse
 from FloodML_LSTM import LSTM
 from FloodML_Transformer import ERA5_Transformer
-from FloodML_Conv_LSTM import Conv_LSTM
+from FloodML_2_LSTM import TWO_LSTM
 from FloodML_CNN_LSTM import CNN_LSTM
 from pathlib import Path
 import random
@@ -28,7 +28,6 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
-from functools import reduce
 import multiprocessing
 import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
@@ -38,8 +37,6 @@ matplotlib.use("AGG")
 K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
-
-NUMBER_OF_PROCESSES_FOR_DDP = 1
 
 
 def setup(rank, world_size):
@@ -365,7 +362,8 @@ def run_single_parameters_check_with_val_on_years(
         shared_model,
         num_epochs,
         num_workers_data_loader,
-        profile_code
+        profile_code,
+        num_processes_ddp
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer" if "Transformer" in model_name else "LSTM"
@@ -388,7 +386,7 @@ def run_single_parameters_check_with_val_on_years(
     nse_queue_single_pass = ctx.Queue(1000)
     training_loss_queue_single_pass = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
-             args=(NUMBER_OF_PROCESSES_FOR_DDP,
+             args=(num_processes_ddp,
                    learning_rate,
                    sequence_length,
                    num_hidden_units,
@@ -405,7 +403,7 @@ def run_single_parameters_check_with_val_on_years(
                    optim_name,
                    num_workers_data_loader,
                    profile_code),
-             nprocs=NUMBER_OF_PROCESSES_FOR_DDP,
+             nprocs=num_processes_ddp,
              join=True)
     training_loss_dict_single_pass = {}
     while not training_loss_queue_single_pass.empty():
@@ -487,13 +485,9 @@ def run_training_and_test(
                                  in_features=len(dynamic_attributes_names) + len(static_attributes_names),
                                  out_features_cnn=64)
     elif model_name.lower() == "conv_lstm":
-        model = Conv_LSTM(
-            num_features_non_spatial=len(dynamic_attributes_names) + len(static_attributes_names),
-            image_input_size=(10, 10),
-            hidden_dim_lstm=num_hidden_units,
-            sequence_length=sequence_length,
-            in_channels_cnn=1
-        )
+        model = TWO_LSTM(dropout=dropout, input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+                         hidden_dim=num_hidden_units, sequence_length_conv_lstm=30, in_channels_cnn=1,
+                         image_width=47, image_height=47)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
@@ -586,7 +580,8 @@ def choose_hyper_parameters_validation(
         num_epochs,
         num_workers_data_loader,
         num_basins,
-        profile_code
+        profile_code,
+        num_processes_ddp
 ):
     train_stations_list = []
     val_stations_list = []
@@ -654,7 +649,8 @@ def choose_hyper_parameters_validation(
             optim_name=optim_name,
             shared_model=shared_model,
             num_workers_data_loader=num_workers_data_loader,
-            profile_code=profile_code
+            profile_code=profile_code,
+            num_processes_ddp=num_processes_ddp
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -736,6 +732,9 @@ def main():
     parser.add_argument("--num_basins", help="number of basins to include "
                                              "in training and test / validation", default=None, type=int)
     parser.add_argument('--profile_code', action='store_true')
+    parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
+                                                    " parallelism", default=torch.cuda.device_count(),
+                        type=int)
     parser.set_defaults(profile_code=False)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
@@ -753,7 +752,8 @@ def main():
             num_epochs=command_args.num_epochs,
             num_workers_data_loader=command_args.num_workers_data_loader,
             num_basins=command_args.num_basins,
-            profile_code=command_args.profile_code
+            profile_code=command_args.profile_code,
+            num_processes_ddp=command_args.num_processes_ddp
         )
     elif command_args.dataset == "CARAVAN":
         if command_args.model == "CONV_LSTM" or command_args.model == "CNN_LSTM":
@@ -772,7 +772,8 @@ def main():
             num_epochs=command_args.num_epochs,
             num_workers_data_loader=command_args.num_workers_data_loader,
             num_basins=command_args.num_basins,
-            profile_code=command_args.profile_code
+            profile_code=command_args.profile_code,
+            num_processes_ddp=command_args.num_processes_ddp
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
