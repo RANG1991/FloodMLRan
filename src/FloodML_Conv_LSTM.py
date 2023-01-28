@@ -7,30 +7,31 @@ import math
 class FloodML_Conv_LSTM(nn.Module):
 
     def __init__(self, in_channels_cnn, sequence_length, image_width, image_height):
-        self.filter_size_convolutions = 3
+        super(FloodML_Conv_LSTM, self).__init__()
+        self.filter_size_conv = 3
         self.conv_x_input_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.conv_h_input_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.conv_x_forget_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.conv_h_forget_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.conv_x_output_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.conv_h_output_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.conv_x_cell_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.conv_h_cell_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=self.in_channels_cnn,
+            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
             kernel_size=(self.filter_size_conv, self.filter_size_conv))
         self.sequence_length = sequence_length
         self.image_width = image_width
@@ -42,7 +43,7 @@ class FloodML_Conv_LSTM(nn.Module):
         for i in range(self.sequence_length):
             c_prev = c_curr
             h_prev = h_curr
-            curr_x = x[:, i, :, :].squeeze()
+            curr_x = x[:, i, :, :]
             input_gate = nn.Sigmoid(self.conv_x_input_gate(curr_x) + self.conv_h_input_gate(h_prev))
             forget_gate = nn.Sigmoid(self.conv_x_forget_gate(curr_x) + self.conv_h_forget_gate(h_prev))
             output_gate = nn.Sigmoid(self.conv_x_output_gate(curr_x) + self.conv_h_output_gate(h_prev))

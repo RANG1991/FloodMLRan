@@ -256,7 +256,7 @@ def prepare_datasets(
             sequence_length=sequence_length,
             discharge_str=discharge_str,
             use_Caravan_dataset=use_Caravan_dataset,
-            create_new_files=True
+            create_new_files=False
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -279,7 +279,7 @@ def prepare_datasets(
             y_mean=training_data.y_mean,
             x_means=training_data.x_means,
             x_stds=training_data.x_stds,
-            create_new_files=True
+            create_new_files=False
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -487,7 +487,7 @@ def run_training_and_test(
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM(dropout=dropout, input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
                          hidden_dim=num_hidden_units, sequence_length_conv_lstm=30, in_channels_cnn=1,
-                         image_width=47, image_height=47)
+                         image_width=47, image_height=47, num_channels=1)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
