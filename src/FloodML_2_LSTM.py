@@ -19,6 +19,7 @@ class TWO_LSTM(torch.nn.Module):
         self.image_width = image_width
         self.image_height = image_height
         self.sequence_length_conv_lstm = sequence_length_conv_lstm
+        self.linear = torch.nn.Linear(self.image_width * self.image_height, self.hidden_dim)
 
     def forward(self, x):
         batch_size, time_steps, _ = x.size()
@@ -28,7 +29,7 @@ class TWO_LSTM(torch.nn.Module):
         x_spatial = x_spatial[:, :self.sequence_length_conv_lstm, :, :]
         c, h = self.conv_lstm(x_spatial)
         x_non_spatial = x[:, :, :-self.num_channels * self.image_width * self.image_height]
-        output, (h_n, c_n) = self.lstm(x_non_spatial)
+        output, (h_n, c_n) = self.lstm(x_non_spatial, self.linear(h), self.linear(c))
         output = self.dropout(output)
         pred = self.head(output)
         return pred[:, -1, :]
