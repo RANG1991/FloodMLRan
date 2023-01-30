@@ -128,6 +128,7 @@ class Dataset_ERA5(Dataset):
             test_end_date,
             stage,
             all_stations_ids,
+            sequence_length_spatial,
             specific_model_type="",
             static_attributes_names=[],
             sequence_length=270,
@@ -165,6 +166,7 @@ class Dataset_ERA5(Dataset):
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
         self.prefix_dynamic_data_file = "us_"
+        self.sequence_length_spatial = sequence_length_spatial
         max_width, max_length = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data"
         )
@@ -306,9 +308,10 @@ class Dataset_ERA5(Dataset):
         elif self.specific_model_type.lower() == "conv":
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
-            X_data = np.vstack([np.pad(X_data[:-30], [(0, 0), (0, X_data_spatial.shape[1] - X_data.shape[1])],
+            X_data = np.vstack([np.pad(X_data[:-self.sequence_length_spatial],
+                                       [(0, 0), (0, X_data_spatial.shape[1] - X_data.shape[1])],
                                        mode='constant', constant_values=0),
-                                X_data_spatial[-30:]])
+                                X_data_spatial[-self.sequence_length_spatial:]])
             X_data_tensor = torch.tensor(
                 X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)

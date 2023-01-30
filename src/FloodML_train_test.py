@@ -234,6 +234,7 @@ def prepare_datasets(
         discharge_data_folder,
         dataset_to_use,
         specific_model_type,
+        sequence_length_spatial,
         create_box_plots=False,
         create_new_files=False
 ):
@@ -257,7 +258,8 @@ def prepare_datasets(
             sequence_length=sequence_length,
             discharge_str=discharge_str,
             use_Caravan_dataset=use_Caravan_dataset,
-            create_new_files=create_new_files
+            create_new_files=create_new_files,
+            sequence_length_spatial=sequence_length_spatial
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -280,7 +282,8 @@ def prepare_datasets(
             y_mean=training_data.y_mean,
             x_means=training_data.x_means,
             x_stds=training_data.x_stds,
-            create_new_files=create_new_files
+            create_new_files=create_new_files,
+            sequence_length_spatial=sequence_length_spatial
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -365,7 +368,8 @@ def run_single_parameters_check_with_val_on_years(
         num_workers_data_loader,
         profile_code,
         num_processes_ddp,
-        create_new_files
+        create_new_files,
+        sequence_length_spatial,
 ):
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer" if "Transformer" in model_name else "LSTM"
@@ -380,6 +384,7 @@ def run_single_parameters_check_with_val_on_years(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
+        sequence_length_spatial=sequence_length_spatial,
         specific_model_type=specific_model_type,
         create_new_files=create_new_files
     )
@@ -405,7 +410,8 @@ def run_single_parameters_check_with_val_on_years(
                    1,
                    optim_name,
                    num_workers_data_loader,
-                   profile_code
+                   profile_code,
+                   sequence_length_spatial
                    ),
              nprocs=num_processes_ddp,
              join=True)
@@ -478,7 +484,8 @@ def run_training_and_test(
         calc_nse_interval,
         optim_name,
         num_workers_data_loader,
-        profile_code
+        profile_code,
+        sequence_length_spatial
 ):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
@@ -490,8 +497,8 @@ def run_training_and_test(
                                  out_features_cnn=64)
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM(dropout=dropout, input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
-                         hidden_dim=num_hidden_units, sequence_length_conv_lstm=30, in_channels_cnn=1,
-                         image_width=47, image_height=47, num_channels=1)
+                         hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
+                         in_channels_cnn=1, image_width=47, image_height=47, num_channels=1)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
@@ -586,7 +593,8 @@ def choose_hyper_parameters_validation(
         num_basins,
         profile_code,
         num_processes_ddp,
-        create_new_files
+        create_new_files,
+        sequence_length_spatial
 ):
     train_stations_list = []
     val_stations_list = []
@@ -656,7 +664,8 @@ def choose_hyper_parameters_validation(
             num_workers_data_loader=num_workers_data_loader,
             profile_code=profile_code,
             num_processes_ddp=num_processes_ddp,
-            create_new_files=create_new_files
+            create_new_files=create_new_files,
+            sequence_length_spatial=sequence_length_spatial
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -741,6 +750,8 @@ def main():
     parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
                                                     " parallelism", default=torch.cuda.device_count(),
                         type=int)
+    parser.add_argument("--sequence_length_spatial", help="the sequence length to take of spatial features",
+                        default=7, type=int)
     parser.add_argument("--create_new_files", action="store_true")
     parser.set_defaults(profile_code=False)
     parser.set_defaults(create_new_files=False)
@@ -762,7 +773,8 @@ def main():
             num_basins=command_args.num_basins,
             profile_code=command_args.profile_code,
             num_processes_ddp=command_args.num_processes_ddp,
-            create_new_files=command_args.create_new_files
+            create_new_files=command_args.create_new_files,
+            sequence_length_spatial=command_args.sequence_length_spatial
         )
     elif command_args.dataset == "CARAVAN":
         if command_args.model == "CNN_LSTM":
@@ -783,7 +795,8 @@ def main():
             num_basins=command_args.num_basins,
             profile_code=command_args.profile_code,
             num_processes_ddp=command_args.num_processes_ddp,
-            create_new_files=command_args.create_new_files
+            create_new_files=command_args.create_new_files,
+            sequence_length_spatial=command_args.sequence_length_spatial
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
