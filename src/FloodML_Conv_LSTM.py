@@ -38,10 +38,8 @@ class FloodML_Conv_LSTM(nn.Module):
         self.image_width = image_width
         self.image_height = image_height
 
-    def forward(self, x, c_curr, h_curr):
+    def forward(self, x, c_prev, h_prev):
         for i in range(self.sequence_length):
-            c_prev = c_curr
-            h_prev = h_curr
             curr_x = x[:, i, :, :, :]
             input_gate = torch.sigmoid(self.conv_x_input_gate(curr_x) + self.conv_h_input_gate(h_prev))
             input_gate = self.bn(input_gate)
@@ -52,4 +50,6 @@ class FloodML_Conv_LSTM(nn.Module):
             c_curr = forget_gate * c_prev + input_gate * (self.bn(self.conv_x_cell_gate(curr_x) +
                                                                   self.conv_h_cell_gate(h_prev)))
             h_curr = output_gate * torch.tanh(c_curr)
-        return h_curr
+            c_prev = c_curr
+            h_prev = h_curr
+        return h_prev
