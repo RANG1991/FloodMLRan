@@ -426,15 +426,15 @@ def run_single_parameters_check_with_val_on_years(
     for i in range(1, num_epochs + 1):
         training_loss_list_single_pass.append((sum(training_loss_dict_single_pass[i])
                                                / len(training_loss_dict_single_pass[i])))
-    nse_list_single_pass = []
-    nse_list_single_pass_temp = nse_queue_single_pass.get()
-    nse_list_single_pass.extend(nse_list_single_pass_temp[:])
-    del nse_list_single_pass_temp
-    if len(nse_list_single_pass) > 0:
+    nse_list_last_epoch = []
+    nse_list_last_epoch_temp = nse_queue_single_pass.get()
+    nse_list_last_epoch.extend(nse_list_last_epoch_temp[:])
+    del nse_list_last_epoch_temp
+    if len(nse_list_last_epoch) > 0:
         print(
             f"parameters are: dropout={dropout_rate} sequence_length={sequence_length} "
             f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: "
-            f"{statistics.median(nse_list_single_pass)}"
+            f"{statistics.median(nse_list_last_epoch)}"
         )
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -452,7 +452,7 @@ def run_single_parameters_check_with_val_on_years(
     )
     plt.show()
     plt.close()
-    return nse_list_single_pass
+    return nse_list_last_epoch
 
 
 class DistributedSamplerNoDuplicate(DistributedSampler):
@@ -574,7 +574,8 @@ def run_training_and_test(
                             preds_obs_dict_per_basin_all_ranks[key] = []
                         preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
-                nse_queue_single_pass.put(nse_list_single_pass)
+                if i == num_epochs - 1:
+                    nse_queue_single_pass.put(nse_list_single_pass)
             if world_size > 1:
                 dist.barrier()
         if rank == 0 and i == 3 and profile_code:
