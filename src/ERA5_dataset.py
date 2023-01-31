@@ -228,7 +228,7 @@ class Dataset_ERA5(Dataset):
                 else:
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                                 + (len(self.list_static_attributes_names))):]
-                    current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
+                    # current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
                     indices_all_features_non_spatial = range(0,
                                                              (len(self.list_dynamic_attributes_names))
                                                              + (len(self.list_static_attributes_names)))

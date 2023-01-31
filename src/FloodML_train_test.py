@@ -533,14 +533,14 @@ def run_training_and_test(
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
                                                                  shuffle=False)
         train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train, pin_memory=True,
-                                      num_workers=num_workers_data_loader)
+                                      num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
         test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test, pin_memory=True,
-                                     num_workers=num_workers_data_loader)
+                                     num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
     else:
         train_dataloader = DataLoader(training_data, batch_size=256, pin_memory=True,
-                                      num_workers=num_workers_data_loader, shuffle=False)
+                                      num_workers=num_workers_data_loader, shuffle=False, worker_init_fn=seed_worker)
         test_dataloader = DataLoader(test_data, batch_size=256, pin_memory=True,
-                                     num_workers=num_workers_data_loader, shuffle=False)
+                                     num_workers=num_workers_data_loader, shuffle=False, worker_init_fn=seed_worker)
     if rank == 0 and profile_code:
         p = profile(
             activities=[ProfilerActivity.CUDA],
@@ -576,6 +576,10 @@ def run_training_and_test(
             p.stop()
     if world_size > 1:
         cleanup()
+
+
+def seed_worker(worker_id):
+    initialize_seed(123)
 
 
 def choose_hyper_parameters_validation(
@@ -715,11 +719,16 @@ def trace_handler(p):
     p.export_chrome_trace("./trace_" + str(p.step_num) + ".json")
 
 
+def initialize_seed(seed):
+    torch.cuda.manual_seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+
+
 def main():
-    torch.cuda.manual_seed(123)
-    torch.manual_seed(123)
-    random.seed(123)
-    np.random.seed(123)
+    torch.backends.cudnn.deterministic = True
+    initialize_seed(123)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
@@ -749,7 +758,7 @@ def main():
                                              "in training and test / validation", default=None, type=int)
     parser.add_argument('--profile_code', action='store_true')
     parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
-                                                    " parallelism", default=torch.cuda.device_count(),
+                                                    " parallelism", default=1,
                         type=int)
     parser.add_argument("--sequence_length_spatial", help="the sequence length to take of spatial features",
                         default=7, type=int)
