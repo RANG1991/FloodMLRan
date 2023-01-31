@@ -104,7 +104,8 @@ def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor
                 station_id = station_id_batch[i]
                 if station_id not in preds_obs_dict_per_basin:
                     preds_obs_dict_per_basin[station_id] = []
-                preds_obs_dict_per_basin[station_id].append((pred_expected[i], pred_actual[i]))
+                preds_obs_dict_per_basin[station_id].append(
+                    (pred_expected[i].clone().item(), pred_actual[i].item()))
     return preds_obs_dict_per_basin
 
 
@@ -133,9 +134,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     # sim = np.delete(sim, np.argwhere(obs < 0), axis=0)
     # obs = np.delete(obs, np.argwhere(obs < 0), axis=0)
     # check for NaNs in observations
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    mask = ~torch.isnan(obs)
+    mask = ~np.isnan(obs)
     sim = sim[mask]
     obs = obs[mask]
     denominator = ((obs - obs.mean()) ** 2).sum()
@@ -150,8 +149,8 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     for stations_id in stations_ids:
         obs_and_preds = preds_obs_dict_per_basin[stations_id]
         obs, preds = zip(*obs_and_preds)
-        obs = torch.stack(list(obs))
-        preds = torch.stack(list(preds))
+        obs = np.stack(list(obs))
+        preds = np.stack(list(preds))
         nse = calc_nse(obs, preds)
         print(f"station with id: {stations_id} has nse of: {nse}")
         nse_list_basins.append(nse)
@@ -163,10 +162,10 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     fig, ax = plt.subplots(figsize=(20, 6))
     obs_and_preds = preds_obs_dict_per_basin[median_nse_basin]
     obs, preds = zip(*obs_and_preds)
-    obs = torch.stack(list(obs))
-    preds = torch.stack(list(preds))
-    ax.plot(obs.cpu().numpy().squeeze(), label="observation")
-    ax.plot(preds.cpu().numpy().squeeze(), label="prediction")
+    obs = np.stack(list(obs))
+    preds = np.stack(list(preds))
+    ax.plot(obs.squeeze(), label="observation")
+    ax.plot(preds.squeeze(), label="prediction")
     ax.legend()
     ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
     plt.savefig(
@@ -390,9 +389,10 @@ def run_single_parameters_check_with_val_on_years(
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
-    ctx = multiprocessing.get_context('spawn')
+    ctx = mp.get_context('spawn')
     nse_queue_single_pass = ctx.Queue(1000)
     training_loss_queue_single_pass = ctx.Queue(1000)
+    list_preds_dicts_ranks = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
                    learning_rate,
@@ -407,6 +407,7 @@ def run_single_parameters_check_with_val_on_years(
                    model_name,
                    nse_queue_single_pass,
                    training_loss_queue_single_pass,
+                   list_preds_dicts_ranks,
                    1,
                    optim_name,
                    num_workers_data_loader,
@@ -481,6 +482,7 @@ def run_training_and_test(
         model_name,
         nse_queue_single_pass,
         training_loss_queue_single_pass,
+        queue_preds_dicts_ranks,
         calc_nse_interval,
         optim_name,
         num_workers_data_loader,
@@ -516,7 +518,6 @@ def run_training_and_test(
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
-    list_preds_dicts_ranks = []
     if world_size > 1:
         setup(rank, world_size)
         torch.cuda.set_device(rank)
@@ -528,10 +529,8 @@ def run_training_and_test(
     if world_size > 1:
         model = DDP(model, device_ids=[rank])
     if world_size > 1:
-        distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, num_replicas=world_size, rank=rank,
-                                                                  shuffle=False)
-        distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, num_replicas=world_size, rank=rank,
-                                                                 shuffle=False)
+        distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
+        distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
         train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train, pin_memory=True,
                                       num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
         test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test, pin_memory=True,
@@ -557,17 +556,17 @@ def run_training_and_test(
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1))
-            list_preds_dicts_ranks.append(preds_obs_dict_per_basin)
+            queue_preds_dicts_ranks.put(preds_obs_dict_per_basin.copy())
             if world_size > 1:
                 dist.barrier()
             if rank == 0:
                 preds_obs_dict_per_basin_all_ranks = {}
-                for preds_obs_dict_per_basin in list_preds_dicts_ranks:
+                for _ in range(world_size):
+                    preds_obs_dict_per_basin = queue_preds_dicts_ranks.get()
                     for key in preds_obs_dict_per_basin:
                         if key not in preds_obs_dict_per_basin_all_ranks:
                             preds_obs_dict_per_basin_all_ranks[key] = []
                         preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
-                list_preds_dicts_ranks = []
                 nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
                 nse_queue_single_pass.put(nse_list_single_pass)
             if world_size > 1:
