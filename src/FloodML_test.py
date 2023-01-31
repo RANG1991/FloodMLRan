@@ -29,8 +29,8 @@ def test_FloodML():
         sequence_length=270,
         discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
         use_Caravan_dataset=True,
-        create_new_files=True
-    )
+        create_new_files=True,
+        sequence_length_spatial=7)
     test_data = ERA5_dataset.Dataset_ERA5(
         dynamic_data_folder=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
         static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
@@ -52,8 +52,8 @@ def test_FloodML():
         y_mean=training_data.y_mean,
         x_means=training_data.x_means,
         x_stds=training_data.x_stds,
-        create_new_files=True
-    )
+        create_new_files=True,
+        sequence_length_spatial=7)
     nse_queue_single_pass = Queue()
     training_loss_queue_single_pass = Queue()
     FloodML_train_test.run_training_and_test(rank=0,
@@ -74,7 +74,8 @@ def test_FloodML():
                                              calc_nse_interval=1,
                                              optim_name="Adam",
                                              num_workers_data_loader=0,
-                                             profile_code=False)
+                                             profile_code=False,
+                                             sequence_length_spatial=7)
     # nse_saved_list = []
     # while not nse_queue_single_pass.empty():
     #     nse_saved_list.append(nse_queue_single_pass.get())
