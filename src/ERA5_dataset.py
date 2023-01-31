@@ -605,7 +605,7 @@ class Dataset_ERA5(Dataset):
         self.current_basin = list(dict_station_id_to_data.keys())[0]
         self.dict_curr_basin = dict_station_id_to_data[self.current_basin]
         for key in dict_station_id_to_data.keys():
-            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
+            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length - 1):
                 lookup_table_basins[length_of_dataset] = key
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins

@@ -395,7 +395,7 @@ def run_single_parameters_check_with_val_on_years(
     list_preds_dicts_ranks = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
-                   learning_rate,
+                   (learning_rate * num_processes_ddp),
                    sequence_length,
                    num_hidden_units,
                    num_epochs,
@@ -531,9 +531,11 @@ def run_training_and_test(
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
-        train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train, pin_memory=True,
+        train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train,
+                                      pin_memory=True,
                                       num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
-        test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test, pin_memory=True,
+        test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test,
+                                     pin_memory=True,
                                      num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
     else:
         train_dataloader = DataLoader(training_data, batch_size=256, pin_memory=True,
@@ -549,12 +551,16 @@ def run_training_and_test(
                 active=2), on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"))
         p.start()
     for i in range(num_epochs):
+        if world_size > 1:
+            train_dataloader.sampler.set_epoch(i)
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
         if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
+            if world_size > 1:
+                test_dataloader.sampler.set_epoch(i)
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1))
             queue_preds_dicts_ranks.put(preds_obs_dict_per_basin.copy())
             if world_size > 1:
@@ -726,7 +732,7 @@ def initialize_seed(seed):
 
 
 def main():
-    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.enabled = False
     initialize_seed(123)
     parser = argparse.ArgumentParser()
     parser.add_argument(
