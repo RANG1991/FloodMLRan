@@ -37,6 +37,6 @@ class TWO_LSTM(torch.nn.Module):
         c_n = self.linear_states(c_n).reshape(batch_size, self.num_channels, self.image_width, self.image_height)
         output = self.conv_lstm(x_spatial, h_n, c_n)
         output = output.reshape(batch_size, -1)
+        output = self.dropout(output)
         pred = self.head(output)
-        pred = self.dropout(pred)
         return pred

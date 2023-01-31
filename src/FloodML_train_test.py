@@ -491,27 +491,28 @@ def run_training_and_test(
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
         model = ERA5_Transformer(sequence_length=sequence_length,
-                                 image_input_size=(training_data.max_length,
+                                 image_input_size=(training_data.max_height,
                                                    training_data.max_width),
                                  in_features=len(dynamic_attributes_names) + len(static_attributes_names),
                                  out_features_cnn=64)
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM(dropout=dropout, input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
                          hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                         in_channels_cnn=1, image_width=47, image_height=47, num_channels=1)
+                         in_channels_cnn=1, image_width=training_data.max_width, image_height=training_data.max_height,
+                         num_channels=1)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
-        model = CNN_LSTM(lat=10,
-                         lon=10,
+        model = CNN_LSTM(lat=training_data.max_width,
+                         lon=training_data.max_height,
                          hidden_size=num_hidden_units,
                          num_channels=1,
                          dropout_rate=dropout,
                          num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
-                         image_input_size=(10, 10))
+                         image_input_size=(training_data.max_width, training_data.max_height))
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -611,7 +612,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
-    dropout_rates = [0.25, 0.4, 0.0, 0.5]
+    dropout_rates = [0.5, 0.4, 0.0, 0.25]
     sequence_lengths = [270, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
