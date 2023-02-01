@@ -370,6 +370,7 @@ def run_single_parameters_check_with_val_on_years(
         create_new_files,
         sequence_length_spatial,
 ):
+    print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer" if "Transformer" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
