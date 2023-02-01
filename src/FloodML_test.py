@@ -56,6 +56,7 @@ def test_FloodML():
         sequence_length_spatial=7)
     nse_queue_single_pass = Queue()
     training_loss_queue_single_pass = Queue()
+    queue_preds_dicts_ranks = Queue()
     FloodML_train_test.run_training_and_test(rank=0,
                                              world_size=1,
                                              learning_rate=5 * (10 ** -4),
@@ -71,6 +72,7 @@ def test_FloodML():
                                              model_name="LSTM",
                                              nse_queue_single_pass=nse_queue_single_pass,
                                              training_loss_queue_single_pass=training_loss_queue_single_pass,
+                                             queue_preds_dicts_ranks=queue_preds_dicts_ranks,
                                              calc_nse_interval=1,
                                              optim_name="Adam",
                                              num_workers_data_loader=0,
