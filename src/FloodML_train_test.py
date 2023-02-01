@@ -555,6 +555,7 @@ def run_training_and_test(
     for i in range(num_epochs):
         if world_size > 1:
             train_dataloader.sampler.set_epoch(i)
+        train_dataloader.dataset.inner_index_in_data_of_basin = 0
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank)
         if rank == 0 and profile_code:
@@ -563,6 +564,7 @@ def run_training_and_test(
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             if world_size > 1:
                 test_dataloader.sampler.set_epoch(i)
+            test_dataloader.dataset.inner_index_in_data_of_basin = 0
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1))
             queue_preds_dicts_ranks.put(preds_obs_dict_per_basin.copy())
             if world_size > 1:

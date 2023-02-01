@@ -322,10 +322,10 @@ class Dataset_ERA5(Dataset):
             X_data = np.concatenate([X_data, X_data_spatial], axis=1)
             del X_data_spatial
             X_data_tensor = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length + 1]
             ).to(torch.float32)
         y_data_tensor = torch.tensor(
-            y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
+            y_data[self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.y_std_dict[self.current_basin], self.current_basin, X_data_tensor, y_data_tensor
@@ -605,7 +605,7 @@ class Dataset_ERA5(Dataset):
         self.current_basin = list(dict_station_id_to_data.keys())[0]
         self.dict_curr_basin = dict_station_id_to_data[self.current_basin]
         for key in dict_station_id_to_data.keys():
-            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length - 1):
+            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
                 lookup_table_basins[length_of_dataset] = key
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
