@@ -395,7 +395,8 @@ def run_single_parameters_check_with_val_on_years(
     list_preds_dicts_ranks = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
-                   (learning_rate * num_processes_ddp),
+                   (learning_rate * num_processes_ddp * (
+                       num_workers_data_loader if num_workers_data_loader > 0 else 1)),
                    sequence_length,
                    num_hidden_units,
                    num_epochs,
@@ -764,7 +765,7 @@ def main():
                                              "in training and test / validation", default=None, type=int)
     parser.add_argument('--profile_code', action='store_true')
     parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
-                                                    " parallelism", default=1,
+                                                    " parallelism", default=torch.cuda.device_count(),
                         type=int)
     parser.add_argument("--sequence_length_spatial", help="the sequence length to take of spatial features",
                         default=7, type=int)
