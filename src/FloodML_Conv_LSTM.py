@@ -8,31 +8,16 @@ class FloodML_Conv_LSTM(nn.Module):
 
     def __init__(self, in_channels_cnn, sequence_length, image_width, image_height):
         super(FloodML_Conv_LSTM, self).__init__()
+        self.in_channels_cnn = in_channels_cnn
         self.filter_size_conv = 3
-        self.conv_x_input_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
-        self.conv_h_input_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
-        self.conv_x_forget_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
-        self.conv_h_forget_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
-        self.conv_x_output_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
-        self.conv_h_output_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
-        self.conv_x_cell_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
-        self.conv_h_cell_gate = torch.nn.Conv2d(
-            in_channels=in_channels_cnn, out_channels=in_channels_cnn,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same", bias=False)
+        self.layers_list = []
+        for i in range(sequence_length):
+            conv = torch.nn.Conv2d(
+                in_channels=self.in_channels_cnn + (2 ** i),
+                out_channels=self.in_channels_cnn * 4 * (2 ** (i + 1)),
+                kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same")
+            self.layers_list.append(conv)
+        self.layers_list = nn.ModuleList(self.layers_list)
         # self.bn = nn.BatchNorm2d(in_channels_cnn)
         self.sequence_length = sequence_length
         self.image_width = image_width
@@ -42,16 +27,16 @@ class FloodML_Conv_LSTM(nn.Module):
         outputs = []
         for i in range(self.sequence_length):
             curr_x = x[:, i, :, :, :]
-            input_gate = torch.sigmoid(self.conv_x_input_gate(curr_x) + self.conv_h_input_gate(h_prev))
-            # input_gate = self.bn(input_gate)
-            forget_gate = torch.sigmoid(self.conv_x_forget_gate(curr_x) + self.conv_h_forget_gate(h_prev))
-            # forget_gate = self.bn(forget_gate)
-            output_gate = torch.sigmoid(self.conv_x_output_gate(curr_x) + self.conv_h_output_gate(h_prev))
-            # output_gate = self.bn(output_gate)
-            c_curr = forget_gate * c_prev + input_gate * (self.conv_x_cell_gate(curr_x) +
-                                                          self.conv_h_cell_gate(h_prev))
+            combined = torch.cat([curr_x, h_prev], dim=1)
+            gates = self.layers_list[i](combined)
+            input_gate, forget_gate, cell_gate, output_gate = torch.split(gates, 2 ** (i + 1), dim=1)
+            input_gate = torch.sigmoid(input_gate)
+            forget_gate = torch.sigmoid(forget_gate)
+            output_gate = torch.sigmoid(output_gate)
+            c_curr = forget_gate * c_prev.repeat(1, cell_gate.shape[1] // c_prev.shape[1], 1,
+                                                 1) + input_gate * cell_gate
             h_curr = output_gate * torch.tanh(c_curr)
             outputs.append(h_curr)
             c_prev = c_curr
             h_prev = h_curr
-        return torch.stack(outputs).permute(1, 0, 2, 3, 4).contiguous()
+        return torch.cat(outputs, dim=1).contiguous()

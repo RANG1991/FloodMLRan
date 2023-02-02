@@ -502,8 +502,7 @@ def run_training_and_test(
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM(dropout=dropout, input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
                          hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                         in_channels_cnn=1, image_width=training_data.max_width, image_height=training_data.max_height,
-                         num_channels=1)
+                         in_channels_cnn=1, image_width=training_data.max_width, image_height=training_data.max_height)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
