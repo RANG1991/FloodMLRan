@@ -23,14 +23,12 @@ class TWO_LSTM(torch.nn.Module):
         self.linear_states = torch.nn.Linear(self.hidden_dim,
                                              self.in_cnn_channels * self.image_width * self.image_height)
         self.head = torch.nn.Linear(
-            in_features=self.image_width * self.image_height * (sequence_length_conv_lstm ** 2),
+            in_features=self.image_width * self.image_height * self.in_cnn_channels,
             out_features=1)
 
-    def forward(self, x):
-        batch_size, _, _ = x.size()
-        x_non_spatial = x[:, :-self.sequence_length_conv_lstm, :self.input_dim]
+    def forward(self, x_non_spatial, x_spatial):
+        batch_size = x_non_spatial.shape[0]
         _, (h_n, c_n) = self.lstm(x_non_spatial)
-        x_spatial = x[:, -self.sequence_length_conv_lstm:, :]
         x_spatial = x_spatial.view(batch_size, self.sequence_length_conv_lstm, self.in_cnn_channels,
                                    self.image_width * self.image_height)
         x_spatial = x_spatial.view(batch_size, self.sequence_length_conv_lstm, self.in_cnn_channels, self.image_width,
@@ -38,9 +36,11 @@ class TWO_LSTM(torch.nn.Module):
         h_n = self.linear_states(h_n).reshape(batch_size, self.in_cnn_channels, self.image_width, self.image_height)
         c_n = self.linear_states(c_n).reshape(batch_size, self.in_cnn_channels, self.image_width, self.image_height)
         output = self.conv_lstm(x_spatial, c_n, h_n)
-        output = output[:, -(self.sequence_length_conv_lstm ** 2):, :, :].reshape(batch_size,
-                                                                                  self.sequence_length_conv_lstm ** 2 *
-                                                                                  self.image_width * self.image_height)
+        output = output.reshape(batch_size,
+                                self.sequence_length_conv_lstm,
+                                self.in_cnn_channels *
+                                self.image_width *
+                                self.image_height)
         output = self.dropout(output)
         pred = self.head(output)
-        return pred
+        return pred[:, -1, :]

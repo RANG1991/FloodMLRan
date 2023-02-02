@@ -13,8 +13,8 @@ class FloodML_Conv_LSTM(nn.Module):
         self.layers_list = []
         for i in range(sequence_length):
             conv = torch.nn.Conv2d(
-                in_channels=self.in_channels_cnn + (2 ** i),
-                out_channels=self.in_channels_cnn * 4 * (2 ** (i + 1)),
+                in_channels=self.in_channels_cnn * 2,
+                out_channels=self.in_channels_cnn * 4,
                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same")
             self.layers_list.append(conv)
         self.layers_list = nn.ModuleList(self.layers_list)
@@ -29,12 +29,11 @@ class FloodML_Conv_LSTM(nn.Module):
             curr_x = x[:, i, :, :, :]
             combined = torch.cat([curr_x, h_prev], dim=1)
             gates = self.layers_list[i](combined)
-            input_gate, forget_gate, cell_gate, output_gate = torch.split(gates, 2 ** (i + 1), dim=1)
+            input_gate, forget_gate, cell_gate, output_gate = torch.split(gates, self.in_channels_cnn, dim=1)
             input_gate = torch.sigmoid(input_gate)
             forget_gate = torch.sigmoid(forget_gate)
             output_gate = torch.sigmoid(output_gate)
-            c_curr = forget_gate * c_prev.repeat(1, cell_gate.shape[1] // c_prev.shape[1], 1,
-                                                 1) + input_gate * cell_gate
+            c_curr = forget_gate * c_prev + input_gate * cell_gate
             h_curr = output_gate * torch.tanh(c_curr)
             outputs.append(h_curr)
             c_prev = c_curr

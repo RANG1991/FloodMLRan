@@ -57,11 +57,14 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     running_loss = 0.0
-    for stds, station_id_batch, xs, ys in pbar:
+    for stds, station_id_batch, xs_non_spatial, xs_spatial, ys in pbar:
         # push data to GPU (if available)
-        xs, ys = xs.to(device), ys.to(device)
+        xs_non_spatial, ys = xs_non_spatial.to(device), ys.to(device)
         # get model predictions
-        y_hat = model(xs)
+        if xs_spatial.nelement() > 0:
+            y_hat = model(xs_non_spatial, xs_spatial.to(device))
+        else:
+            y_hat = model(xs_non_spatial)
         # calculate loss
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # delete previously stored gradients from the model
@@ -89,11 +92,14 @@ def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor
     # in inference mode, we don't need to store intermediate steps for backprob
     with torch.no_grad():
         # request mini-batch of data from the loader
-        for _, station_id_batch, xs, ys in pbar:
+        for _, station_id_batch, xs_non_spatial, xs_spatial, ys in pbar:
             # push data to GPU (if available)
-            xs = xs.to(device)
+            xs_non_spatial, ys = xs_non_spatial.to(device), ys.to(device)
             # get model predictions
-            y_hat = model(xs).squeeze()
+            if xs_spatial.nelement() > 0:
+                y_hat = model(xs_non_spatial, xs_spatial.to(device)).squeeze()
+            else:
+                y_hat = model(xs_non_spatial).squeeze()
             ys = ys.to(device)
             pred_actual = (
                     (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
@@ -503,7 +509,8 @@ def run_training_and_test(
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM(dropout=dropout, input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
                          hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                         in_channels_cnn=1, image_width=training_data.max_width, image_height=training_data.max_height)
+                         in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_width,
+                         image_height=training_data.max_height)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),

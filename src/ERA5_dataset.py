@@ -233,6 +233,14 @@ class Dataset_ERA5(Dataset):
                                                              (len(self.list_dynamic_attributes_names))
                                                              + (len(self.list_static_attributes_names)))
                     current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
+                    current_x_data_spatial = np.concatenate([np.expand_dims(current_x_data_spatial, axis=1),
+                                                             np.repeat(
+                                                                 np.expand_dims(current_x_data_non_spatial[:,
+                                                                                1:len(
+                                                                                    self.list_dynamic_attributes_names)],
+                                                                                axis=-1),
+                                                                 self.max_width * self.max_height,
+                                                                 axis=-1)], axis=1)
                     del current_x_data
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                        "x_data_spatial": current_x_data_spatial}
@@ -302,33 +310,37 @@ class Dataset_ERA5(Dataset):
                 self.dict_curr_basin = pickle.load(f)
         if self.specific_model_type.lower() == "lstm":
             X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
-            X_data_tensor = torch.tensor(
+            X_data_tensor_non_spatial = torch.tensor(
                 X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor([])
         elif self.specific_model_type.lower() == "conv":
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
-            X_data = np.vstack([np.pad(X_data[:-self.sequence_length_spatial],
-                                       [(0, 0), (0, X_data_spatial.shape[1] - X_data.shape[1])],
-                                       mode='constant', constant_values=0),
-                                X_data_spatial[-self.sequence_length_spatial:]])
-            X_data_tensor = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length -
+                                                          self.sequence_length_spatial]
             ).to(torch.float32)
-            del X_data_spatial
+            X_data_tensor_spatial = torch.tensor(
+                X_data_spatial[self.inner_index_in_data_of_basin + self.sequence_length -
+                               self.sequence_length_spatial: self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32)
         else:
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
-            X_data = np.concatenate([X_data, X_data_spatial], axis=1)
-            del X_data_spatial
-            X_data_tensor = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length + 1]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor(
+                X_data_spatial[
+                self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]).to(
+                torch.float32)
         y_data_tensor = torch.tensor(
             y_data[self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
-        return self.y_std_dict[self.current_basin], self.current_basin, X_data_tensor, y_data_tensor
+        return self.y_std_dict[
+            self.current_basin], self.current_basin, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor
 
     def read_static_attributes(self):
         df_attr_caravan = pd.read_csv(
