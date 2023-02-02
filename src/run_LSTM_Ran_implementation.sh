@@ -16,4 +16,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 source $virtual_env
 # module load cuda/11.2
 
-NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CARAVAN --optim Adam --shared_model True --num_epochs 50 --num_workers_data_loader 0
+NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CARAVAN --optim Adam --shared_model True --num_epochs 50

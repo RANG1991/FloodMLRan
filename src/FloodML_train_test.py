@@ -172,7 +172,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
         f"../data/results/Hydrograph_of_basin_{median_nse_basin}_in_epoch_{num_epoch}.png"
     )
     plt.close()
-    return nse_list_basins
+    return nse_list_basins, median_nse
 
 
 def plot_NSE_CDF(nse_losses, title_for_legend):
@@ -491,6 +491,7 @@ def run_training_and_test(
         profile_code,
         sequence_length_spatial
 ):
+    best_median_nse = None
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
@@ -576,9 +577,14 @@ def run_training_and_test(
                         if key not in preds_obs_dict_per_basin_all_ranks:
                             preds_obs_dict_per_basin_all_ranks[key] = []
                         preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
-                nse_list_single_pass = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks, (i + 1))
-                if i == num_epochs - 1:
+                nse_list_single_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks,
+                                                                              (i + 1))
+                if best_median_nse is None or best_median_nse < median_nse:
+                    if not nse_queue_single_pass.empty():
+                        nse_queue_single_pass.get()
                     nse_queue_single_pass.put(nse_list_single_pass)
+                    best_median_nse = median_nse
+                print(f"best NSE so far: {best_median_nse}")
             if world_size > 1:
                 dist.barrier()
         if rank == 0 and i == 3 and profile_code:
