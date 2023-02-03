@@ -49,11 +49,14 @@ def cleanup():
     dist.destroy_process_group()
 
 
-def train_epoch(model, optimizer, loader, loss_func, epoch, device):
+def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_to_console):
     # set model to train mode (important for dropout)
     torch.cuda.empty_cache()
     model.train()
-    pbar = tqdm(loader, file=sys.stdout)
+    if print_tqdm_to_console:
+        pbar = tqdm(loader, file=sys.stdout)
+    else:
+        pbar = tqdm(loader, file=open('./tqdm_progress.txt', 'w'))
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     running_loss = 0.0
@@ -82,12 +85,15 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device):
     return running_loss / (len(loader))
 
 
-def eval_model(model, loader, device, epoch) -> Tuple[torch.Tensor, torch.Tensor]:
+def eval_model(model, loader, device, epoch, print_tqdm_to_console) -> Tuple[torch.Tensor, torch.Tensor]:
     torch.cuda.empty_cache()
     preds_obs_dict_per_basin = {}
     # set model to eval mode (important for dropout)
     model.eval()
-    pbar = tqdm(loader, file=sys.stdout)
+    if print_tqdm_to_console:
+        pbar = tqdm(loader, file=sys.stdout)
+    else:
+        pbar = tqdm(loader, file=open('./tqdm_progress.txt', 'a'))
     pbar.set_description(f"Epoch {epoch}")
     # in inference mode, we don't need to store intermediate steps for backprob
     with torch.no_grad():
@@ -375,6 +381,7 @@ def run_single_parameters_check_with_val_on_years(
         num_processes_ddp,
         create_new_files,
         sequence_length_spatial,
+        print_tqdm_to_console
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
@@ -420,7 +427,8 @@ def run_single_parameters_check_with_val_on_years(
                    optim_name,
                    num_workers_data_loader,
                    profile_code,
-                   sequence_length_spatial
+                   sequence_length_spatial,
+                   print_tqdm_to_console
                    ),
              nprocs=num_processes_ddp,
              join=True)
@@ -495,7 +503,8 @@ def run_training_and_test(
         optim_name,
         num_workers_data_loader,
         profile_code,
-        sequence_length_spatial
+        sequence_length_spatial,
+        print_tqdm_to_console
 ):
     best_median_nse = None
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
@@ -564,7 +573,8 @@ def run_training_and_test(
             train_dataloader.sampler.set_epoch(i)
         train_dataloader.dataset.inner_index_in_data_of_basin = 0
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
-                                             epoch=(i + 1), device=rank)
+                                             epoch=(i + 1), device=rank,
+                                             print_tqdm_to_console=print_tqdm_to_consol)
         if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
@@ -572,7 +582,8 @@ def run_training_and_test(
             if world_size > 1:
                 test_dataloader.sampler.set_epoch(i)
             test_dataloader.dataset.inner_index_in_data_of_basin = 0
-            preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1))
+            preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1),
+                                                  print_tqdm_to_console=print_tqdm_to_console)
             queue_preds_dicts_ranks.put(preds_obs_dict_per_basin.copy())
             if world_size > 1:
                 dist.barrier()
@@ -621,7 +632,8 @@ def choose_hyper_parameters_validation(
         profile_code,
         num_processes_ddp,
         create_new_files,
-        sequence_length_spatial
+        sequence_length_spatial,
+        print_tqdm_to_console
 ):
     train_stations_list = []
     val_stations_list = []
@@ -692,7 +704,8 @@ def choose_hyper_parameters_validation(
             profile_code=profile_code,
             num_processes_ddp=num_processes_ddp,
             create_new_files=create_new_files,
-            sequence_length_spatial=sequence_length_spatial
+            sequence_length_spatial=sequence_length_spatial,
+            print_tqdm_to_console=print_tqdm_to_console
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -785,8 +798,10 @@ def main():
     parser.add_argument("--sequence_length_spatial", help="the sequence length to take of spatial features",
                         default=7, type=int)
     parser.add_argument("--create_new_files", action="store_true")
+    parser.add_argument("--print_tqdm_to_console", action="store_true")
     parser.set_defaults(profile_code=False)
     parser.set_defaults(create_new_files=False)
+    parser.set_defaults(print_tqdm_to_console=False)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -806,7 +821,8 @@ def main():
             profile_code=command_args.profile_code,
             num_processes_ddp=command_args.num_processes_ddp,
             create_new_files=command_args.create_new_files,
-            sequence_length_spatial=command_args.sequence_length_spatial
+            sequence_length_spatial=command_args.sequence_length_spatial,
+            print_tqdm_to_console=command_args.print_tqdm_to_console
         )
     elif command_args.dataset == "CARAVAN":
         if command_args.model == "CNN_LSTM":
@@ -828,7 +844,8 @@ def main():
             profile_code=command_args.profile_code,
             num_processes_ddp=command_args.num_processes_ddp,
             create_new_files=command_args.create_new_files,
-            sequence_length_spatial=command_args.sequence_length_spatial
+            sequence_length_spatial=command_args.sequence_length_spatial,
+            print_tqdm_to_console=command_args.print_tqdm_to_console
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
