@@ -56,7 +56,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
     if print_tqdm_to_console:
         pbar = tqdm(loader, file=sys.stdout)
     else:
-        pbar = tqdm(loader, file=open('./tqdm_progress.txt', 'w'))
+        pbar = tqdm(loader, file=open('../tqdm_progress.txt', 'w'))
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     running_loss = 0.0
@@ -93,7 +93,7 @@ def eval_model(model, loader, device, epoch, print_tqdm_to_console) -> Tuple[tor
     if print_tqdm_to_console:
         pbar = tqdm(loader, file=sys.stdout)
     else:
-        pbar = tqdm(loader, file=open('./tqdm_progress.txt', 'a'))
+        pbar = tqdm(loader, file=open('../tqdm_progress.txt', 'a'))
     pbar.set_description(f"Epoch {epoch}")
     # in inference mode, we don't need to store intermediate steps for backprob
     with torch.no_grad():
