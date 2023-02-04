@@ -33,7 +33,9 @@ import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
 import wandb
 
-wandb.init(project="FloodML")
+wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
+
+wandb.init(project="FloodML", entity="r999")
 
 matplotlib.use("AGG")
 
