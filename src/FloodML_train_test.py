@@ -554,6 +554,7 @@ def run_training_and_test(
         model = DDP(model, device_ids=[rank])
     config = wandb.config
     config.learning_rate = learning_rate
+    config.wandb = True
     wandb.watch(model)
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
@@ -659,12 +660,12 @@ def choose_hyper_parameters_validation(
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
-    dropout_rates = [0.5, 0.4, 0.0, 0.25]
+    dropout_rates = [0.5]
     sequence_lengths = [270, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [156, 96, 128, 256, 196, 224]
+        num_hidden_units = [156]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
