@@ -164,13 +164,13 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
         obs = np.stack(list(obs))
         preds = np.stack(list(preds))
         nse = calc_nse(obs, preds)
-        print(f"station with id: {stations_id} has nse of: {nse}")
+        print(f"station with id: {stations_id} has nse of: {nse}", flush=True)
         nse_list_basins.append(nse)
     # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
     median_nse_basin = stations_ids[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
     median_nse = statistics.median(nse_list_basins)
-    print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
+    print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}", flush=True)
     fig, ax = plt.subplots(figsize=(20, 6))
     obs_and_preds = preds_obs_dict_per_basin[median_nse_basin]
     obs, preds = zip(*obs_and_preds)
@@ -574,7 +574,7 @@ def run_training_and_test(
         train_dataloader.dataset.inner_index_in_data_of_basin = 0
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank,
-                                             print_tqdm_to_console=print_tqdm_to_consol)
+                                             print_tqdm_to_console=print_tqdm_to_console)
         if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
