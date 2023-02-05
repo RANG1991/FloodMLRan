@@ -20,10 +20,10 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
         self.cnn_lstm = CNN_LSTM(lat=image_width,
                                  lon=image_height,
                                  hidden_size=hidden_dim,
-                                 num_channels=1,
+                                 num_channels=in_channels_cnn,
                                  dropout_rate=dropout,
                                  image_input_size=(image_width, image_height))
-        self.sequence_length_conv_lstm = sequence_length_conv_lstm
+        self.sequence_length_cnn_lstm = sequence_length_conv_lstm
         self.linear_states = torch.nn.Linear(self.hidden_dim,
                                              self.in_cnn_channels * self.image_width * self.image_height)
         self.head = torch.nn.Linear(
@@ -32,16 +32,10 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
 
     def forward(self, x_non_spatial, x_spatial):
         batch_size = x_non_spatial.shape[0]
-        _, (h_n, c_n) = self.lstm(x_non_spatial)
-        x_spatial = x_spatial.view(batch_size, self.sequence_length_conv_lstm, self.in_cnn_channels,
-                                   self.image_width * self.image_height)
-        x_spatial = x_spatial.view(batch_size, self.sequence_length_conv_lstm, self.in_cnn_channels, self.image_width,
-                                   self.image_height)
-        h_n = self.linear_states(h_n).reshape(batch_size, self.in_cnn_channels, self.image_width, self.image_height)
-        c_n = self.linear_states(c_n).reshape(batch_size, self.in_cnn_channels, self.image_width, self.image_height)
-        output = self.cnn_lstm(x_spatial, c_n, h_n)
+        _, (h_n, c_n) = self.lstm(x_non_spatial[:, :-self.sequence_length_cnn_lstm, :])
+        output = self.cnn_lstm(x_non_spatial[:, -self.sequence_length_cnn_lstm:, :], x_spatial, h_n, c_n)
         output = output.reshape(batch_size,
-                                self.sequence_length_conv_lstm,
+                                self.sequence_length_cnn_lstm,
                                 self.in_cnn_channels *
                                 self.image_width *
                                 self.image_height)

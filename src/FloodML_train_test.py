@@ -533,7 +533,10 @@ def run_training_and_test(
             hidden_dim=num_hidden_units,
             dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
-        model = TWO_LSTM_CNN_LSTM()
+        model = TWO_LSTM_CNN_LSTM(input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+                                  image_height=training_data.max_dim, image_width=training_data.max_dim,
+                                  hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
+                                  in_channels_cnn=len(dynamic_attributes_names), dropout=dropout)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -830,8 +833,6 @@ def main():
             print_tqdm_to_console=command_args.print_tqdm_to_console
         )
     elif command_args.dataset == "CARAVAN":
-        if command_args.model == "CNN_LSTM":
-            ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[1:]
         choose_hyper_parameters_validation(
             ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
             ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,

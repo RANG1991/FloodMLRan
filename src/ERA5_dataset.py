@@ -328,6 +328,16 @@ class Dataset_ERA5(Dataset):
                 X_data_spatial[self.inner_index_in_data_of_basin + self.sequence_length -
                                self.sequence_length_spatial: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)
+        elif self.specific_model_type == "cnn":
+            X_data, X_data_spatial, y_data = \
+                self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor(
+                X_data_spatial[self.inner_index_in_data_of_basin + self.sequence_length -
+                               self.sequence_length_spatial: self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32)
         else:
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]

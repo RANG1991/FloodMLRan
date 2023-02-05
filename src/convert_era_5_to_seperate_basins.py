@@ -364,6 +364,7 @@ def main():
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"].tolist()
+    station_ids_list = ["01031500"]
     for station_id in station_ids_list:
         station_id = str(station_id).zfill(8)
         basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
