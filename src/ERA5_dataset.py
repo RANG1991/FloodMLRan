@@ -402,15 +402,14 @@ class Dataset_ERA5(Dataset):
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
                     if station_id == basin_id_with_maximum_height:
-                        for i in range(X_data_spatial.shape[0]):
-                            gray_image = X_data_spatial[i].reshape(-1, self.max_height)
-                            plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_{i}_precip.png",
-                                       gray_image)
+                        gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], -1, self.max_height).sum(axis=0)
+                        plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
+                                   gray_image)
                     if station_id == basin_id_with_maximum_width:
-                        for i in range(X_data_spatial.shape[0]):
-                            gray_image = X_data_spatial[i].reshape(self.max_width, -1)
-                            plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_{i}_precip.png",
-                                       gray_image)
+                        gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_width, -1).sum(
+                            axis=0)
+                        plt.imsave(f"../data/basin_check_precip_images/img_{station_id}precip.png",
+                                   gray_image)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         del X_data_spatial
                         del X_data_non_spatial
