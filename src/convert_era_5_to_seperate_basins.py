@@ -13,6 +13,8 @@ PATH_ROOT = "../../FloodMLRan/data/ERA5"
 TEST_PERIOD = ("1989-10-01", "1999-09-30")
 TRAINING_PERIOD = ("1999-10-01", "2008-09-30")
 
+GRID_DELTA = 0.25
+
 
 def check_if_discharge_file_exists(station_id, ERA5_discharge_data_folder_name):
     timezone_file = ERA5_discharge_data_folder_name + "/timezone_" + station_id + ".txt"
@@ -75,9 +77,23 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
     df_group.to_csv(filename)
 
 
+def get_index_by_lat_lon(lat, lon, lat_grid, lon_grid):
+    i = np.where(lat == lat_grid)[0]
+    assert len(i) > 0, f"Please supply latitude between {min(lat_grid)} and {max(lat_grid)}"
+    j = np.where(lon == lon_grid)[0]
+    assert len(j) > 0, f"Please supply longitude between {min(lon_grid)} and {max(lon_grid)}"
+    return i, j
+
+
 def create_and_write_precipitation_spatial(
-        datetimes, ls_spatial, ERA5_static_data_file_name, station_id, output_folder_name
-):
+        datetimes, ls_spatial, ERA5_static_data_file_name, station_id, output_folder_name, lat_grid, lon_grid,
+        lat_lon_lst):
+    h = len(lat_grid)
+    w = len(lon_grid)
+    idx_mat = np.zeros((h, w), dtype=bool)
+    for lat_i, lon_i in lat_lon_lst:
+        i, j = get_index_by_lat_lon(lat_i, lon_i, lat_grid, lon_grid)
+        idx_mat[i[0], j[0]] = True
     ds = xr.Dataset(
         {
             "precipitation": xr.DataArray(
@@ -88,7 +104,7 @@ def create_and_write_precipitation_spatial(
         },
         attrs={"creation_date": datetime.datetime.now()},
     )
-
+    ds["precipitation"] = ds["precipitation"] * idx_mat
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
         lambda s: s.replace("us_", "")
@@ -238,12 +254,29 @@ def parse_single_basin_precipitation(
     df_precip_one_day_non_spatial = create_and_write_precipitation_mean(
         datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
     )
+
+    lonb = lon[ind_lon_min:ind_lon_max + 1]
+    latb = lat[ind_lat_max:ind_lat_min + 1]
+    lslon = [lonb[i] for i in range(0, len(lonb)) for j in range(0, len(latb))]
+    lslat = [latb[j] for i in range(0, len(lonb)) for j in range(0, len(latb))]
+    lat_lon_lst = []
+    for i in range(0, len(lslon)):
+        if np.squeeze(basin_data["geometry"].contains(Point(lslon[i], lslat[i]))):
+            lat_lon_lst.append([lslat[i], lslon[i]])
+    fn = output_folder_name + "/latlon_" + station_id + ".csv"
+    pd.DataFrame(data=lat_lon_lst, columns=["lat", "lon"]).to_csv(
+        fn, index=False, float_format="%6.1f"
+    )
+
     create_and_write_precipitation_spatial(
         datetimes,
         ls_precip_new,
         ERA5_static_data_file_name,
         station_id,
         output_folder_name,
+        latb,
+        lonb,
+        lat_lon_lst
     )
     # down sample the discharge data into 1D (1 day) bins and take the mean of the values falling into the same bin
     df_dis_one_day = df_dis.resample("1D").mean()
@@ -290,18 +323,7 @@ def parse_single_basin_precipitation(
             precip.shape,
         ]
     )
-    lonb = lon[ind_lon_min:ind_lon_max]
-    latb = lat[ind_lat_max:ind_lat_min]
-    lslon = [lonb[i] for i in range(0, len(lonb)) for j in range(0, len(latb))]
-    lslat = [latb[j] for i in range(0, len(lonb)) for j in range(0, len(latb))]
-    lat_lon_lst = []
-    for i in range(0, len(lslon)):
-        if np.squeeze(basin_data["geometry"].contains(Point(lslon[i], lslat[i]))):
-            lat_lon_lst.append([lslat[i], lslon[i]])
-    fn = output_folder_name + "/latlon_" + station_id + ".csv"
-    pd.DataFrame(data=lat_lon_lst, columns=["lat", "lon"]).to_csv(
-        fn, index=False, float_format="%6.1f"
-    )
+
     fn = output_folder_name + "/info_" + station_id + ".txt"
     with open(fn, "w") as f:
         print(
@@ -341,8 +363,8 @@ def main():
     # return
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
-    station_ids_list = ["03069500"]
-    for station_id in station_ids_list:
+    station_ids_list = basins_data["hru_id"].tolist()
+    for station_id in station_ids_list[0: 1]:
         station_id = str(station_id).zfill(8)
         basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
         try:
