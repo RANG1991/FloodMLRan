@@ -167,13 +167,14 @@ class Dataset_ERA5(Dataset):
         self.specific_model_type = specific_model_type
         self.prefix_dynamic_data_file = "us_"
         self.sequence_length_spatial = sequence_length_spatial
-        max_width, max_length, basin_id_with_maximum_width, basin_id_with_maximum_height = self.get_maximum_width_and_length_of_basin(
+        max_width, max_height, basin_id_with_maximum_width, basin_id_with_maximum_height = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data", self.all_station_ids
         )
-        if max_length <= 0 or max_width <= 0:
+        if max_height <= 0 or max_width <= 0:
             raise Exception("max length or max width are not greater than 0")
-        self.max_width = max(max_width, max_length)
-        self.max_height = max(max_width, max_length)
+        self.max_width = max_width
+        self.max_height = max_height
+        self.max_dim = max(self.max_height, self.max_width)
         (dict_station_id_to_data,
          x_means,
          x_stds,
@@ -183,7 +184,7 @@ class Dataset_ERA5(Dataset):
          max_spatial
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type,
-                                              max_width=self.max_width, max_length=self.max_height,
+                                              max_width=self.max_width, max_height=self.max_height,
                                               create_new_files=create_new_files,
                                               basin_id_with_maximum_width=basin_id_with_maximum_width,
                                               basin_id_with_maximum_height=basin_id_with_maximum_height)
@@ -241,7 +242,7 @@ class Dataset_ERA5(Dataset):
                                                                                 1:len(
                                                                                     self.list_dynamic_attributes_names)],
                                                                                 axis=-1),
-                                                                 self.max_width * self.max_height,
+                                                                 self.max_dim * self.max_dim,
                                                                  axis=-1)], axis=1)
                     del current_x_data
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
@@ -368,7 +369,7 @@ class Dataset_ERA5(Dataset):
         ).to_numpy()
         return df_attr, df_attr["gauge_id"].values.tolist()
 
-    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length,
+    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_height,
                                     create_new_files, basin_id_with_maximum_width, basin_id_with_maximum_height):
         if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
             obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'r',
@@ -400,14 +401,23 @@ class Dataset_ERA5(Dataset):
                         specific_model_type.lower() == "transformer"):
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
-                    if station_id == basin_id_with_maximum_width or station_id == basin_id_with_maximum_height:
-                        plt.imshow(X_data_non_spatial[0, :, :])
+                    if station_id == basin_id_with_maximum_height:
+                        for i in range(X_data_spatial.shape[0]):
+                            gray_image = X_data_spatial[i].reshape(-1, self.max_height)
+                            plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_{i}_precip.png",
+                                       gray_image)
+                    if station_id == basin_id_with_maximum_width:
+                        for i in range(X_data_spatial.shape[0]):
+                            gray_image = X_data_spatial[i].reshape(self.max_width, -1)
+                            plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_{i}_precip.png",
+                                       gray_image)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         del X_data_spatial
                         del X_data_non_spatial
                         del y_data
                         continue
-                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_width, max_length)
+                    max_dim = max(max_width, max_height)
+                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
                         del X_data_spatial
@@ -437,7 +447,7 @@ class Dataset_ERA5(Dataset):
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
                     X_data_spatial = np.array(
-                        X_data_spatial.reshape(X_data_non_spatial.shape[0], max_length * max_width),
+                        X_data_spatial.reshape(X_data_non_spatial.shape[0], max_height * max_width),
                         dtype=np.float64)
                     max_spatial = X_data_spatial.max().item() if (
                             X_data_spatial.max().item() > max_spatial or max_spatial == -1) else max_spatial

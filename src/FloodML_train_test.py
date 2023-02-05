@@ -517,29 +517,29 @@ def run_training_and_test(
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
         model = ERA5_Transformer(sequence_length=sequence_length,
-                                 image_input_size=(training_data.max_height,
-                                                   training_data.max_width),
+                                 image_input_size=(training_data.max_dim,
+                                                   training_data.max_dim),
                                  in_features=len(dynamic_attributes_names) + len(static_attributes_names),
                                  out_features_cnn=64)
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM_CONV_LSTM(dropout=dropout,
                                    input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
                                    hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                                   in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_width,
-                                   image_height=training_data.max_height)
+                                   in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_dim,
+                                   image_height=training_data.max_dim)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
-        model = CNN_LSTM(lat=training_data.max_width,
-                         lon=training_data.max_height,
+        model = CNN_LSTM(lat=training_data.max_dim,
+                         lon=training_data.max_dim,
                          hidden_size=num_hidden_units,
                          num_channels=1,
                          dropout_rate=dropout,
                          num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
-                         image_input_size=(training_data.max_width, training_data.max_height))
+                         image_input_size=(training_data.max_dim, training_data.max_dim))
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
