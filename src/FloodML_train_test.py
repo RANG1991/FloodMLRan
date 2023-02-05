@@ -19,7 +19,7 @@ import statistics
 import argparse
 from FloodML_LSTM import LSTM
 from FloodML_Transformer import ERA5_Transformer
-from FloodML_2_LSTM import TWO_LSTM
+from FloodML_2_LSTM_Conv_LSTM import TWO_LSTM_CONV_LSTM
 from FloodML_CNN_LSTM import CNN_LSTM
 from pathlib import Path
 import random
@@ -522,10 +522,11 @@ def run_training_and_test(
                                  in_features=len(dynamic_attributes_names) + len(static_attributes_names),
                                  out_features_cnn=64)
     elif model_name.lower() == "conv_lstm":
-        model = TWO_LSTM(dropout=dropout, input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
-                         hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                         in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_width,
-                         image_height=training_data.max_height)
+        model = TWO_LSTM_CONV_LSTM(dropout=dropout,
+                                   input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+                                   hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
+                                   in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_width,
+                                   image_height=training_data.max_height)
     elif model_name.lower() == "lstm":
         model = LSTM(
             input_dim=len(dynamic_attributes_names) + len(static_attributes_names),

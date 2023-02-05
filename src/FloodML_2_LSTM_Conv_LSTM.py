@@ -2,10 +2,10 @@ import torch
 from FloodML_Conv_LSTM import FloodML_Conv_LSTM
 
 
-class TWO_LSTM(torch.nn.Module):
+class TWO_LSTM_CONV_LSTM(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, dropout, in_channels_cnn,
                  sequence_length_conv_lstm, image_width, image_height):
-        super(TWO_LSTM, self).__init__()
+        super(TWO_LSTM_CONV_LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.image_width = image_width

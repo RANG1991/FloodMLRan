@@ -167,7 +167,7 @@ class Dataset_ERA5(Dataset):
         self.specific_model_type = specific_model_type
         self.prefix_dynamic_data_file = "us_"
         self.sequence_length_spatial = sequence_length_spatial
-        max_width, max_length = self.get_maximum_width_and_length_of_basin(
+        max_width, max_length, basin_id_with_maximum_width, basin_id_with_maximum_height = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data", self.all_station_ids
         )
         if max_length <= 0 or max_width <= 0:
@@ -184,7 +184,9 @@ class Dataset_ERA5(Dataset):
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_length=self.max_height,
-                                              create_new_files=create_new_files)
+                                              create_new_files=create_new_files,
+                                              basin_id_with_maximum_width=basin_id_with_maximum_width,
+                                              basin_id_with_maximum_height=basin_id_with_maximum_height)
 
         self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.x_mean_dict, force=True)
         self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}", self.x_std_dict, force=True)
@@ -367,7 +369,7 @@ class Dataset_ERA5(Dataset):
         return df_attr, df_attr["gauge_id"].values.tolist()
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_length,
-                                    create_new_files):
+                                    create_new_files, basin_id_with_maximum_width, basin_id_with_maximum_height):
         if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
             obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'r',
                                    encoding='utf-8').read()
@@ -398,6 +400,8 @@ class Dataset_ERA5(Dataset):
                         specific_model_type.lower() == "transformer"):
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
+                    if station_id == basin_id_with_maximum_width or station_id == basin_id_with_maximum_height:
+                        plt.imshow(X_data_non_spatial[0, :, :])
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         del X_data_spatial
                         del X_data_non_spatial
@@ -670,16 +674,17 @@ class Dataset_ERA5(Dataset):
             + ".png"
         )
 
-    @staticmethod
-    def get_maximum_width_and_length_of_basin(shape_files_folder, basins_ids):
+    def get_maximum_width_and_length_of_basin(self, shape_files_folder, basins_ids):
         WIDTH_LOC_IN_ROW = 2
         HEIGHT_LOC_IN_ROW = 3
         max_height = -1
         max_width = -1
+        basin_id_with_maximum_height = -1
+        basin_id_with_maximum_width = -1
         file_names = glob(f"{shape_files_folder}/shape_*.csv")
         for file_name in file_names:
             basin_id = file_name.replace(f"{shape_files_folder}/shape_", "").strip(".csv")
-            if basin_id in basins_ids:
+            if basin_id in basins_ids and self.check_is_valid_station_id(station_id=basin_id, create_new_files=True):
                 with open(file_name, newline="\n") as csvfile:
                     shape_file_reader = csv.reader(csvfile, delimiter=",")
                     shape_file_rows_list = list(shape_file_reader)
@@ -687,11 +692,13 @@ class Dataset_ERA5(Dataset):
                     height = int(shape_file_rows_list[1][HEIGHT_LOC_IN_ROW])
                     if width > max_width:
                         max_width = width
+                        basin_id_with_maximum_width = basin_id
                     if height > max_height:
                         max_height = height
+                        basin_id_with_maximum_height = basin_id
         print(f"max width is: {max_width}")
         print(f"max height is: {max_height}")
-        return int(max_width), int(max_height)
+        return int(max_width), int(max_height), basin_id_with_maximum_width, basin_id_with_maximum_height
 
     def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
