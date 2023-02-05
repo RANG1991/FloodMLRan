@@ -110,7 +110,7 @@ class CNN_LSTM(nn.Module):
         self.dropout = nn.Dropout(p=self.dropout_rate)
         self.fc = nn.Linear(in_features=self.hidden_size, out_features=1)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_non_spatial, x_spatial: torch.Tensor) -> torch.Tensor:
         """
         Forward pass through the Network.
         param x: Tensor of shape [batch size, seq length, num features]
@@ -124,24 +124,17 @@ class CNN_LSTM(nn.Module):
         # 3. (num_channels*H_LAT*W_LON + 4)
         # the 4 is for the 4 static features
         # for example, currently, x.size() is - (64, 30, 840)
-        batch_size, time_steps, _ = x.size()
+        batch_size, time_steps, _ = x_non_spatial.size()
         # getting the "image" part of the input
         # (removing the last 4 static features)
-        image = x[:, :, -self.num_channels * self.lat * self.lon:]
-        # reshaping the image to 4 dimensional tensor of (batch_size, time_steps, num_channels, H_LAT*W_LON)
-        image = image.view(batch_size, time_steps, self.num_channels, self.lat * self.lon)
-        # reshaping the image to 5 dimensional tensor of (batch_size, time_steps, num_channels, H_LAT, W_LON)
-        image = image.view(batch_size, time_steps, self.num_channels, self.lat, self.lon)
-        # reshaping the image to 4 dimensional tensor of (batch_size * time_steps, num_channels, H_LAT, W_LON)
-        c_in = image.view(batch_size * time_steps, self.num_channels, self.lat, self.lon)
+        c_in = x_spatial.view(batch_size * time_steps, self.num_channels, self.lat, self.lon)
         # CNN part
         c_out = self.cnn(c_in)
         # CNN output should be in the size of (input size - attributes_size)
         cnn_out = c_out.view(batch_size, time_steps, -1)
         # getting the "non-image" part of the input (last 4 attributes)
         # (removing the "image" part)
-        a_in = x[:, :, :-self.num_channels * self.lat * self.lon]
-        r_in = torch.cat([cnn_out, a_in], dim=2)
+        r_in = torch.cat([cnn_out, x_non_spatial], dim=2)
         output, (h_n, c_n) = self.lstm(r_in)
         # perform prediction only at the end of the input sequence
         pred = self.fc(self.dropout(output))

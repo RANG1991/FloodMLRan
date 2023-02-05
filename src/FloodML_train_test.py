@@ -20,7 +20,7 @@ import argparse
 from FloodML_LSTM import LSTM
 from FloodML_Transformer import ERA5_Transformer
 from FloodML_2_LSTM_Conv_LSTM import TWO_LSTM_CONV_LSTM
-from FloodML_CNN_LSTM import CNN_LSTM
+from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
 from pathlib import Path
 import random
 import torch
@@ -533,13 +533,7 @@ def run_training_and_test(
             hidden_dim=num_hidden_units,
             dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
-        model = CNN_LSTM(lat=training_data.max_dim,
-                         lon=training_data.max_dim,
-                         hidden_size=num_hidden_units,
-                         num_channels=1,
-                         dropout_rate=dropout,
-                         num_attributes=len(dynamic_attributes_names) + len(static_attributes_names),
-                         image_input_size=(training_data.max_dim, training_data.max_dim))
+        model = TWO_LSTM_CNN_LSTM()
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
