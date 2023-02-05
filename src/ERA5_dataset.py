@@ -328,7 +328,7 @@ class Dataset_ERA5(Dataset):
                 X_data_spatial[self.inner_index_in_data_of_basin + self.sequence_length -
                                self.sequence_length_spatial: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)
-        elif self.specific_model_type == "cnn":
+        elif self.specific_model_type.lower() == "cnn":
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
@@ -418,7 +418,7 @@ class Dataset_ERA5(Dataset):
                     if station_id == basin_id_with_maximum_width:
                         gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_width, -1).sum(
                             axis=0)
-                        plt.imsave(f"../data/basin_check_precip_images/img_{station_id}precip.png",
+                        plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
                                    gray_image)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         del X_data_spatial
@@ -456,7 +456,7 @@ class Dataset_ERA5(Dataset):
                         specific_model_type.lower() == "cnn" or
                         specific_model_type.lower() == "transformer"):
                     X_data_spatial = np.array(
-                        X_data_spatial.reshape(X_data_non_spatial.shape[0], max_height * max_width),
+                        X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
                     max_spatial = X_data_spatial.max().item() if (
                             X_data_spatial.max().item() > max_spatial or max_spatial == -1) else max_spatial

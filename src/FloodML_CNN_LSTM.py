@@ -132,7 +132,7 @@ class CNN_LSTM(nn.Module):
         # getting the "non-image" part of the input (last 4 attributes)
         # (removing the "image" part)
         r_in = torch.cat([cnn_out, x_non_spatial], dim=2)
-        output, (h_n, c_n) = self.lstm(r_in, h_n, c_n)
+        output, (h_n, c_n) = self.lstm(r_in, (h_n, c_n))
         # perform prediction only at the end of the input sequence
         pred = self.fc(self.dropout(output))
         return pred[:, -1, :]

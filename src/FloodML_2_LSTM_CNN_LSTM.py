@@ -3,26 +3,26 @@ from FloodML_CNN_LSTM import CNN_LSTM
 
 
 class TWO_LSTM_CNN_LSTM(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, dropout, in_channels_cnn,
+    def __init__(self, input_dim, hidden_dim, dropout, in_cnn_channels,
                  sequence_length_conv_lstm, image_width, image_height):
         super(TWO_LSTM_CNN_LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.image_width = image_width
         self.image_height = image_height
-        self.in_cnn_channels = in_channels_cnn
+        self.in_cnn_channels = in_cnn_channels
         self.dropout = torch.nn.Dropout(dropout)
         self.lstm = torch.nn.LSTM(
             input_size=self.input_dim,
             hidden_size=self.hidden_dim,
             batch_first=True
         )
-        self.cnn_lstm = CNN_LSTM(lat=image_width,
-                                 lon=image_height,
-                                 hidden_size=hidden_dim,
-                                 num_channels=in_channels_cnn,
-                                 dropout_rate=dropout,
-                                 image_input_size=(image_width, image_height))
+        self.cnn_lstm = CNN_LSTM(lat=self.image_width,
+                                 lon=self.image_height,
+                                 hidden_size=self.hidden_dim,
+                                 num_channels=self.in_cnn_channels,
+                                 dropout_rate=self.dropout,
+                                 image_input_size=(self.image_width, self.image_height))
         self.sequence_length_cnn_lstm = sequence_length_conv_lstm
         self.linear_states = torch.nn.Linear(self.hidden_dim,
                                              self.in_cnn_channels * self.image_width * self.image_height)
