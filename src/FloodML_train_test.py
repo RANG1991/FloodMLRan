@@ -79,7 +79,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         optimizer.zero_grad()
         # calculate gradients
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
         # update the weights
         optimizer.step()
         # write current loss in the progress bar
