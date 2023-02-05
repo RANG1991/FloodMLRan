@@ -88,6 +88,7 @@ class CNN_LSTM(nn.Module):
                  num_channels: int,
                  dropout_rate: float = 0.0,
                  num_layers: int = 1,
+                 num_attributes=0,
                  image_input_size=(int,)):
         """
         Initialize model
@@ -103,7 +104,7 @@ class CNN_LSTM(nn.Module):
         input_size = (image_input_size[0] * image_input_size[1] * num_channels)
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size)
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=self.hidden_size,
+        self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,
                             num_layers=num_layers, bias=True,
                             batch_first=True)
         self.dropout = nn.Dropout(p=self.dropout_rate)
