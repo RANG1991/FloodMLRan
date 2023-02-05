@@ -536,7 +536,7 @@ def run_training_and_test(
         model = TWO_LSTM_CNN_LSTM(input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
                                   image_height=training_data.max_dim, image_width=training_data.max_dim,
                                   hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                                  in_channels_cnn=len(dynamic_attributes_names), dropout=dropout)
+                                  in_cnn_channels=len(dynamic_attributes_names), dropout=dropout)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")

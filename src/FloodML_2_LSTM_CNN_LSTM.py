@@ -21,7 +21,7 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
                                  lon=self.image_height,
                                  hidden_size=self.hidden_dim,
                                  num_channels=self.in_cnn_channels,
-                                 dropout_rate=self.dropout,
+                                 dropout_rate=dropout,
                                  image_input_size=(self.image_width, self.image_height))
         self.sequence_length_cnn_lstm = sequence_length_conv_lstm
         self.linear_states = torch.nn.Linear(self.hidden_dim,
