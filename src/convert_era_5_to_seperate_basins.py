@@ -7,6 +7,7 @@ import datetime
 from shapely.geometry import Point
 from pathlib import Path
 import xarray as xr
+import concurrent.futures
 
 PATH_ROOT = "../../FloodMLRan/data/ERA5"
 
@@ -350,7 +351,32 @@ def check(ERA5_static_data_file_name, station_id):
     print(basin_static_data)
 
 
-def main():
+def run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
+                                    ERA5_percip_data_folder_name,
+                                    ERA5_static_data_file_name, output_folder_name):
+    station_id = str(station_id).zfill(8)
+    basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
+    try:
+        parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
+    except Exception as e:
+        print(f"parsing discharge of basin with id: {station_id} failed with exception: {e}")
+        return
+    discharge_file_name = (ERA5_discharge_data_folder_name + "/dis_" + str(station_id) + ".csv")
+    try:
+        parse_single_basin_precipitation(
+            station_id,
+            basin_data,
+            discharge_file_name,
+            ERA5_percip_data_folder_name,
+            ERA5_discharge_data_folder_name,
+            ERA5_static_data_file_name,
+            output_folder_name,
+        )
+    except Exception as e:
+        print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
+
+
+def main(use_multiprocessing=True):
     root_folder = PATH_ROOT
     boundaries_file_name = root_folder + "/HCDN_nhru_final_671.shp"
     ERA5_static_data_file_name = (
@@ -364,29 +390,23 @@ def main():
     # read the basins' boundaries file using gpd.read_file()
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"].tolist()
-    station_ids_list = ["01031500"]
-    for station_id in station_ids_list:
-        station_id = str(station_id).zfill(8)
-        basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
-        try:
-            parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
-        except Exception as e:
-            print(f"parsing discharge of basin with id: {station_id} failed with exception: {e}")
-            continue
-        discharge_file_name = (ERA5_discharge_data_folder_name + "/dis_" + str(station_id) + ".csv")
-        try:
-            parse_single_basin_precipitation(
-                station_id,
-                basin_data,
-                discharge_file_name,
-                ERA5_percip_data_folder_name,
-                ERA5_discharge_data_folder_name,
-                ERA5_static_data_file_name,
-                output_folder_name,
-            )
-        except Exception as e:
-            print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
-            continue
+    if use_multiprocessing:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_station_id = {
+                executor.submit(run_processing_for_single_basin, station_id, basins_data,
+                                ERA5_discharge_data_folder_name,
+                                ERA5_percip_data_folder_name,
+                                ERA5_static_data_file_name, output_folder_name): station_id for station_id in
+                station_ids_list}
+            for future in concurrent.futures.as_completed(future_to_station_id):
+                station_id = future_to_station_id[future]
+                print(f"finished with station id: {station_id}")
+    else:
+        for station_id in station_ids_list:
+            run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
+                                            ERA5_percip_data_folder_name,
+                                            ERA5_static_data_file_name, output_folder_name)
 
 
-main()
+if __name__ == "__main__":
+    main()

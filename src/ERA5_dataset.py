@@ -411,15 +411,6 @@ class Dataset_ERA5(Dataset):
                         specific_model_type.lower() == "transformer"):
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
-                    if station_id == basin_id_with_maximum_height:
-                        gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], -1, self.max_height).sum(axis=0)
-                        plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
-                                   gray_image)
-                    if station_id == basin_id_with_maximum_width:
-                        gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_width, -1).sum(
-                            axis=0)
-                        plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
-                                   gray_image)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
                         del X_data_spatial
                         del X_data_non_spatial
@@ -427,6 +418,10 @@ class Dataset_ERA5(Dataset):
                         continue
                     max_dim = max(max_width, max_height)
                     X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
+                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).sum(
+                        axis=0)
+                    plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
+                               gray_image)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
                         del X_data_spatial
