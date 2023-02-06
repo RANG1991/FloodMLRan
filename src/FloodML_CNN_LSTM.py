@@ -117,13 +117,6 @@ class CNN_LSTM(nn.Module):
         containing the input data for the LSTM network
         return: Tensor containing the network predictions
         """
-        # x is of size:
-        # 1. batch_size (some sample of all the training set)
-        # 2. times_steps - the length of the sequence (for example 30,
-        # if we are talking about one month)
-        # 3. (num_channels*H_LAT*W_LON + 4)
-        # the 4 is for the 4 static features
-        # for example, currently, x.size() is - (64, 30, 840)
         batch_size, time_steps, _ = x_non_spatial.size()
         c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.lat, self.lon)
         # CNN part
