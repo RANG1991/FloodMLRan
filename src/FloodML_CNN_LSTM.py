@@ -25,30 +25,26 @@ class CNN(nn.Module):
         self.stride_size_conv = 1
         self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
-        # The operation list - the operation type to how many times we
-        # are doing this operation (how much filter applications)
-        self.op_list = [("conv", self.channels_out_conv_1), ("pool", 1), ("conv", self.channels_out_conv_2),
-                        ("pool", 1)]
-        dims_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.op_list)
-        size_for_fc = dims_fc[0] * dims_fc[1] * self.channels_out_conv_2
+        self.conv_layers = nn.ModuleList([
+            torch.nn.Conv2d(in_channels=num_channels, out_channels=self.channels_out_conv_1,
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same"),
+            nn.ReLU(),
+            torch.nn.MaxPool2d(self.filter_size_pool),
+            torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same"),
+            nn.ReLU(),
+            torch.nn.MaxPool2d(self.filter_size_pool)
+        ])
+        size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, num_channels)
         self.size_for_fc = int(size_for_fc)
         self.fc = nn.Linear(self.size_for_fc, output_size_cnn)
-        self.conv1 = torch.nn.Conv2d(
-            in_channels=num_channels, out_channels=self.channels_out_conv_1,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv)
-        )
-        self.conv2 = torch.nn.Conv2d(
-            in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
-            kernel_size=(self.filter_size_conv, self.filter_size_conv)
-        )
-        self.pool = torch.nn.MaxPool2d(self.filter_size_pool)
         self.dropout = torch.nn.Dropout(0.4)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
+        for layer in self.conv_layers:
+            x = layer(x)
         x = x.view(-1, self.size_for_fc)
-        x = self.fc(self.dropout(F.relu(x)))
+        x = self.fc(self.dropout(x))
         return x
 
     @staticmethod
@@ -67,18 +63,21 @@ class CNN(nn.Module):
             new_dims[1] = ((height - filter_size) // stride) + 1
         return new_dims
 
-    def calc_dims_after_all_conv_op(self, input_image_shape: [int], ops_list: [str]):
+    def calc_dims_after_all_conv_op(self, input_image_shape: [int], num_in_channels):
         image_dims = (input_image_shape[-2], input_image_shape[-1])
-        for op in ops_list:
-            if op[0] == "conv":
-                image_dims = CNN.calc_dims_after_filter(image_dims,
-                                                        self.filter_size_conv,
-                                                        self.stride_size_conv)
-            elif op[0] == "pool":
+        num_out_channels = num_in_channels
+        for op in self.conv_layers:
+            if "conv" in str(op).lower():
+                if op.padding == "valid":
+                    image_dims = CNN.calc_dims_after_filter(image_dims,
+                                                            self.filter_size_conv,
+                                                            self.stride_size_conv)
+                num_out_channels = op.out_channels
+            elif "pool" in str(op).lower():
                 image_dims = CNN.calc_dims_after_filter(image_dims,
                                                         self.filter_size_pool,
                                                         self.stride_size_pool)
-        return image_dims
+        return image_dims[0] * image_dims[1] * num_out_channels
 
 
 class CNN_LSTM(nn.Module):
