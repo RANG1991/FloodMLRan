@@ -226,7 +226,7 @@ class Dataset_ERA5(Dataset):
 
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
-                if specific_model_type.lower() == "lstm":
+                if specific_model_type.lower() == "lstm" or specific_model_type.lower() == "transformer_seq2seq":
                     dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
                 else:
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
@@ -311,12 +311,12 @@ class Dataset_ERA5(Dataset):
             with open(f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}{self.suffix_pickle_file}.pkl",
                       'rb') as f:
                 self.dict_curr_basin = pickle.load(f)
+        X_data_tensor_spatial = torch.tensor([])
         if self.specific_model_type.lower() == "lstm":
             X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
                 X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)
-            X_data_tensor_spatial = torch.tensor([])
         elif self.specific_model_type.lower() == "conv":
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
@@ -338,6 +338,11 @@ class Dataset_ERA5(Dataset):
                 X_data_spatial[self.inner_index_in_data_of_basin + self.sequence_length -
                                self.sequence_length_spatial: self.inner_index_in_data_of_basin + self.sequence_length]
             ).to(torch.float32)
+        elif self.specific_model_type.lower() == "transformer_seq2seq":
+            X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32)
         else:
             X_data, X_data_spatial, y_data = \
                 self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
@@ -348,9 +353,15 @@ class Dataset_ERA5(Dataset):
                 X_data_spatial[
                 self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]).to(
                 torch.float32)
-        y_data_tensor = torch.tensor(
-            y_data[self.inner_index_in_data_of_basin + self.sequence_length]
-        ).to(torch.float32).squeeze()
+        if self.specific_model_type.lower() == "transformer_seq2seq":
+            y_data_tensor = torch.tensor(
+                y_data[
+                self.inner_index_in_data_of_basin + 1: self.inner_index_in_data_of_basin + self.sequence_length + 1]
+            ).to(torch.float32).squeeze()
+        else:
+            y_data_tensor = torch.tensor(
+                y_data[self.inner_index_in_data_of_basin + self.sequence_length]
+            ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.y_std_dict[
             self.current_basin], self.current_basin, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor

@@ -21,6 +21,7 @@ from FloodML_LSTM import LSTM
 from FloodML_Transformer import ERA5_Transformer
 from FloodML_2_LSTM_Conv_LSTM import TWO_LSTM_CONV_LSTM
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
+from FloodML_Transformer_Seq2Seq import Transformer_Seq2Seq
 from pathlib import Path
 import random
 import torch
@@ -54,7 +55,8 @@ def cleanup():
     dist.destroy_process_group()
 
 
-def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_to_console):
+def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_to_console,
+                specific_model_type):
     # set model to train mode (important for dropout)
     torch.cuda.empty_cache()
     model.train()
@@ -71,10 +73,13 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         # get model predictions
         if xs_spatial.nelement() > 0:
             y_hat = model(xs_non_spatial, xs_spatial.to(device))
+        elif specific_model_type.lower() == "transformer_seq2seq":
+            ys_prefix_random = torch.cat([torch.zeros(size=(ys.shape[0], 1), device="cuda"), ys[:, :-1]], axis=-1)
+            y_hat = model(xs_non_spatial, ys_prefix_random)[:, -1, :]
         else:
             y_hat = model(xs_non_spatial)
         # calculate loss
-        loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
+        loss = loss_func(ys[:, -1], y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # delete previously stored gradients from the model
         optimizer.zero_grad()
         # calculate gradients
@@ -91,7 +96,8 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
     return running_loss / (len(loader))
 
 
-def eval_model(model, loader, device, epoch, print_tqdm_to_console) -> Tuple[torch.Tensor, torch.Tensor]:
+def eval_model(model, loader, device, epoch, print_tqdm_to_console,
+               specific_model_type) -> Tuple[torch.Tensor, torch.Tensor]:
     torch.cuda.empty_cache()
     preds_obs_dict_per_basin = {}
     # set model to eval mode (important for dropout)
@@ -110,13 +116,18 @@ def eval_model(model, loader, device, epoch, print_tqdm_to_console) -> Tuple[tor
             # get model predictions
             if xs_spatial.nelement() > 0:
                 y_hat = model(xs_non_spatial, xs_spatial.to(device)).squeeze()
+            elif specific_model_type.lower() == "transformer_seq2seq":
+                y_hat_prev = torch.zeros(size=(ys.shape[0], 1), device="cuda")
+                for _ in range(xs_non_spatial.shape[1]):
+                    y_hat = model(xs_non_spatial, y_hat_prev)[:, -1, :]
+                    y_hat_prev = y_hat
+                y_hat = y_hat.squeeze()
             else:
                 y_hat = model(xs_non_spatial).squeeze()
-            ys = ys.to(device)
             pred_actual = (
                     (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
             pred_expected = (
-                    (ys * loader.dataset.y_std) + loader.dataset.y_mean)
+                    (ys[:, -1] * loader.dataset.y_std) + loader.dataset.y_mean)
             # print(torch.cat([y_hat.cpu(), ys], dim=1))
             for i in range(len(station_id_batch)):
                 station_id = station_id_batch[i]
@@ -391,7 +402,8 @@ def run_single_parameters_check_with_val_on_years(
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
-        "Transformer" if "Transformer" in model_name else "LSTM"
+        "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer" if \
+            "Transformer" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,
@@ -434,7 +446,8 @@ def run_single_parameters_check_with_val_on_years(
                    num_workers_data_loader,
                    profile_code,
                    sequence_length_spatial,
-                   print_tqdm_to_console
+                   print_tqdm_to_console,
+                   specific_model_type
                    ),
              nprocs=num_processes_ddp,
              join=True)
@@ -510,7 +523,8 @@ def run_training_and_test(
         num_workers_data_loader,
         profile_code,
         sequence_length_spatial,
-        print_tqdm_to_console
+        print_tqdm_to_console,
+        specific_model_type
 ):
     best_median_nse = None
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
@@ -521,6 +535,9 @@ def run_training_and_test(
                                                    training_data.max_dim),
                                  in_features=len(dynamic_attributes_names) + len(static_attributes_names),
                                  out_features_cnn=64)
+    elif model_name.lower() == "transformer_seq2seq":
+        model = Transformer_Seq2Seq(
+            in_features=len(dynamic_attributes_names) + len(static_attributes_names))
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM_CONV_LSTM(dropout=dropout,
                                    input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
@@ -582,7 +599,8 @@ def run_training_and_test(
         train_dataloader.dataset.inner_index_in_data_of_basin = 0
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank,
-                                             print_tqdm_to_console=print_tqdm_to_console)
+                                             print_tqdm_to_console=print_tqdm_to_console,
+                                             specific_model_type=specific_model_type)
         if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
@@ -591,7 +609,8 @@ def run_training_and_test(
                 test_dataloader.sampler.set_epoch(i)
             test_dataloader.dataset.inner_index_in_data_of_basin = 0
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1),
-                                                  print_tqdm_to_console=print_tqdm_to_console)
+                                                  print_tqdm_to_console=print_tqdm_to_console,
+                                                  specific_model_type=specific_model_type)
             queue_preds_dicts_ranks.put(preds_obs_dict_per_basin.copy())
             if world_size > 1:
                 dist.barrier()
@@ -659,7 +678,7 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.5]
-    sequence_lengths = [270, 365]
+    sequence_lengths = [30, 365]
     if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
@@ -782,7 +801,7 @@ def main():
     parser.add_argument(
         "--model",
         help="which model to use",
-        choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM"],
+        choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq"],
         default="LSTM",
     )
     parser.add_argument(
