@@ -29,9 +29,25 @@ def read_output_file(output_file):
 def generate_box_plots(df_res):
     df_res_new_model_nse_is_higher = df_res.loc[(df_res['NSE_CONV_LSTM'] > df_res['NSE_LSTM'])]
     df_res_new_model_nse_is_lower = df_res.loc[(df_res['NSE_CONV_LSTM'] <= df_res['NSE_LSTM'])]
-    for column_name in df_res.columns:
-        dict_single_column_box_plot = {"1": df_res_new_model_nse_is_higher[column_name],
-                                       "0": df_res_new_model_nse_is_lower[column_name]}
+    for column_name in ["glc_pc_s06",
+                        "glc_pc_s09",
+                        "tbi_cl_smj",
+                        "crp_pc_sse",
+                        "glc_pc_s16",
+                        "for_pc_sse",
+                        "lit_cl_smj",
+                        "pnv_pc_s08",
+                        "pnv_pc_s09",
+                        "pnv_pc_s10",
+                        "pnv_pc_s13",
+                        "slt_pc_sav",
+                        "glc_cl_smj",
+                        "inu_pc_slt",
+                        "ero_kh_sav",
+                        "tec_cl_smj",
+                        "snd_pc_sav"]:
+        dict_single_column_box_plot = {"new model NSE is higher": df_res_new_model_nse_is_higher[column_name],
+                                       "new model NSE is lower": df_res_new_model_nse_is_lower[column_name]}
         Dataset_ERA5.create_boxplot_on_data(dict_single_column_box_plot,
                                             plot_title=f"box_plot_{column_name}_NSE_comparison")
 

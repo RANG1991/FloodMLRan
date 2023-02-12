@@ -695,7 +695,6 @@ class Dataset_ERA5(Dataset):
         plt.title(f"Box plots data - {plot_title}", fontsize=8)
         plt.savefig(
             f"../data/images/data_box_plots_{plot_title}"
-            + f"_{curr_datetime_str}"
             + ".png"
         )
 
