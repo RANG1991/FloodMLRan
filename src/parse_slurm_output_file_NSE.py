@@ -2,6 +2,8 @@ import re
 import pandas as pd
 from pathlib import Path
 import functools
+import numpy as np
+from ERA5_dataset import Dataset_ERA5
 
 
 def read_output_file(output_file):
@@ -22,6 +24,11 @@ def read_output_file(output_file):
                 basin_nse = float(match_nse_string.group(2))
                 dicts_models_dict[model_name][basin_id] = basin_nse
     return dicts_models_dict
+
+
+def generate_box_plots(df_res):
+    df_res_new_model_nse_is_higher = df_res.loc[(df_res['NSE_CONV_LSTM'] > df_res['NSE_LSTM'])]
+    df_res_new_model_nse_is_lower = df_res.loc[(df_res['NSE_CONV_LSTM'] <= df_res['NSE_LSTM'])]
 
 
 def generate_csv_from_output_file(output_file, static_attr_file):
