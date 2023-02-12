@@ -47,7 +47,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '10005'
+    os.environ['MASTER_PORT'] = '10006'
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
