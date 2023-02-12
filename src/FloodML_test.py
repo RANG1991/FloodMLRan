@@ -11,11 +11,11 @@ def test_FloodML():
     torch.manual_seed(123)
     random.seed(123)
     np.random.seed(123)
-    all_station_ids = sorted(open("../data/CAMELS_US/train_basins_ERA5.txt").read().splitlines())
+    all_station_ids = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
     training_data = ERA5_dataset.Dataset_ERA5(
         dynamic_data_folder=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
         static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
-        dynamic_attributes_names=[ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[0]],
+        dynamic_attributes_names=ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
         static_attributes_names=ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
         train_start_date="01/10/1999",
         train_end_date="30/09/2008",
@@ -24,7 +24,7 @@ def test_FloodML():
         test_start_date="01/10/1989",
         test_end_date="30/09/1999",
         stage="train",
-        specific_model_type="LSTM",
+        specific_model_type="CONV",
         all_stations_ids=all_station_ids,
         sequence_length=270,
         discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
@@ -34,7 +34,7 @@ def test_FloodML():
     test_data = ERA5_dataset.Dataset_ERA5(
         dynamic_data_folder=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
         static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
-        dynamic_attributes_names=[ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[0]],
+        dynamic_attributes_names=ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
         static_attributes_names=ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
         train_start_date="01/10/1999",
         train_end_date="30/09/2008",
@@ -46,7 +46,7 @@ def test_FloodML():
         all_stations_ids=all_station_ids,
         sequence_length=270,
         discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
-        specific_model_type="LSTM",
+        specific_model_type="CONV",
         use_Caravan_dataset=True,
         y_std=training_data.y_std,
         y_mean=training_data.y_mean,
@@ -67,9 +67,8 @@ def test_FloodML():
                                              test_data=test_data,
                                              dropout=0,
                                              static_attributes_names=ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
-                                             dynamic_attributes_names=[
-                                                 ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN[0]],
-                                             model_name="LSTM",
+                                             dynamic_attributes_names=ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
+                                             model_name="CONV_LSTM",
                                              nse_queue_single_pass=nse_queue_single_pass,
                                              training_loss_queue_single_pass=training_loss_queue_single_pass,
                                              queue_preds_dicts_ranks=queue_preds_dicts_ranks,
@@ -77,7 +76,9 @@ def test_FloodML():
                                              optim_name="Adam",
                                              num_workers_data_loader=0,
                                              profile_code=False,
-                                             sequence_length_spatial=7)
+                                             sequence_length_spatial=7,
+                                             print_tqdm_to_console=False,
+                                             specific_model_type="CONV")
     # nse_saved_list = []
     # while not nse_queue_single_pass.empty():
     #     nse_saved_list.append(nse_queue_single_pass.get())

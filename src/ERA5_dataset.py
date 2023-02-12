@@ -185,10 +185,8 @@ class Dataset_ERA5(Dataset):
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_height=self.max_height,
-                                              create_new_files=create_new_files,
-                                              basin_id_with_maximum_width=basin_id_with_maximum_width,
-                                              basin_id_with_maximum_height=basin_id_with_maximum_height)
-
+                                              create_new_files=create_new_files)
+        
         self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.x_mean_dict, force=True)
         self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}", self.x_std_dict, force=True)
         self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.y_mean_dict, force=True)
@@ -391,7 +389,7 @@ class Dataset_ERA5(Dataset):
         return df_attr, df_attr["gauge_id"].values.tolist()
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_height,
-                                    create_new_files, basin_id_with_maximum_width, basin_id_with_maximum_height):
+                                    create_new_files):
         if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
             obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'r',
                                    encoding='utf-8').read()
