@@ -29,6 +29,11 @@ def read_output_file(output_file):
 def generate_box_plots(df_res):
     df_res_new_model_nse_is_higher = df_res.loc[(df_res['NSE_CONV_LSTM'] > df_res['NSE_LSTM'])]
     df_res_new_model_nse_is_lower = df_res.loc[(df_res['NSE_CONV_LSTM'] <= df_res['NSE_LSTM'])]
+    for column_name in df_res.columns:
+        dict_single_column_box_plot = {"1": df_res_new_model_nse_is_higher[column_name],
+                                       "0": df_res_new_model_nse_is_lower[column_name]}
+        Dataset_ERA5.create_boxplot_on_data(dict_single_column_box_plot,
+                                            plot_title=f"box_plot_{column_name}_NSE_comparison")
 
 
 def generate_csv_from_output_file(output_file, static_attr_file):

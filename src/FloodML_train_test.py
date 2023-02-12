@@ -76,10 +76,11 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         elif specific_model_type.lower() == "transformer_seq2seq":
             ys_prefix_random = torch.cat([torch.zeros(size=(ys.shape[0], 1), device="cuda"), ys[:, :-1]], axis=-1)
             y_hat = model(xs_non_spatial, ys_prefix_random)[:, -1, :]
+            ys = ys[:, -1]
         else:
             y_hat = model(xs_non_spatial)
         # calculate loss
-        loss = loss_func(ys[:, -1], y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
+        loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         # delete previously stored gradients from the model
         optimizer.zero_grad()
         # calculate gradients
@@ -122,12 +123,13 @@ def eval_model(model, loader, device, epoch, print_tqdm_to_console,
                     y_hat = model(xs_non_spatial, y_hat_prev)[:, -1, :]
                     y_hat_prev = y_hat
                 y_hat = y_hat.squeeze()
+                ys = ys[:, -1]
             else:
                 y_hat = model(xs_non_spatial).squeeze()
             pred_actual = (
                     (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
             pred_expected = (
-                    (ys[:, -1] * loader.dataset.y_std) + loader.dataset.y_mean)
+                    (ys * loader.dataset.y_std) + loader.dataset.y_mean)
             # print(torch.cat([y_hat.cpu(), ys], dim=1))
             for i in range(len(station_id_batch)):
                 station_id = station_id_batch[i]
