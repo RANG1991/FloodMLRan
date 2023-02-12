@@ -690,7 +690,7 @@ class Dataset_ERA5(Dataset):
         )
         fig.tight_layout()
         curr_datetime = datetime.now()
-        curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+        curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H_%M_%S")
         plt.grid()
         plt.title(f"Box plots data - {plot_title}", fontsize=8)
         plt.savefig(

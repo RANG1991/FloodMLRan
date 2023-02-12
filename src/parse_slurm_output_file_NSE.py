@@ -53,6 +53,7 @@ def generate_csv_from_output_file(output_file, static_attr_file):
     df_static_attrib["gauge_id"] = df_static_attrib["gauge_id"].apply(lambda x: x.replace("us_", ""))
     df_res = df_nse.set_index('basin_id').join(df_static_attrib.set_index('gauge_id'))
     df_res.to_csv(output_file_name + ".csv")
+    generate_box_plots(df_res)
 
 
 def main():
