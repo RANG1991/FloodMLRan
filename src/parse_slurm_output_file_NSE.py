@@ -27,8 +27,8 @@ def read_output_file(output_file):
 
 
 def generate_box_plots(df_res):
-    df_res_new_model_nse_is_higher = df_res.loc[(df_res['NSE_CONV_LSTM'] > df_res['NSE_LSTM'])]
-    df_res_new_model_nse_is_lower = df_res.loc[(df_res['NSE_CONV_LSTM'] <= df_res['NSE_LSTM'])]
+    df_res_new_model_nse_is_higher = df_res.loc[(df_res['NSE_CNN_LSTM'] > df_res['NSE_LSTM'])]
+    df_res_new_model_nse_is_lower = df_res.loc[(df_res['NSE_CNN_LSTM'] <= df_res['NSE_LSTM'])]
     for column_name in ["glc_pc_s06",
                         "glc_pc_s09",
                         "tbi_cl_smj",
@@ -73,7 +73,7 @@ def generate_csv_from_output_file(output_file, static_attr_file):
 
 
 def main():
-    generate_csv_from_output_file("./slurm-5703010.out", "../data/ERA5/Caravan/attributes/attributes_hydroatlas_us.csv")
+    generate_csv_from_output_file("./slurm-5770447.out", "../data/ERA5/Caravan/attributes/attributes_hydroatlas_us.csv")
 
 
 if __name__ == "__main__":
