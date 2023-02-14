@@ -2,27 +2,28 @@ from matplotlib import pyplot as plt
 import re
 import numpy as np
 
-PATTERN = r"The NSE loss for basin with ID: (\d+) is: ([-+]?\d*[.,]?\d*)"
-
 
 def create_dict_basin_id_to_NSE(logs_filename):
-    d = {}
-    with open(logs_filename, "r") as f:
+    dicts_models_dict = {}
+    model_name = "empty_model_name"
+    with open(logs_filename, "r", encoding="utf-8") as f:
         for row in f:
-            basin_nse_loss_str = re.search(PATTERN, row)
-            if basin_nse_loss_str is not None:
-                basin_id = basin_nse_loss_str.group(1)
-                nse_loss = basin_nse_loss_str.group(2)
-                if basin_id not in d.keys():
-                    d[basin_id] = []
-                try:
-                    d[basin_id].append(float(nse_loss))
-                except ValueError as e:
-                    print(e)
-    return d
+            match_model_name_string = re.search("running with model: (.*?)\n", row)
+            if match_model_name_string:
+                new_model_name = match_model_name_string.group(1)
+                if new_model_name != model_name:
+                    print(f"moving to new model with name: {new_model_name}")
+                    dicts_models_dict[new_model_name] = {}
+                    model_name = new_model_name
+            match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
+            if match_nse_string:
+                basin_id = match_nse_string.group(1)
+                basin_nse = float(match_nse_string.group(2))
+                dicts_models_dict[model_name][basin_id] = basin_nse
+    return dicts_models_dict
 
 
-def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss):
+def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, plot_title=""):
     nse_losses = []
     for basin_id, mean_nes_loss in dict_basins_mean_NSE_loss.items():
         if mean_nes_loss >= 0:
@@ -34,25 +35,22 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss):
     # evaluate the cumulative
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
+    if plot_title != "":
+        plt.title(plot_title)
     # plot the cumulative function
     plt.plot(base[:-1], cumulative, c='blue')
     plt.grid()
-    plt.show()
+    plt.savefig(plot_title)
+    plt.clf()
 
 
 def main():
-    with open("nse_per_basin.txt", "w") as f:
-        d = create_dict_basin_id_to_NSE("./output_CAMELS_My_code.log")
+    d = create_dict_basin_id_to_NSE("./slurm-5786593.out")
+    for model_name in d.keys():
         dict_basins_id_to_mean_nse_loss = {}
-        for basin_id, nse_losses_list in d.items():
-            print("Basin ID: {}, NSE losses: {}, mean NSE losses: {}".format(basin_id, nse_losses_list,
-                                                                             sum(nse_losses_list) / len(
-                                                                                 nse_losses_list)))
-            f.write("Basin ID: {}, NSE losses: {}, mean NSE losses: {}\n".format(basin_id, nse_losses_list,
-                                                                                 sum(nse_losses_list) / len(
-                                                                                     nse_losses_list)))
-            dict_basins_id_to_mean_nse_loss[basin_id] = sum(nse_losses_list) / len(nse_losses_list)
-    plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss)
+        for basin_id, basin_nse in d[model_name].items():
+            dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
+        plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, plot_title=f"NSE CDF of model - {model_name}")
 
 
 if __name__ == "__main__":
