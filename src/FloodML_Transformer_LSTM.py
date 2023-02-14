@@ -2,8 +2,6 @@ import torch
 from torch import nn
 import math
 from Transformer.Layers import EncoderLayer
-from Transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
-from FloodML_CNN_LSTM import CNN
 
 
 def get_pad_mask(seq, pad_idx):
@@ -18,27 +16,37 @@ def get_subsequent_mask(seq):
     return subsequent_mask
 
 
-class ERA5_Transformer(nn.Module):
+class ERA5_Transformer_LSTM(nn.Module):
 
-    def __init__(self, out_features, in_features, sequence_length=270):
-        super(ERA5_Transformer, self).__init__()
-        assert out_features % 8 == 0
-        self.encoder = Encoder(in_features_dim=in_features,
-                               out_features_dim=out_features,
+    def __init__(self, num_in_features_encoder, num_out_features_encoder,
+                 num_hidden_lstm, dropout_rate, sequence_length=270):
+        super(ERA5_Transformer_LSTM, self).__init__()
+        assert num_out_features_encoder % 8 == 0
+        self.encoder = Encoder(in_features_dim=num_in_features_encoder,
+                               out_features_dim=num_out_features_encoder,
                                n_layers=6,
-                               d_k=out_features // 8,
-                               d_v=out_features // 8,
+                               d_k=num_out_features_encoder // 8,
+                               d_v=num_out_features_encoder // 8,
                                n_head=8,
-                               d_model=out_features,
-                               d_inner=out_features,
+                               d_model=num_out_features_encoder,
+                               d_inner=num_out_features_encoder,
                                sequence_length=sequence_length)
-
-        self.fc = nn.Linear(out_features, 1)
+        self.input_dim = num_out_features_encoder
+        self.hidden_dim = num_hidden_lstm
+        self.dropout = torch.nn.Dropout(dropout_rate)
+        self.lstm = torch.nn.LSTM(
+            input_size=self.input_dim,
+            hidden_size=self.hidden_dim,
+            batch_first=True
+        )
+        self.head = torch.nn.Linear(in_features=self.hidden_dim, out_features=1)
 
     def forward(self, x):
-        enc_output, *_ = self.encoder_1(x)
-        dec_output, *_ = self.decoder(enc_output)
-        return self.fc(dec_output)
+        enc_output, *_ = self.encoder(x)
+        output, (h_n, c_n) = self.lstm(enc_output)
+        output = self.dropout(output)
+        pred = self.head(output)
+        return pred[:, -1, :]
 
 
 class PositionalEncoding(nn.Module):

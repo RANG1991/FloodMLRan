@@ -186,7 +186,7 @@ class Dataset_ERA5(Dataset):
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_height=self.max_height,
                                               create_new_files=create_new_files)
-        
+
         self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.x_mean_dict, force=True)
         self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}", self.x_std_dict, force=True)
         self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.y_mean_dict, force=True)
@@ -224,7 +224,8 @@ class Dataset_ERA5(Dataset):
 
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
-                if specific_model_type.lower() == "lstm" or specific_model_type.lower() == "transformer_seq2seq":
+                if specific_model_type.lower() == "lstm" or specific_model_type.lower() == "transformer_seq2seq" or \
+                        specific_model_type.lower() == "transformer_lstm":
                     dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
                 else:
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
@@ -310,7 +311,7 @@ class Dataset_ERA5(Dataset):
                       'rb') as f:
                 self.dict_curr_basin = pickle.load(f)
         X_data_tensor_spatial = torch.tensor([])
-        if self.specific_model_type.lower() == "lstm":
+        if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "transformer_lstm":
             X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
                 X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
@@ -416,8 +417,7 @@ class Dataset_ERA5(Dataset):
             print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
             if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
                 if (specific_model_type.lower() == "conv" or
-                        specific_model_type.lower() == "cnn" or
-                        specific_model_type.lower() == "transformer"):
+                        specific_model_type.lower() == "cnn"):
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
@@ -457,8 +457,7 @@ class Dataset_ERA5(Dataset):
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
 
                 if (specific_model_type.lower() == "conv" or
-                        specific_model_type.lower() == "cnn" or
-                        specific_model_type.lower() == "transformer"):
+                        specific_model_type.lower() == "cnn"):
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
