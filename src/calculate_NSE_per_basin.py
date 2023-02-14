@@ -23,37 +23,37 @@ def create_dict_basin_id_to_NSE(logs_filename):
     return dicts_models_dict
 
 
-def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, plot_title=""):
+def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name):
     nse_losses = []
     for basin_id, mean_nes_loss in dict_basins_mean_NSE_loss.items():
-        if mean_nes_loss >= 0:
-            nse_losses.append(mean_nes_loss)
+        nse_losses.append(mean_nes_loss)
     nse_losses_np = np.array(nse_losses)
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     # evaluate the histogram
-    values, base = np.histogram(nse_losses_np, bins=100)
+    values, base = np.histogram(nse_losses_np, bins=100000)
     # evaluate the cumulative
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
-    if plot_title != "":
-        plt.title(plot_title)
-    # plot the cumulative function
-    plt.plot(base[:-1], cumulative, c='blue')
-    plt.grid()
-    plt.savefig(plot_title)
-    plt.clf()
+    plt.xscale("log")
+    plt.plot(base[:-1], cumulative, label=model_name)
 
 
 def main():
     input_file_name = "slurm-5786593.out"
+    plot_title = f"NSE CDF of process ID - " \
+                 f"{input_file_name.replace('slurm-', '').replace('.out', '')}"
     d = create_dict_basin_id_to_NSE(input_file_name)
     for model_name in d.keys():
         dict_basins_id_to_mean_nse_loss = {}
         for basin_id, basin_nse in d[model_name].items():
             dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
-        plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss,
-                            plot_title=f"NSE CDF of model - {model_name} - process ID - "
-                                       f"{input_file_name.replace('slurm-', '').replace('.out', '')}")
+        plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, model_name=model_name)
+    if plot_title != "":
+        plt.title(plot_title)
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_title)
+    plt.clf()
 
 
 if __name__ == "__main__":
