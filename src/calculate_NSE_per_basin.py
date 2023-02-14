@@ -45,12 +45,15 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, plot_title=""):
 
 
 def main():
-    d = create_dict_basin_id_to_NSE("./slurm-5703010.out")
+    input_file_name = "slurm-5786593.out"
+    d = create_dict_basin_id_to_NSE(input_file_name)
     for model_name in d.keys():
         dict_basins_id_to_mean_nse_loss = {}
         for basin_id, basin_nse in d[model_name].items():
             dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
-        plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, plot_title=f"NSE CDF of model - {model_name}")
+        plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss,
+                            plot_title=f"NSE CDF of model - {model_name} - process ID - "
+                                       f"{input_file_name.replace('slurm-', '').replace('.out', '')}")
 
 
 if __name__ == "__main__":
