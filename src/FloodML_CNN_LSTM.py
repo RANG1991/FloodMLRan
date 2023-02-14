@@ -19,14 +19,14 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = 16
-        self.channels_out_conv_2 = 32
+        self.channels_out_conv_1 = self.initial_num_channels * 2
+        self.channels_out_conv_2 = self.initial_num_channels * 4
         self.filter_size_conv = 3
         self.stride_size_conv = 1
         self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
         self.conv_layers = nn.ModuleList([
-            torch.nn.Conv2d(in_channels=num_channels, out_channels=self.channels_out_conv_1,
+            torch.nn.Conv2d(in_channels=self.initial_num_channels, out_channels=self.channels_out_conv_1,
                             kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same"),
             nn.ReLU(),
             torch.nn.MaxPool2d(self.filter_size_pool),
@@ -35,7 +35,7 @@ class CNN(nn.Module):
             nn.ReLU(),
             torch.nn.MaxPool2d(self.filter_size_pool)
         ])
-        size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, num_channels)
+        size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels)
         self.size_for_fc = int(size_for_fc)
         self.fc = nn.Linear(self.size_for_fc, output_size_cnn)
         self.dropout = torch.nn.Dropout(0.4)
