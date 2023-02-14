@@ -45,7 +45,7 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, plot_title=""):
 
 
 def main():
-    d = create_dict_basin_id_to_NSE("./slurm-5786593.out")
+    d = create_dict_basin_id_to_NSE("./slurm-5703010.out")
     for model_name in d.keys():
         dict_basins_id_to_mean_nse_loss = {}
         for basin_id, basin_nse in d[model_name].items():
