@@ -18,7 +18,7 @@ from datetime import datetime
 import statistics
 import argparse
 from FloodML_LSTM import LSTM
-from FloodML_Transformer import ERA5_Transformer
+from FloodML_Transformer_CNN import ERA5_Transformer
 from FloodML_2_LSTM_Conv_LSTM import TWO_LSTM_CONV_LSTM
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
 from FloodML_Transformer_Seq2Seq import Transformer_Seq2Seq
@@ -667,9 +667,9 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/ERA5/only_above_1000_size_basins.txt").read().splitlines())
     else:
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/train_basins.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/ERA5/only_above_1000_size_basins.txt").read().splitlines())
     all_stations_list_sorted = all_stations_list_sorted[:num_basins] if num_basins else all_stations_list_sorted
     # for i in range(len(all_stations_list_sorted)):
     #     if i % 5 != 0:
