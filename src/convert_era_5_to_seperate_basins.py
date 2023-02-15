@@ -8,6 +8,7 @@ from shapely.geometry import Point
 from pathlib import Path
 import xarray as xr
 import concurrent.futures
+import pytz
 
 PATH_ROOT = "../../FloodMLRan/data/ERA5"
 
@@ -37,45 +38,59 @@ def check_if_all_percip_files_exist(station_id, output_folder_name):
     return all_files_exist
 
 
-def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
-    dis_file_exists = check_if_discharge_file_exists(station_id, output_folder_name)
-    if dis_file_exists:
-        print("The discharge file of the basin: {} exists".format(station_id))
-        return
+def get_utc_offset(station_id):
     start_time = pd.to_datetime("1980-01-01 00:00:00")
     end_time = pd.to_datetime("2021-09-15 00:00:00")
     param_id = "00060"
     data = InstantValueIO(
         start_date=start_time, end_date=end_time, station=station_id, parameter=param_id
     )
-
-    FT2M = 0.3048
     datetimes = []
-    flow = []
     for series in data:
-        flow = [r[1] for r in series.data]
         datetimes = [r[0] for r in series.data]
-
     utc_offset = datetimes[0].utcoffset().total_seconds() / 60 / 60
+    return utc_offset
 
-    area = basin_data["AREA"].values[0] / 1000000
-    ls = []
-    for i in range(0, len(datetimes)):
-        t = datetimes[i]
-        flow_curr = flow[i] * (FT2M ** 3) * 3.6 * 24 / area
-        ls.append([t.year, t.month, t.day, t.hour, t.minute, flow_curr])
-    df = pd.DataFrame(
-        data=ls, columns=["year", "month", "day", "hour", "minute", "flow"]
-    )
-    df_group = df.groupby(by=["year", "month", "day", "hour"]).mean()
-    df_group = df_group.assign(minute=0)
-    df_group.loc[df_group["flow"] < 0, "flow"] = 0
 
-    fn = output_folder_name + "/timezone_" + station_id + ".txt"
-    with open(fn, "w") as f:
-        print(utc_offset, file=f)
-    filename = output_folder_name + "/dis_" + station_id + ".csv"
-    df_group.to_csv(filename)
+# def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
+#     dis_file_exists = check_if_discharge_file_exists(station_id, output_folder_name)
+#     if dis_file_exists:
+#         print("The discharge file of the basin: {} exists".format(station_id))
+#         return
+#     start_time = pd.to_datetime("1980-01-01 00:00:00")
+#     end_time = pd.to_datetime("2021-09-15 00:00:00")
+#     param_id = "00060"
+#     data = InstantValueIO(
+#         start_date=start_time, end_date=end_time, station=station_id, parameter=param_id
+#     )
+# 
+#     FT2M = 0.3048
+#     datetimes = []
+#     flow = []
+#     for series in data:
+#         flow = [r[1] for r in series.data]
+#         datetimes = [r[0] for r in series.data]
+# 
+#     utc_offset = datetimes[0].utcoffset().total_seconds() / 60 / 60
+# 
+#     area = basin_data["AREA"].values[0] / 1000000
+#     ls = []
+#     for i in range(0, len(datetimes)):
+#         t = datetimes[i]
+#         flow_curr = flow[i] * (FT2M ** 3) * 3.6 * 24 / area
+#         ls.append([t.year, t.month, t.day, t.hour, t.minute, flow_curr])
+#     df = pd.DataFrame(
+#         data=ls, columns=["year", "month", "day", "hour", "minute", "flow"]
+#     )
+#     df_group = df.groupby(by=["year", "month", "day", "hour"]).mean()
+#     df_group = df_group.assign(minute=0)
+#     df_group.loc[df_group["flow"] < 0, "flow"] = 0
+# 
+#     fn = output_folder_name + "/timezone_" + station_id + ".txt"
+#     with open(fn, "w") as f:
+#         print(utc_offset, file=f)
+#     filename = output_folder_name + "/dis_" + station_id + ".csv"
+#     df_group.to_csv(filename)
 
 
 def get_index_by_lat_lon(lat, lon, lat_grid, lon_grid):
@@ -158,33 +173,35 @@ def parse_single_basin_precipitation(
     max_lon = np.squeeze(np.ceil(bounds["maxx"].values * 10) / 10)
     max_lat = np.squeeze(np.ceil(bounds["maxy"].values * 10) / 10)
 
-    fn = discharge_folder_name + "/timezone_" + station_id + ".txt"
-    with open(fn, "r") as f:
-        lines = f.readlines()
-        utc_offset = int(float(lines[0].strip()))
+    # fn = discharge_folder_name + "/timezone_" + station_id + ".txt"
+    # with open(fn, "r") as f:
+    #     lines = f.readlines()
+    #     utc_offset = int(float(lines[0].strip()))
+    #
+    # # read the discharge of the required station
+    # df_dis = pd.read_csv(discharge_file_name)
+    # # convert the columns of year, month, day, hour, minute to datetime and put it as the dataframe index
+    # df_dis.index = [
+    #     datetime.datetime(
+    #         df_dis["year"][i],
+    #         df_dis["month"][i],
+    #         df_dis["day"][i],
+    #         df_dis["hour"][i],
+    #         df_dis["minute"][i],
+    #     )
+    #     for i in range(0, len(df_dis))
+    # ]
+    # # read the precipitation of the required station
+    # # ERA5
+    # year_start = df_dis["year"].min() - 1
+    # year_end = df_dis["year"].max()
+    # print(year_start, year_end)
 
-    # read the discharge of the required station
-    df_dis = pd.read_csv(discharge_file_name)
-    # convert the columns of year, month, day, hour, minute to datetime and put it as the dataframe index
-    df_dis.index = [
-        datetime.datetime(
-            df_dis["year"][i],
-            df_dis["month"][i],
-            df_dis["day"][i],
-            df_dis["hour"][i],
-            df_dis["minute"][i],
-        )
-        for i in range(0, len(df_dis))
-    ]
-    # read the precipitation of the required station
-    # ERA5
-    year_start = df_dis["year"].min() - 1
-    year_end = df_dis["year"].max()
-    print(year_start, year_end)
+    offset = get_utc_offset(station_id)
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(year_start, year_end + 1):
+    for year in range(1988, 2009):
         fn = f"{ERA5_data_folder_name}/tp_US_{year}.nc"
         try:
             dataset = nc.Dataset(fn)
@@ -251,7 +268,7 @@ def parse_single_basin_precipitation(
             precip_new.append(precip[i, :, :])
     ls = [[precip_mean_lat_lon_new[i]] for i in range(0, len(datetimes))]
     ls_precip_new = [precip_new[i] for i in range(0, len(datetimes))]
-    datetimes = [time + datetime.timedelta(hours=utc_offset) for time in datetimes]
+    datetimes = [time + datetime.timedelta(hours=offset) for time in datetimes]
     df_precip_one_day_non_spatial = create_and_write_precipitation_mean(
         datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
     )
@@ -280,21 +297,21 @@ def parse_single_basin_precipitation(
         lat_lon_lst
     )
     # down sample the discharge data into 1D (1 day) bins and take the mean of the values falling into the same bin
-    df_dis_one_day = df_dis.resample("1D").mean()
-    df_dis_one_day = df_dis_one_day.reset_index()
-    df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
-    df_dis_one_day = df_dis_one_day[["date", "flow"]]
-    print(df_dis_one_day)
-    # join the two dataframes (precipitation and discharge) by date to get the final dataframe
-    df_joined_non_spatial = df_precip_one_day_non_spatial.merge(
-        df_dis_one_day, on="date"
-    )
-    df_dis_one_day.to_csv(
-        output_folder_name + "/dis24_" + station_id + ".csv", float_format="%6.1f"
-    )
-    df_joined_non_spatial.to_csv(
-        output_folder_name + "/data24_" + station_id + ".csv", float_format="%6.1f"
-    )
+    # df_dis_one_day = df_dis.resample("1D").mean()
+    # df_dis_one_day = df_dis_one_day.reset_index()
+    # df_dis_one_day = df_dis_one_day.rename(columns={"index": "date"})
+    # df_dis_one_day = df_dis_one_day[["date", "flow"]]
+    # print(df_dis_one_day)
+    # # join the two dataframes (precipitation and discharge) by date to get the final dataframe
+    # df_joined_non_spatial = df_precip_one_day_non_spatial.merge(
+    #     df_dis_one_day, on="date"
+    # )
+    # df_dis_one_day.to_csv(
+    #     output_folder_name + "/dis24_" + station_id + ".csv", float_format="%6.1f"
+    # )
+    # df_joined_non_spatial.to_csv(
+    #     output_folder_name + "/data24_" + station_id + ".csv", float_format="%6.1f"
+    # )
 
     fn = output_folder_name + "/shape_" + station_id + ".csv"
     pd.DataFrame(
@@ -354,13 +371,14 @@ def check(ERA5_static_data_file_name, station_id):
 def run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
                                     ERA5_percip_data_folder_name,
                                     ERA5_static_data_file_name, output_folder_name):
+    print(f"working on station with id: {station_id}")
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
-    try:
-        parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
-    except Exception as e:
-        print(f"parsing discharge of basin with id: {station_id} failed with exception: {e}")
-        return
+    # try:
+    #     parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
+    # except Exception as e:
+    #     print(f"parsing discharge of basin with id: {station_id} failed with exception: {e}")
+    #     return
     discharge_file_name = (ERA5_discharge_data_folder_name + "/dis_" + str(station_id) + ".csv")
     try:
         parse_single_basin_precipitation(

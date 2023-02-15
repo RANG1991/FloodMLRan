@@ -166,7 +166,7 @@ class Dataset_ERA5(Dataset):
         (self.df_attr,
          self.list_stations_static,
          self.countries_abbreviations_stations_dict
-         ) = self.read_static_attributes_all_countries(["us", "ca"], limit_size_above_1000=limit_size_above_1000)
+         ) = self.read_static_attributes_all_countries(["us"], limit_size_above_1000=limit_size_above_1000)
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
         self.sequence_length_spatial = sequence_length_spatial
@@ -381,7 +381,7 @@ class Dataset_ERA5(Dataset):
         df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")
         df_attr["gauge_id"] = (
             df_attr["gauge_id"]
-            .apply(lambda x: str(x).replace(f"{country_abbreviation}", ""))
+            .apply(lambda x: str(x).replace(f"{country_abbreviation}_", ""))
             .values.tolist()
         )
         df_attr = df_attr.dropna()
@@ -511,6 +511,8 @@ class Dataset_ERA5(Dataset):
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, min_spatial, max_spatial
 
     def check_is_valid_station_id(self, station_id, create_new_files):
+        if station_id not in self.countries_abbreviations_stations_dict.keys():
+            return False
         country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
