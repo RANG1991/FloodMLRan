@@ -34,7 +34,7 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name):
     # evaluate the cumulative
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
-    plt.xscale("log")
+    plt.xscale("symlog")
     plt.plot(base[:-1], cumulative, label=model_name)
 
 
