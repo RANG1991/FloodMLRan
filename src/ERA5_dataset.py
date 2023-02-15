@@ -83,9 +83,9 @@ DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = [
 
 DISCHARGE_STR_CARAVAN = "streamflow"
 
-DYNAMIC_DATA_FOLDER_CARAVAN = "../data/ERA5/Caravan/timeseries/csv/us/"
+DYNAMIC_DATA_FOLDER_CARAVAN = "../data/ERA5/Caravan/timeseries/csv/"
 
-DISCHARGE_DATA_FOLDER_CARAVAN = "../data/ERA5/Caravan/timeseries/csv/us/"
+DISCHARGE_DATA_FOLDER_CARAVAN = "../data/ERA5/Caravan/timeseries/csv/"
 
 DYNAMIC_ATTRIBUTES_NAMES_ERA5 = ["precip"]
 
@@ -138,6 +138,7 @@ class Dataset_ERA5(Dataset):
             y_std=None,
             use_Caravan_dataset=True,
             create_new_files=False,
+            limit_size_above_1000=False
     ):
         self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
         self.x_mean_dict = self.read_pickle_if_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}")
@@ -162,10 +163,12 @@ class Dataset_ERA5(Dataset):
         self.test_start_date = test_start_date
         self.test_end_date = test_end_date
         self.stage = stage
-        self.df_attr, self.list_stations_static = self.read_static_attributes()
+        (self.df_attr,
+         self.list_stations_static,
+         self.countries_abbreviations_stations_dict
+         ) = self.read_static_attributes_all_countries(["us", "ca"], limit_size_above_1000=limit_size_above_1000)
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
-        self.prefix_dynamic_data_file = "us_"
         self.sequence_length_spatial = sequence_length_spatial
         max_width, max_height, basin_id_with_maximum_width, basin_id_with_maximum_height = self.get_maximum_width_and_length_of_basin(
             "../data/ERA5/ERA_5_all_data", self.all_station_ids
@@ -365,29 +368,48 @@ class Dataset_ERA5(Dataset):
         return self.y_std_dict[
             self.current_basin], self.current_basin, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor
 
-    def read_static_attributes(self):
+    def read_static_attributes_single_country(self, country_abbreviation, countries_abbreviations_stations_dict,
+                                              limit_size_above_1000=False):
         df_attr_caravan = pd.read_csv(
-            Path(self.static_data_folder) / "attributes_hydroatlas_us.csv",
+            Path(self.static_data_folder) / f"attributes_hydroatlas_{country_abbreviation}.csv",
             dtype={"gauge_id": str},
         )
         df_attr_hydroatlas = pd.read_csv(
-            Path(self.static_data_folder) / "attributes_caravan_us.csv",
+            Path(self.static_data_folder) / f"attributes_caravan_{country_abbreviation}.csv",
             dtype={"gauge_id": str},
         )
         df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")
         df_attr["gauge_id"] = (
             df_attr["gauge_id"]
-            .apply(lambda x: str(x).replace("us_", ""))
+            .apply(lambda x: str(x).replace(f"{country_abbreviation}", ""))
             .values.tolist()
         )
         df_attr = df_attr.dropna()
+        if limit_size_above_1000:
+            df_attr = df_attr[df_attr["basin_area"] >= 1000]
         df_attr = df_attr[["gauge_id"] + self.list_static_attributes_names]
         # maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
         # mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
         df_attr[self.list_static_attributes_names] = df_attr.drop(
             columns=["gauge_id"]
         ).to_numpy()
-        return df_attr, df_attr["gauge_id"].values.tolist()
+        list_station_ids = df_attr["gauge_id"].values.tolist()
+        for station_id in list_station_ids:
+            countries_abbreviations_stations_dict[station_id] = country_abbreviation
+        return df_attr, list_station_ids
+
+    def read_static_attributes_all_countries(self, countries_abbreviations, limit_size_above_1000=False):
+        list_stations_static = []
+        list_static_df = []
+        countries_abbreviations_stations_dict = {}
+        for country_abbreviation in countries_abbreviations:
+            curr_df, curr_list_stations = self.read_static_attributes_single_country(country_abbreviation,
+                                                                                     countries_abbreviations_stations_dict,
+                                                                                     limit_size_above_1000=limit_size_above_1000)
+            list_stations_static.extend(curr_list_stations)
+            list_static_df.append(curr_df)
+        df_attr = pd.concat(list_static_df)
+        return df_attr, list_stations_static, countries_abbreviations_stations_dict
 
     def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_height,
                                     create_new_files):
@@ -489,8 +511,10 @@ class Dataset_ERA5(Dataset):
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, min_spatial, max_spatial
 
     def check_is_valid_station_id(self, station_id, create_new_files):
+        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
         return (station_id in self.list_stations_static
-                and os.path.exists(Path(self.dynamic_data_folder) / f"{self.prefix_dynamic_data_file}{station_id}.csv")
+                and os.path.exists(Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
+                                   / f"{country_abbreviation}_{station_id}.csv")
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
                 and (not os.path.exists(
                     f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
@@ -502,12 +526,13 @@ class Dataset_ERA5(Dataset):
                              create_new_files])))
 
     def read_single_station_file_spatial(self, station_id):
+        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
         station_data_file_spatial = (
                 Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc"
         )
         station_data_file_discharge = (
-                Path(self.dynamic_data_folder)
-                / f"{self.prefix_dynamic_data_file}{station_id}.csv"
+                Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
+                / f"{country_abbreviation}_{station_id}.csv"
         )
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
@@ -565,9 +590,10 @@ class Dataset_ERA5(Dataset):
         return dataset_xarray_filtered, df_dis_data
 
     def read_single_station_file(self, station_id):
+        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
         station_data_file = (
-                Path(self.dynamic_data_folder)
-                / f"{self.prefix_dynamic_data_file}{station_id}.csv"
+                Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
+                / f"{country_abbreviation}_{station_id}.csv"
         )
         df_dynamic_data = pd.read_csv(station_data_file)
         df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
