@@ -266,7 +266,8 @@ def prepare_datasets(
         specific_model_type,
         sequence_length_spatial,
         create_box_plots=False,
-        create_new_files=False
+        create_new_files=False,
+        limit_size_above_1000=False
 ):
     print(f"running with dataset: {dataset_to_use}")
     if dataset_to_use == "ERA5" or dataset_to_use == "CARAVAN":
@@ -289,7 +290,8 @@ def prepare_datasets(
             discharge_str=discharge_str,
             use_Caravan_dataset=use_Caravan_dataset,
             create_new_files=create_new_files,
-            sequence_length_spatial=sequence_length_spatial
+            sequence_length_spatial=sequence_length_spatial,
+            limit_size_above_1000=limit_size_above_1000
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             dynamic_data_folder=dynamic_data_folder,
@@ -313,7 +315,8 @@ def prepare_datasets(
             x_means=training_data.x_means,
             x_stds=training_data.x_stds,
             create_new_files=create_new_files,
-            sequence_length_spatial=sequence_length_spatial
+            sequence_length_spatial=sequence_length_spatial,
+            limit_size_above_1000=limit_size_above_1000
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -400,7 +403,8 @@ def run_single_parameters_check_with_val_on_years(
         num_processes_ddp,
         create_new_files,
         sequence_length_spatial,
-        print_tqdm_to_console
+        print_tqdm_to_console,
+        limit_size_above_1000
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
@@ -419,7 +423,8 @@ def run_single_parameters_check_with_val_on_years(
         dataset_to_use,
         sequence_length_spatial=sequence_length_spatial,
         specific_model_type=specific_model_type,
-        create_new_files=create_new_files
+        create_new_files=create_new_files,
+        limit_size_above_1000=limit_size_above_1000
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
@@ -663,7 +668,8 @@ def choose_hyper_parameters_validation(
         num_processes_ddp,
         create_new_files,
         sequence_length_spatial,
-        print_tqdm_to_console
+        print_tqdm_to_console,
+        limit_size_above_1000
 ):
     train_stations_list = []
     val_stations_list = []
@@ -735,7 +741,8 @@ def choose_hyper_parameters_validation(
             num_processes_ddp=num_processes_ddp,
             create_new_files=create_new_files,
             sequence_length_spatial=sequence_length_spatial,
-            print_tqdm_to_console=print_tqdm_to_console
+            print_tqdm_to_console=print_tqdm_to_console,
+            limit_size_above_1000=limit_size_above_1000
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -829,9 +836,11 @@ def main():
                         default=7, type=int)
     parser.add_argument("--create_new_files", action="store_true")
     parser.add_argument("--print_tqdm_to_console", action="store_true")
+    parser.add_argument("--limit_size_above_1000", action="store_true")
     parser.set_defaults(profile_code=False)
     parser.set_defaults(create_new_files=False)
     parser.set_defaults(print_tqdm_to_console=False)
+    parser.set_defaults(limit_size_above_1000=False)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -852,7 +861,8 @@ def main():
             num_processes_ddp=command_args.num_processes_ddp,
             create_new_files=command_args.create_new_files,
             sequence_length_spatial=command_args.sequence_length_spatial,
-            print_tqdm_to_console=command_args.print_tqdm_to_console
+            print_tqdm_to_console=command_args.print_tqdm_to_console,
+            limit_size_above_1000=command_args.limit_size_above_1000
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
@@ -873,7 +883,8 @@ def main():
             num_processes_ddp=command_args.num_processes_ddp,
             create_new_files=command_args.create_new_files,
             sequence_length_spatial=command_args.sequence_length_spatial,
-            print_tqdm_to_console=command_args.print_tqdm_to_console
+            print_tqdm_to_console=command_args.print_tqdm_to_console,
+            limit_size_above_1000=command_args.limit_size_above_1000
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")

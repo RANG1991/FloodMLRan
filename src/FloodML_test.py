@@ -11,7 +11,8 @@ def test_FloodML():
     torch.manual_seed(123)
     random.seed(123)
     np.random.seed(123)
-    all_station_ids = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+    # all_station_ids = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+    all_station_ids = ["06344600"]
     training_data = ERA5_dataset.Dataset_ERA5(
         dynamic_data_folder=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
         static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
@@ -30,7 +31,8 @@ def test_FloodML():
         discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
         use_Caravan_dataset=True,
         create_new_files=True,
-        sequence_length_spatial=7)
+        sequence_length_spatial=7,
+        limit_size_above_1000=True)
     test_data = ERA5_dataset.Dataset_ERA5(
         dynamic_data_folder=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
         static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
@@ -53,7 +55,8 @@ def test_FloodML():
         x_means=training_data.x_means,
         x_stds=training_data.x_stds,
         create_new_files=True,
-        sequence_length_spatial=7)
+        sequence_length_spatial=7,
+        limit_size_above_1000=True)
     nse_queue_single_pass = Queue()
     training_loss_queue_single_pass = Queue()
     queue_preds_dicts_ranks = Queue()

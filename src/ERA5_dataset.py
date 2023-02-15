@@ -308,6 +308,7 @@ class Dataset_ERA5(Dataset):
         next_basin = self.lookup_table[index]
         if self.current_basin != next_basin:
             self.current_basin = next_basin
+            print(f"dealing with basin: {self.current_basin}")
             self.inner_index_in_data_of_basin = 0
             self.dict_curr_basin = {}
             with open(f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}{self.suffix_pickle_file}.pkl",
