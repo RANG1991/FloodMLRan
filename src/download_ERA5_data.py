@@ -44,3 +44,7 @@ def main():
     c = cdsapi.Client()
     for year in range(1981, 2023):
         download_ERA5_one_year(c, year)
+
+
+if __name__ == "__main__":
+    smain()
