@@ -157,7 +157,6 @@ class Dataset_ERA5(Dataset):
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
         self.train_end_date = train_end_date
-        self.all_station_ids = all_stations_ids
         self.validation_start_date = validation_start_date
         self.validation_end_date = validation_end_date
         self.test_start_date = test_start_date
@@ -167,6 +166,7 @@ class Dataset_ERA5(Dataset):
          self.list_stations_static,
          self.countries_abbreviations_stations_dict
          ) = self.read_static_attributes_all_countries(["us"], limit_size_above_1000=limit_size_above_1000)
+        self.all_station_ids = list(set(all_stations_ids).intersection(set(self.list_stations_static)))
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
         self.sequence_length_spatial = sequence_length_spatial
@@ -308,7 +308,7 @@ class Dataset_ERA5(Dataset):
         next_basin = self.lookup_table[index]
         if self.current_basin != next_basin:
             self.current_basin = next_basin
-            print(f"dealing with basin: {self.current_basin}")
+            # print(f"dealing with basin: {self.current_basin}")
             self.inner_index_in_data_of_basin = 0
             self.dict_curr_basin = {}
             with open(f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}{self.suffix_pickle_file}.pkl",
