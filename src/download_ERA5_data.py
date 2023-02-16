@@ -1,8 +1,9 @@
 import cdsapi
+import time
 
 
 def download_ERA5_one_year(client, year):
-    client.retrieve(
+    r = client.retrieve(
         'reanalysis-era5-land',
         {
             'day': [
@@ -36,8 +37,31 @@ def download_ERA5_one_year(client, year):
                 90, 40, 40,
                 160,
             ]
-        },
-        f'../data/ERA5/Precipitation/tp_CA_{year}.nc')
+        })
+    sleep = 30
+    while True:
+        r.update()
+        reply = r.reply
+        r.info("Request ID: %s, state: %s" % (reply["request_id"], reply["state"]))
+
+        if reply["state"] == "completed":
+            break
+        elif reply["state"] in ("queued", "running"):
+            r.info("Request ID: %s, sleep: %s", reply["request_id"], sleep)
+            time.sleep(sleep)
+        elif reply["state"] in ("failed",):
+            r.error("Message: %s", reply["error"].get("message"))
+            r.error("Reason:  %s", reply["error"].get("reason"))
+            for n in (
+                    reply.get("error", {}).get("context", {}).get("traceback", "").split("\n")
+            ):
+                if n.strip() == "":
+                    break
+                r.error("  %s", n)
+            raise Exception(
+                "%s. %s." % (reply["error"].get("message"), reply["error"].get("reason"))
+            )
+    r.download(f'../data/ERA5/Precipitation/tp_CA_{year}.nc')
 
 
 def main():
