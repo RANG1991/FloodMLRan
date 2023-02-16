@@ -39,7 +39,7 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name):
 
 
 def main():
-    input_file_name = "slurm-5786593.out"
+    input_file_name = "slurm-5794204.out"
     plot_title = f"NSE CDF of process ID - " \
                  f"{input_file_name.replace('slurm-', '').replace('.out', '')}"
     d = create_dict_basin_id_to_NSE(input_file_name)
