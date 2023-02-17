@@ -2,7 +2,7 @@ import cdsapi
 import time
 
 
-def download_ERA5_one_year(client, year):
+def download_ERA5_one_year(client, year, month):
     r = client.retrieve(
         'reanalysis-era5-land',
         {
@@ -29,13 +29,12 @@ def download_ERA5_one_year(client, year):
                 '18:00', '19:00', '20:00',
                 '21:00', '22:00', '23:00',
             ],
-            'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
+            'month': f'{month}',
             'year': f'{year}',
             'variable': 'total_precipitation',
             'format': 'netcdf',
             'area': [
-                90, 40, 40,
-                160,
+                42, 83, 53, 141,
             ]
         })
     sleep = 30
@@ -61,13 +60,16 @@ def download_ERA5_one_year(client, year):
             raise Exception(
                 "%s. %s." % (reply["error"].get("message"), reply["error"].get("reason"))
             )
-    r.download(f'../data/ERA5/Precipitation/tp_CA_{year}.nc')
+    r.download(f'../data/ERA5/Precipitation/tp_CA_{year}_{month}.nc')
 
 
 def main():
     c = cdsapi.Client()
     for year in range(1981, 2023):
-        download_ERA5_one_year(c, year)
+        for month in ['01', '02', '03', '04',
+                      '05', '06', '07', '08',
+                      '09', '10', '11', '12']:
+            download_ERA5_one_year(c, year, month)
 
 
 if __name__ == "__main__":

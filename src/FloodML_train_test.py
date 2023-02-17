@@ -434,8 +434,8 @@ def run_single_parameters_check_with_val_on_years(
     list_preds_dicts_ranks = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
-                   (learning_rate * num_processes_ddp * (
-                       num_workers_data_loader if num_workers_data_loader > 0 else 1)),
+                   (learning_rate * (num_processes_ddp if num_processes_ddp > 1 else 1)
+                    * (num_workers_data_loader if num_workers_data_loader > 0 else 1)),
                    sequence_length,
                    num_hidden_units,
                    num_epochs,
@@ -539,29 +539,31 @@ def run_training_and_test(
     if model_name.lower() == "transformer_lstm":
         model = ERA5_Transformer_LSTM(sequence_length=sequence_length,
                                       num_in_features_encoder=len(dynamic_attributes_names) + len(
-                                          static_attributes_names),
+                                          training_data.list_static_attributes_names),
                                       num_hidden_lstm=num_hidden_units,
                                       dropout_rate=dropout,
                                       num_out_features_encoder=128)
     elif model_name.lower() == "transformer_seq2seq":
         model = Transformer_Seq2Seq(
-            in_features=len(dynamic_attributes_names) + len(static_attributes_names))
+            in_features=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
     elif model_name.lower() == "conv_lstm":
         model = TWO_LSTM_CONV_LSTM(dropout=dropout,
-                                   input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+                                   input_dim=len(dynamic_attributes_names) + len(
+                                       training_data.list_static_attributes_names),
                                    hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
                                    in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_dim,
                                    image_height=training_data.max_dim)
     elif model_name.lower() == "lstm":
         model = LSTM(
-            input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
+            input_dim=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
-        model = TWO_LSTM_CNN_LSTM(input_dim=len(dynamic_attributes_names) + len(static_attributes_names),
-                                  image_height=training_data.max_dim, image_width=training_data.max_dim,
-                                  hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                                  in_cnn_channels=len(dynamic_attributes_names), dropout=dropout)
+        model = TWO_LSTM_CNN_LSTM(
+            input_dim=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
+            image_height=training_data.max_dim, image_width=training_data.max_dim,
+            hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
+            in_cnn_channels=len(dynamic_attributes_names), dropout=dropout)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -582,10 +584,10 @@ def run_training_and_test(
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
-        train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train,
+        train_dataloader = DataLoader(training_data, batch_size=256 * world_size, sampler=distributed_sampler_train,
                                       pin_memory=True,
                                       num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
-        test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test,
+        test_dataloader = DataLoader(test_data, batch_size=256 * world_size, sampler=distributed_sampler_test,
                                      pin_memory=True,
                                      num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
     else:
