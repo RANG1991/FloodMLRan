@@ -55,8 +55,15 @@ def cleanup():
     dist.destroy_process_group()
 
 
+def aggregate_gradients(model):
+    size = float(dist.get_world_size())
+    for param in model.parameters():
+        dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
+        # param.grad.data /= size
+
+
 def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_to_console,
-                specific_model_type):
+                specific_model_type, rank):
     # set model to train mode (important for dropout)
     torch.cuda.empty_cache()
     model.train()
@@ -68,9 +75,8 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
     # request mini-batch of data from the loader
     running_loss = 0.0
     for stds, station_id_batch, xs_non_spatial, xs_spatial, ys in pbar:
-        # push data to GPU (if available)
         xs_non_spatial, ys = xs_non_spatial.to(device), ys.to(device)
-        # get model predictions
+        optimizer.zero_grad()
         if xs_spatial.nelement() > 0:
             y_hat = model(xs_non_spatial, xs_spatial.to(device))
         elif specific_model_type.lower() == "transformer_seq2seq":
@@ -79,16 +85,11 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
             ys = ys[:, -1]
         else:
             y_hat = model(xs_non_spatial)
-        # calculate loss
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
-        # delete previously stored gradients from the model
-        optimizer.zero_grad()
-        # calculate gradients
         loss.backward()
+        aggregate_gradients(model)
         # torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
-        # update the weights
         optimizer.step()
-        # write current loss in the progress bar
         running_loss += loss.item()
         # print(f"Loss: {loss.item():.4f}")
         # pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
@@ -584,10 +585,10 @@ def run_training_and_test(
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
-        train_dataloader = DataLoader(training_data, batch_size=256 * world_size, sampler=distributed_sampler_train,
+        train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train,
                                       pin_memory=True,
                                       num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
-        test_dataloader = DataLoader(test_data, batch_size=256 * world_size, sampler=distributed_sampler_test,
+        test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test,
                                      pin_memory=True,
                                      num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
     else:
@@ -610,7 +611,8 @@ def run_training_and_test(
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device=rank,
                                              print_tqdm_to_console=print_tqdm_to_console,
-                                             specific_model_type=specific_model_type)
+                                             specific_model_type=specific_model_type,
+                                             rank=rank)
         if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
