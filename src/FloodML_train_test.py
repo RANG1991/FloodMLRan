@@ -55,15 +55,15 @@ def cleanup():
     dist.destroy_process_group()
 
 
-def aggregate_gradients(model):
-    size = float(dist.get_world_size())
-    for param in model.parameters():
-        dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
-        # param.grad.data /= size
+def aggregate_gradients(model, world_size):
+    if world_size > 1:
+        for param in model.parameters():
+            dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
+            param.grad.data /= world_size
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_to_console,
-                specific_model_type, rank):
+                specific_model_type, world_size):
     # set model to train mode (important for dropout)
     torch.cuda.empty_cache()
     model.train()
@@ -87,7 +87,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
             y_hat = model(xs_non_spatial)
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         loss.backward()
-        aggregate_gradients(model)
+        # aggregate_gradients(model, world_size)
         # torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
         optimizer.step()
         running_loss += loss.item()
@@ -435,7 +435,7 @@ def run_single_parameters_check_with_val_on_years(
     list_preds_dicts_ranks = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
-                   (learning_rate * (num_processes_ddp if num_processes_ddp > 1 else 1)
+                   (learning_rate * num_processes_ddp
                     * (num_workers_data_loader if num_workers_data_loader > 0 else 1)),
                    sequence_length,
                    num_hidden_units,
@@ -585,10 +585,10 @@ def run_training_and_test(
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
-        train_dataloader = DataLoader(training_data, batch_size=256, sampler=distributed_sampler_train,
+        train_dataloader = DataLoader(training_data, batch_size=256 // world_size, sampler=distributed_sampler_train,
                                       pin_memory=True,
                                       num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
-        test_dataloader = DataLoader(test_data, batch_size=256, sampler=distributed_sampler_test,
+        test_dataloader = DataLoader(test_data, batch_size=256 // world_size, sampler=distributed_sampler_test,
                                      pin_memory=True,
                                      num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
     else:
@@ -612,7 +612,7 @@ def run_training_and_test(
                                              epoch=(i + 1), device=rank,
                                              print_tqdm_to_console=print_tqdm_to_console,
                                              specific_model_type=specific_model_type,
-                                             rank=rank)
+                                             world_size=world_size)
         if rank == 0 and profile_code:
             p.step()
         training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
@@ -834,7 +834,7 @@ def main():
                                              "in training and test / validation", default=None, type=int)
     parser.add_argument('--profile_code', action='store_true')
     parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
-                                                    " parallelism", default=torch.cuda.device_count(),
+                                                    " parallelism", default=1,
                         type=int)
     parser.add_argument("--sequence_length_spatial", help="the sequence length to take of spatial features",
                         default=7, type=int)
