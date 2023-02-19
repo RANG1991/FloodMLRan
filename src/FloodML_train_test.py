@@ -678,9 +678,9 @@ def choose_hyper_parameters_validation(
     train_stations_list = []
     val_stations_list = []
     if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
     else:
-        all_stations_list_sorted = sorted(open("../data/CAMELS_US/531_basin_list.txt").read().splitlines())
+        all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
     all_stations_list_sorted = all_stations_list_sorted[:num_basins] if num_basins else all_stations_list_sorted
     # for i in range(len(all_stations_list_sorted)):
     #     if i % 5 != 0:
