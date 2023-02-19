@@ -152,7 +152,7 @@ class Dataset_ERA5(Dataset):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
-        self.list_static_attributes_names = []
+        self.list_static_attributes_names = static_attributes_names
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
@@ -241,8 +241,10 @@ class Dataset_ERA5(Dataset):
                     current_x_data_spatial = np.concatenate([np.expand_dims(current_x_data_spatial, axis=1),
                                                              np.repeat(
                                                                  np.expand_dims(current_x_data_non_spatial[:,
-                                                                                1:len(
-                                                                                    self.list_dynamic_attributes_names)],
+                                                                                1:(
+                                                                                        len(self.list_dynamic_attributes_names)
+                                                                                        + len(
+                                                                                    self.list_static_attributes_names))],
                                                                                 axis=-1),
                                                                  self.max_dim * self.max_dim,
                                                                  axis=-1)], axis=1)
@@ -388,9 +390,9 @@ class Dataset_ERA5(Dataset):
         df_attr = df_attr.dropna()
         if limit_size_above_1000:
             df_attr = df_attr[df_attr["basin_area"] >= 1000]
-        self.list_static_attributes_names = df_attr.columns.to_list()
-        if "gauge_id" in self.list_static_attributes_names:
-            self.list_static_attributes_names.remove("gauge_id")
+        # self.list_static_attributes_names = df_attr.columns.to_list()
+        # if "gauge_id" in self.list_static_attributes_names:
+        #     self.list_static_attributes_names.remove("gauge_id")
         df_attr = df_attr[["gauge_id"] + self.list_static_attributes_names]
         # maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
         # mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)

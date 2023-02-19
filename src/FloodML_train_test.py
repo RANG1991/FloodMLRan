@@ -9,7 +9,6 @@ from os import listdir
 from os.path import isfile, join
 import pandas as pd
 import matplotlib
-import math
 import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
@@ -29,7 +28,6 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
-import multiprocessing
 import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
 import wandb
@@ -552,7 +550,8 @@ def run_training_and_test(
                                    input_dim=len(dynamic_attributes_names) + len(
                                        training_data.list_static_attributes_names),
                                    hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                                   in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_dim,
+                                   in_channels_cnn=len(dynamic_attributes_names) + len(
+                                       training_data.list_static_attributes_names), image_width=training_data.max_dim,
                                    image_height=training_data.max_dim)
     elif model_name.lower() == "lstm":
         model = LSTM(
@@ -564,7 +563,8 @@ def run_training_and_test(
             input_dim=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
             image_height=training_data.max_dim, image_width=training_data.max_dim,
             hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-            in_cnn_channels=len(dynamic_attributes_names), dropout=dropout)
+            in_cnn_channels=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
+            dropout=dropout)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -691,7 +691,7 @@ def choose_hyper_parameters_validation(
     val_stations_list = all_stations_list_sorted[:]
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.5]
-    sequence_lengths = [30, 365]
+    sequence_lengths = [270]
     if model_name.lower() == "transformer_lstm":
         num_hidden_units = [1]
     else:
@@ -834,8 +834,7 @@ def main():
                                              "in training and test / validation", default=None, type=int)
     parser.add_argument('--profile_code', action='store_true')
     parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
-                                                    " parallelism", default=1,
-                        type=int)
+                                                    " parallelism", default=1, type=int)
     parser.add_argument("--sequence_length_spatial", help="the sequence length to take of spatial features",
                         default=7, type=int)
     parser.add_argument("--create_new_files", action="store_true")

@@ -202,47 +202,49 @@ def parse_single_basin_precipitation(
     list_of_total_precipitations_all_years = []
     started_reading_data = False
     for year in range(1988, 2009):
-        fn = f"{ERA5_data_folder_name}/tp_US_{year}.nc"
-        try:
-            dataset = nc.Dataset(fn)
-        except Exception as e:
-            print(e)
-            continue
-        # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
-        # e.g. - [780168, 780169, 780170, ...]
-        ti = dataset["time"][:]
-        if not started_reading_data:
-            lon = dataset["longitude"][:]
-            lat = dataset["latitude"][:]
-            min_lon_array = min_lon - lon
-            ind_lon_min = np.where(min_lon_array > 0, min_lon_array, np.inf).argmin()
-            max_lon_array = lon - max_lon
-            ind_lon_max = np.where(max_lon_array > 0, max_lon_array, np.inf).argmin()
-            min_lat_array = lat - min_lat
-            ind_lat_min = np.where(min_lat_array > 0, min_lat_array, np.inf).argmin()
-            max_lat_array = max_lat - lat
-            ind_lat_max = np.where(max_lat_array > 0, max_lat_array, np.inf).argmin()
-            started_reading_data = True
-        tp = np.asarray(
-            dataset["tp"][
-            :, ind_lat_max: ind_lat_min + 1, ind_lon_min: ind_lon_max + 1
+        for month in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]:
+            fn = f"{ERA5_data_folder_name}/tp_CA_{year}_{month}.nc"
+            try:
+                dataset = nc.Dataset(fn)
+            except Exception as e:
+                print(e)
+                continue
+            # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
+            # e.g. - [780168, 780169, 780170, ...]
+            ti = dataset["time"][:]
+            if not started_reading_data:
+                lon = dataset["longitude"][:]
+                lat = dataset["latitude"][:]
+                min_lon_array = min_lon - lon
+                ind_lon_min = np.where(min_lon_array > 0, min_lon_array, np.inf).argmin()
+                max_lon_array = lon - max_lon
+                ind_lon_max = np.where(max_lon_array > 0, max_lon_array, np.inf).argmin()
+                min_lat_array = lat - min_lat
+                ind_lat_min = np.where(min_lat_array > 0, min_lat_array, np.inf).argmin()
+                max_lat_array = max_lat - lat
+                ind_lat_max = np.where(max_lat_array > 0, max_lat_array, np.inf).argmin()
+                started_reading_data = True
+            tp = np.asarray(
+                dataset["tp"][
+                :, ind_lat_max: ind_lat_min + 1, ind_lon_min: ind_lon_max + 1
+                ]
+            )
+            # multiply the precipitation by 1000 to get millimeter instead of meter
+            tp[:, :, :] = tp[:, :, :] * 1000
+            # zero out any precipitation that is less than 0
+            tp[tp < 0] = 0
+            # ti is an array containing the dates as the number of
+            # hours since 1900-01-01 00:00 so this is the starting date
+            starting_date = datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M")
+            # convert the time to datetime format
+            datetimes = [
+                (starting_date + datetime.timedelta(hours=int(ti[i])))
+                for i in range(0, len(ti))
             ]
-        )
-        # multiply the precipitation by 1000 to get millimeter instead of meter
-        tp[:, :, :] = tp[:, :, :] * 1000
-        # zero out any precipitation that is less than 0
-        tp[tp < 0] = 0
-        # ti is an array containing the dates as the number of hours since 1900-01-01 00:00 so this is the starting date
-        starting_date = datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M")
-        # convert the time to datetime format
-        datetimes = [
-            (starting_date + datetime.timedelta(hours=int(ti[i])))
-            for i in range(0, len(ti))
-        ]
-        # append the datetimes from specific year to the list of datetimes of all years
-        list_of_dates_all_years.append(datetimes)
-        # append the precipitations from specific year to the list of precipitations of all years
-        list_of_total_precipitations_all_years.append(tp)
+            # append the datetimes from specific year to the list of datetimes of all years
+            list_of_dates_all_years.append(datetimes)
+            # append the precipitations from specific year to the list of precipitations of all years
+            list_of_total_precipitations_all_years.append(tp)
 
     # concatenate the datetimes from all the years
     datetimes = np.concatenate(list_of_dates_all_years, axis=0)
