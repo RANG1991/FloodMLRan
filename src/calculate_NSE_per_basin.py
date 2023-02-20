@@ -6,24 +6,32 @@ import numpy as np
 def create_dict_basin_id_to_NSE(logs_filename):
     dicts_models_dict = {}
     model_name = "empty_model_name"
+    run_number = 1
     with open(logs_filename, "r", encoding="utf-8") as f:
         for row in f:
+            match_run_number_string = re.search("run number: (.*?)\n", row)
+            if match_run_number_string:
+                new_run_number = match_run_number_string.group(1)
+                if new_run_number != run_number:
+                    print(f"moving to new run number: {new_run_number}")
+                    dicts_models_dict[(model_name, new_run_number)] = {}
+                    run_number = new_run_number
             match_model_name_string = re.search("running with model: (.*?)\n", row)
             if match_model_name_string:
                 new_model_name = match_model_name_string.group(1)
                 if new_model_name != model_name:
                     print(f"moving to new model with name: {new_model_name}")
-                    dicts_models_dict[new_model_name] = {}
+                    dicts_models_dict[(new_model_name, run_number)] = {}
                     model_name = new_model_name
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
                 basin_nse = float(match_nse_string.group(2))
-                dicts_models_dict[model_name][basin_id] = basin_nse
+                dicts_models_dict[(model_name, run_number)][basin_id] = basin_nse
     return dicts_models_dict
 
 
-def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name):
+def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
     nse_losses = []
     for basin_id, mean_nes_loss in dict_basins_mean_NSE_loss.items():
         nse_losses.append(mean_nes_loss)
@@ -35,25 +43,30 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name):
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     plt.xscale("symlog")
-    plt.plot(base[:-1], cumulative, label=model_name)
+    plt.plot(base[:-1], cumulative, label=f"model name: {model_name} run number: {run_number}")
 
 
 def main():
-    input_file_name = "slurm-5794204.out"
-    plot_title = f"NSE CDF of process ID - " \
-                 f"{input_file_name.replace('slurm-', '').replace('.out', '')}"
+    input_file_name = "slurm-5796991.out"
     d = create_dict_basin_id_to_NSE(input_file_name)
-    for model_name in d.keys():
-        dict_basins_id_to_mean_nse_loss = {}
-        for basin_id, basin_nse in d[model_name].items():
-            dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
-        plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, model_name=model_name)
-    if plot_title != "":
-        plt.title(plot_title)
-    plt.legend()
-    plt.grid()
-    plt.savefig(plot_title)
-    plt.clf()
+    run_numbers = set([run_number for _, run_number in d.keys()])
+    model_names = set([model_name for model_name, _ in d.keys()])
+    for run_number in run_numbers:
+        plot_title = f"NSE CDF of process ID - " \
+                     f"{input_file_name.replace('slurm-', '').replace('.out', '')} in run number - {run_number}"
+        for model_name in model_names:
+            if (model_name, run_number) not in d.keys() or len(d[(model_name, run_number)].items()) == 0:
+                continue
+            dict_basins_id_to_mean_nse_loss = {}
+            for basin_id, basin_nse in d[(model_name, run_number)].items():
+                dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
+            plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, model_name=model_name, run_number=run_number)
+        if plot_title != "":
+            plt.title(plot_title)
+        plt.legend()
+        plt.grid()
+        plt.savefig(plot_title)
+        plt.clf()
 
 
 if __name__ == "__main__":

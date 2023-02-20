@@ -2,7 +2,6 @@ import re
 import pandas as pd
 from pathlib import Path
 import functools
-import numpy as np
 from ERA5_dataset import Dataset_ERA5
 
 
@@ -69,11 +68,11 @@ def generate_csv_from_output_file(output_file, static_attr_file):
     df_static_attrib["gauge_id"] = df_static_attrib["gauge_id"].apply(lambda x: x.replace("us_", ""))
     df_res = df_nse.set_index('basin_id').join(df_static_attrib.set_index('gauge_id'))
     df_res.to_csv(output_file_name + ".csv")
-    generate_box_plots(df_res)
+    # generate_box_plots(df_res)
 
 
 def main():
-    generate_csv_from_output_file("./slurm-5794204.out", "../data/ERA5/Caravan/attributes/attributes_hydroatlas_us.csv")
+    generate_csv_from_output_file("./slurm-5796991.out", "../data/ERA5/Caravan/attributes/attributes_hydroatlas_us.csv")
 
 
 if __name__ == "__main__":
