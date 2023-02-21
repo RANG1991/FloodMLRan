@@ -18,4 +18,4 @@ source $virtual_env
 #module load cuda/11.7
 
 # Start Running NeuralHydrology code of Frederik
-/sci/labs/efratmorin/ranga/FloodMLRan/neuralhydrology/nh_run.py train --config-file /sci/labs/efratmorin/ranga/FloodMLRan/config_files_dir/config_ERA5.yml
+MPLBACKEND='Agg' /sci/labs/efratmorin/ranga/FloodMLRan/neuralhydrology/nh_run.py train --config-file /sci/labs/efratmorin/ranga/FloodMLRan/config_files_dir/config_ERA5.yml
