@@ -75,10 +75,10 @@ STATIC_ATTRIBUTES_NAMES = [
 
 DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = [
     "total_precipitation_sum",
-    "temperature_2m_min",
-    "temperature_2m_max",
-    "potential_evaporation_sum",
-    "surface_net_solar_radiation_mean",
+    # "temperature_2m_min",
+    # "temperature_2m_max",
+    # "potential_evaporation_sum",
+    # "surface_net_solar_radiation_mean",
 ]
 
 DISCHARGE_STR_CARAVAN = "streamflow"
@@ -152,7 +152,7 @@ class Dataset_ERA5(Dataset):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
-        self.list_static_attributes_names = static_attributes_names
+        self.list_static_attributes_names = sorted(static_attributes_names)
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
@@ -166,7 +166,7 @@ class Dataset_ERA5(Dataset):
          self.list_stations_static,
          self.countries_abbreviations_stations_dict
          ) = self.read_static_attributes_all_countries(["us"], limit_size_above_1000=limit_size_above_1000)
-        self.all_station_ids = list(set(all_stations_ids).intersection(set(self.list_stations_static)))
+        self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
         self.sequence_length_spatial = sequence_length_spatial

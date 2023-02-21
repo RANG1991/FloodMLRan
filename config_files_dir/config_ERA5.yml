@@ -90,7 +90,7 @@ batch_size: 256
 epochs: 1
 
 # If a value, clips the gradients during training to that norm.
-clip_gradient_norm: 2
+clip_gradient_norm:
 
 # Defines which time steps are used to calculate the loss. Can't be larger than seq_length.
 # If use_frequencies is used, this needs to be a dict mapping each frequency to a predict_last_n-value, else an int.
