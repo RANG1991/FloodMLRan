@@ -118,10 +118,10 @@ save_weights_every: 1
 # --- Data configurations --------------------------------------------------------------------------
 
 # which data set to use [camels_us, camels_gb, global, hourly_camels_us]
-dataset: ERA5
+dataset: caravan
 
 # Path to data set root
-data_dir: /sci/labs/efratmorin/ranga/FloodMLRan/data/
+data_dir: /sci/labs/efratmorin/ranga/FloodMLRan/data/ERA5
 
 # Forcing product [daymet, maurer, maurer_extended, nldas, nldas_extended, nldas_hourly]
 # can be either a list of forcings or a single forcing product
