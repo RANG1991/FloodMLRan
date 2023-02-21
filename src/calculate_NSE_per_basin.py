@@ -3,7 +3,19 @@ import re
 import numpy as np
 
 
-def create_dict_basin_id_to_NSE(logs_filename):
+def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
+    dicts_models_dict = {}
+    with open(logs_filename, "r", encoding="utf-8") as f:
+        for row in f:
+            match_nse_string = re.search("The NSE loss for basin with ID: (.*?) is: (.*?)\n", row)
+            if match_nse_string:
+                basin_id = match_nse_string.group(1)
+                basin_nse = float(match_nse_string.group(2))
+                dicts_models_dict[basin_id] = basin_nse
+    return dicts_models_dict
+
+
+def create_dict_basin_id_to_NSE_my_code(logs_filename):
     dicts_models_dict = {}
     model_name = "empty_model_name"
     run_number = 1
@@ -31,25 +43,9 @@ def create_dict_basin_id_to_NSE(logs_filename):
     return dicts_models_dict
 
 
-def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
-    nse_losses = []
-    for basin_id, mean_nes_loss in dict_basins_mean_NSE_loss.items():
-        nse_losses.append(mean_nes_loss)
-    nse_losses_np = np.array(nse_losses)
-    # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
-    # evaluate the histogram
-    values, base = np.histogram(nse_losses_np, bins=100000)
-    # evaluate the cumulative
-    cumulative = np.cumsum(values)
-    cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
-    # plt.xscale("symlog")
-    plt.xlim((-1, 1))
-    plt.plot(base[:-1], cumulative, label=f"model name: {model_name} run number: {run_number}")
-
-
-def main():
+def plot_NSE_CDF_graphs_my_code():
     input_file_name = "slurm-5796991.out"
-    d = create_dict_basin_id_to_NSE(input_file_name)
+    d = create_dict_basin_id_to_NSE_my_code(input_file_name)
     run_numbers = set([run_number for _, run_number in d.keys()])
     model_names = set([model_name for model_name, _ in d.keys()])
     for model_name in model_names:
@@ -68,6 +64,39 @@ def main():
         plt.grid()
         plt.savefig(plot_title)
         plt.clf()
+
+
+def plot_NSE_CDF_graph_frederik_code():
+    input_file_name = "slurm-5817832.out"
+    model_name = "LSTM_Frederik"
+    plot_title = f"NSE CDF of process ID - " \
+                 f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
+    d = create_dict_basin_id_to_NSE_frederik_code(input_file_name)
+    plot_CDF_NSE_basins(d, model_name, 1)
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_title)
+    plt.clf()
+
+
+def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
+    nse_losses = []
+    for basin_id, mean_nes_loss in dict_basins_mean_NSE_loss.items():
+        nse_losses.append(mean_nes_loss)
+    nse_losses_np = np.array(nse_losses)
+    # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
+    # evaluate the histogram
+    values, base = np.histogram(nse_losses_np, bins=100000)
+    # evaluate the cumulative
+    cumulative = np.cumsum(values)
+    cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
+    # plt.xscale("symlog")
+    plt.xlim((-1, 1))
+    plt.plot(base[:-1], cumulative, label=f"model name: {model_name} run number: {run_number}")
+
+
+def main():
+    plot_NSE_CDF_graph_frederik_code()
 
 
 if __name__ == "__main__":
