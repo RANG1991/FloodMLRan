@@ -14,6 +14,7 @@ import pickle
 import os
 from tqdm import tqdm
 import sys
+from os.path import isfile, join
 
 matplotlib.use("AGG")
 
@@ -119,6 +120,7 @@ class Dataset_CAMELS(Dataset):
         self.stage = stage
         self.specific_model_type = specific_model_type
         self.df_attr, self.list_stations_static = self.read_static_attributes()
+        self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
         (self.dict_station_id_to_data,
          x_means,
          x_stds,
@@ -137,7 +139,6 @@ class Dataset_CAMELS(Dataset):
         self.x_means = x_means if stage == "train" else self.x_means
         self.x_stds = x_stds if stage == "train" else self.x_stds
 
-        self.dataset_length, self.lookup_table = self.create_look_table()
         x_data_mean_dynamic = self.x_means[:(len(self.list_dynamic_attributes_names))]
         x_data_std_dynamic = self.x_stds[:(len(self.list_dynamic_attributes_names))]
 
@@ -147,7 +148,6 @@ class Dataset_CAMELS(Dataset):
         for key in self.dict_station_id_to_data.keys():
             current_x_data = self.dict_station_id_to_data[key]["x_data"]
             current_y_data = self.dict_station_id_to_data[key]["y_data"]
-
             current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
                 (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
                 (x_data_std_dynamic + (10 ** (-6)))
@@ -155,10 +155,16 @@ class Dataset_CAMELS(Dataset):
             current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
                 (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
                 (x_data_std_static + (10 ** (-6)))
-
             current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
-
-            self.dict_station_id_to_data[key] = (current_x_data, current_y_data)
+            dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
+            self.dict_station_id_to_data[key] = dict_curr_basin
+            with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl",
+                      'wb') as f:
+                pickle.dump(dict_curr_basin, f)
+        dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
+        self.all_station_ids = list(dict_station_id_to_data_from_file.keys())
+        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
+        del dict_station_id_to_data_from_file
 
     def __len__(self):
         return self.dataset_length
@@ -193,7 +199,7 @@ class Dataset_CAMELS(Dataset):
                 pickle.dump(obj_to_save, f)
 
     def check_is_valid_station_id(self, station_id, create_new_files):
-        return (station_id in self.list_stations_static
+        return (station_id in self.all_station_ids
                 and (not os.path.exists(
                     f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}.pkl")
                      or any([not os.path.exists(
@@ -227,16 +233,12 @@ class Dataset_CAMELS(Dataset):
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
-            min_spatial = float(json_obj["min_spatial"])
-            max_spatial = float(json_obj["max_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
             cumm_s_y = float(json_obj["cumm_s_y"])
             count_of_samples = int(json_obj["count_of_samples"])
         else:
             cumm_m_x = 0
             cumm_s_x = 0
-            min_spatial = -1
-            max_spatial = -1
             cumm_m_y = 0
             cumm_s_y = 0
             count_of_samples = 0
@@ -273,17 +275,15 @@ class Dataset_CAMELS(Dataset):
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
-                "min_spatial": min_spatial,
-                "max_spatial": max_spatial,
                 "cumm_m_y": cumm_m_y,
                 "cumm_s_y": cumm_s_y,
                 "count_of_samples": count_of_samples
             }
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, min_spatial, max_spatial
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y
 
     def read_single_station_dynamic_and_discharge_file(self, station_id):
-        if station_id not in self.list_stations_static:
+        if station_id not in self.all_station_ids:
             return np.array([]), np.array([]), np.array([])
         forcing_path = Path(self.dynamic_data_folder)
         file_path = list(forcing_path.glob(f"**/{station_id}_*_forcing_leap.txt"))
@@ -384,20 +384,32 @@ class Dataset_CAMELS(Dataset):
     def calculate_dataset_length(self):
         return self.dataset_length
 
-    def create_look_table(self):
+    def create_look_table(self, dict_station_id_to_data):
         self.inner_index_in_data_of_basin = 0
         lookup_table_basins = {}
         length_of_dataset = 0
-        self.current_basin = list(self.dict_station_id_to_data.keys())["x_data"]
-        for key in self.dict_station_id_to_data.keys():
-            for _ in range(len(self.dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
+        self.current_basin = list(dict_station_id_to_data.keys())[0]
+        self.dict_curr_basin = dict_station_id_to_data[self.current_basin]
+        for key in dict_station_id_to_data.keys():
+            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
                 lookup_table_basins[length_of_dataset] = key
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
 
+    def load_basins_dicts_from_pickles(self):
+        dict_station_id_to_data = {}
+        for basin_id in self.all_station_ids:
+            file_name = join(f"{FOLDER_WITH_BASINS_PICKLES}", f"{basin_id}_{self.stage}.pkl")
+            if os.path.exists(file_name):
+                with open(file_name, "rb") as f:
+                    pickled_data = pickle.load(f)
+                    dict_station_id_to_data[basin_id] = pickled_data
+        return dict_station_id_to_data
+
     def set_sequence_length(self, sequence_length):
         self.sequence_length = sequence_length
-        self.dataset_length, self.lookup_table = self.create_look_table()
+        dict_station_id_to_data = self.load_basins_dicts_from_pickles()
+        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data)
 
     def get_x_means(self):
         return self.x_means
