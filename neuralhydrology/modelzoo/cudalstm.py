@@ -45,7 +45,7 @@ class CudaLSTM(BaseModel):
     def _reset_parameters(self):
         """Special initialization of certain model weights."""
         if self.cfg.initial_forget_bias is not None:
-            self.lstm.bias_hh_l0.X_data[self.cfg.hidden_size:2 * self.cfg.hidden_size] = self.cfg.initial_forget_bias
+            self.lstm.bias_hh_l0.data[self.cfg.hidden_size:2 * self.cfg.hidden_size] = self.cfg.initial_forget_bias
 
     def forward(self, data: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Perform a forward pass on the CudaLSTM model.
@@ -63,10 +63,8 @@ class CudaLSTM(BaseModel):
                 - `h_n`: hidden state at the last time step of the sequence of shape [batch size, 1, hidden size].
                 - `c_n`: cell state at the last time step of the sequence of shape [batch size, 1, hidden size].
         """
-        # the x_d in data dictionary is of size [batch_size, seq_length, number_of_features]
         # possibly pass dynamic and static inputs through embedding layers, then concatenate them
         x_d = self.embedding_net(data)
-        # print(data["x_d"])
         lstm_output, (h_n, c_n) = self.lstm(input=x_d)
 
         # reshape to [batch_size, seq, n_hiddens]

@@ -61,7 +61,7 @@ def create_results_ensemble(run_dirs: List[Path],
     else:
         best_runs = [_get_results_file(run_dir, period, epoch) for run_dir in run_dirs]
 
-    config = Config(run_dirs[0] / 'config_local_cpu.yml')
+    config = Config(run_dirs[0] / 'config.yml')
     if metrics is not None:
         # override metrics from config
         config.metrics = metrics

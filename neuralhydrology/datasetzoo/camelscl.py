@@ -12,7 +12,12 @@ from neuralhydrology.utils.config import Config
 
 
 class CamelsCL(BaseDataset):
-    """data set class for the CAMELS CL dataset by [#]_.
+    """Data set class for the CAMELS CL dataset by [#]_.
+
+    For more efficient data loading during model training/evaluating, this dataset class expects the CAMELS-CL dataset
+    in a processed format. Specifically, this dataset class works with per-basin csv files that contain all 
+    timeseries data combined. Use the :func:`preprocess_camels_cl_dataset` function to process the original dataset 
+    layout into this format.
 
     Parameters
     ----------
@@ -68,6 +73,7 @@ class CamelsCL(BaseDataset):
         return load_camels_cl_timeseries(data_dir=self.cfg.data_dir, basin=basin)
 
     def _load_attributes(self) -> pd.DataFrame:
+        """Load static catchment attributes."""
         return load_camels_cl_attributes(self.cfg.data_dir, basins=self.basins)
 
 
@@ -78,7 +84,7 @@ def load_camels_cl_timeseries(data_dir: Path, basin: str) -> pd.DataFrame:
     ----------
     data_dir : Path
         Path to the CAMELS CL directory. This folder must contain a folder called 'preprocessed' containing the 
-        per-basin csv files created by preprocess_camels_cl_dataset().
+        per-basin csv files created by :func:`preprocess_camels_cl_dataset`.
     basin : str
         Basin identifier number as string.
 
@@ -142,13 +148,14 @@ def load_camels_cl_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
 def preprocess_camels_cl_dataset(data_dir: Path):
     """Preprocess CAMELS-CL data set and create per-basin files for more flexible and faster data loading.
     
-    This function will read-in all time series text files and create per-basin csv files in a new subfolder called
-    "preprocessed".
+    This function will read-in all daily time series csv files and create per-basin csv files in a new subfolder called
+    "preprocessed". This code is specifically designed for the "CAMELS-CL versión 2022 enero" version that can be 
+    downloaded from `here <https://www.cr2.cl/camels-cl/>`__.
     
     Parameters
     ----------
     data_dir : Path
-        Path to the CAMELS-CL data set. All txt-files from the original dataset should be present in this folder. 
+        Path to the CAMELS-CL data set. All csv-files from the original dataset should be present in this folder. 
 
     Raises
     ------
@@ -157,29 +164,27 @@ def preprocess_camels_cl_dataset(data_dir: Path):
     """
     # check if data has already been pre-processed other-wise create dst folder
     dst_dir = data_dir / "preprocessed"
-    dst_dir.mkdir(exist_ok=False)
+    if dst_dir.is_dir():
+        raise FileExistsError(
+            "Subdirectory 'preprocessed' already exists. Delete this folder if you want to reprocess the data.")
+    dst_dir.mkdir()
 
     # list of available time series features included in CAMELS-CL
-    available_features = ['streamflow', 'precip', 'tmin', 'tmax', 'tmean', 'pet', 'swe']
+    available_features = ['q_mm', 'precip', 'tmin', 'tmax', 'tmean', 'pet']
 
     # get list of text files for those features
-    files = [f for f in list(data_dir.glob('*.txt')) if any([x in f.name for x in available_features])]
+    files = [f for f in list(data_dir.glob('*day.csv')) if any([x in f.name for x in available_features])]
 
     # read-in all text files as pandas dataframe
     dfs = {}
     for file in tqdm(files, file=sys.stdout, desc="Loading txt files into memory"):
-        df = pd.read_csv(file,
-                         sep="\t",
-                         na_values=' ',
-                         index_col="gauge_id",
-                         dtype=np.float32,
-                         parse_dates=['gauge_id'])
-        feature_name = "_".join(file.stem.split('_')[2:])
+        df = pd.read_csv(file, index_col="date", parse_dates=['date'])
+        feature_name = file.stem.rsplit('_', maxsplit=1)[0]
         dfs[feature_name] = df
 
     # create one dataframe per basin with all features. Shorten record to period of valid entries
-    feature_names = list(df.columns)
-    for basin in tqdm(feature_names, file=sys.stdout, desc="Creating per-basin dataframes and saving to disk"):
+    basins = list(df.columns)
+    for basin in tqdm(basins, file=sys.stdout, desc="Creating per-basin dataframes and saving to disk"):
         # collect basin columns from all feature dataframes.
         col_data, col_names = [], []
         for feature, feature_df in dfs.items():
@@ -187,7 +192,7 @@ def preprocess_camels_cl_dataset(data_dir: Path):
             col_data.append(feature_df[basin])
         df = pd.DataFrame({name: data for name, data in zip(col_names, col_data)})
 
-        # remove all rows with NaNs, then reindex to have continues data frames from first to last record
+        # remove all rows with NaNs, then reindex to have continuous data frames from first to last record
         df = df.dropna(axis=0, how="all")
         df = df.reindex(pd.date_range(start=df.index[0], end=df.index[-1]), fill_value=np.nan)
 
@@ -195,4 +200,4 @@ def preprocess_camels_cl_dataset(data_dir: Path):
         df.index.name = "date"
         df.to_csv(dst_dir / f"{basin}.csv")
 
-    print(f"Finished preprocessing the CAMELS CL data set. Resulting per-basin csv files have been stored at {dst_dir}")
+    print(f"Finished processing the CAMELS CL data set. Resulting per-basin csv files have been stored at {dst_dir}")

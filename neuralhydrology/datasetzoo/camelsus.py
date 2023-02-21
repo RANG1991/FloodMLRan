@@ -7,13 +7,10 @@ import xarray
 
 from neuralhydrology.datasetzoo.basedataset import BaseDataset
 from neuralhydrology.utils.config import Config
-import logging
-
-LOGGER = logging.getLogger(__name__)
 
 
 class CamelsUS(BaseDataset):
-    """data set class for the CAMELS US data set by [#]_ and [#]_.
+    """Data set class for the CAMELS US data set by [#]_ and [#]_.
     
     Parameters
     ----------
@@ -138,10 +135,10 @@ def load_camels_us_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
     df['huc'] = df['huc_02'].apply(lambda x: str(x).zfill(2))
     df = df.drop('huc_02', axis=1)
 
-    # if basins:
-    #    if any(b not in df.index for b in basins):
-    #        raise ValueError('Some basins are missing static attributes.')
-    #    df = df.loc[basins]
+    if basins:
+        if any(b not in df.index for b in basins):
+            raise ValueError('Some basins are missing static attributes.')
+        df = df.loc[basins]
 
     return df
 
@@ -225,6 +222,6 @@ def load_camels_us_discharge(data_dir: Path, basin: str, area: int) -> pd.Series
     df = df.set_index("date")
 
     # normalize discharge from cubic feet per second to mm per day
-    df.QObs = 28316846.592 * df.QObs * 86400 / (area * 10 ** 6)
+    df.QObs = 28316846.592 * df.QObs * 86400 / (area * 10**6)
 
     return df.QObs

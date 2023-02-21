@@ -85,9 +85,9 @@ class CustomLSTM(BaseModel):
 
         # TODO: move hidden and cell state initialization to init and only reset states in forward pass to zero.
         if h_0 is None:
-            h_0 = x_d.X_data.new(batch_size, self._hidden_size).zero_()
+            h_0 = x_d.data.new(batch_size, self._hidden_size).zero_()
         if c_0 is None:
-            c_0 = x_d.X_data.new(batch_size, self._hidden_size).zero_()
+            c_0 = x_d.data.new(batch_size, self._hidden_size).zero_()
         h_x = (h_0, c_0)
 
         output = defaultdict(list)
@@ -174,7 +174,7 @@ class _LSTMCell(nn.Module):
         assert self.hidden_size == cudnnlstm.hidden_size
         assert self.input_size == cudnnlstm.input_size
 
-        self.w_hh.data = getattr(cudnnlstm, f"weight_hh_l{layer}").X_data
-        self.w_ih.data = getattr(cudnnlstm, f"weight_ih_l{layer}").X_data
-        self.b_hh.data = getattr(cudnnlstm, f"bias_hh_l{layer}").X_data
-        self.b_ih.data = getattr(cudnnlstm, f"bias_ih_l{layer}").X_data
+        self.w_hh.data = getattr(cudnnlstm, f"weight_hh_l{layer}").data
+        self.w_ih.data = getattr(cudnnlstm, f"weight_ih_l{layer}").data
+        self.b_hh.data = getattr(cudnnlstm, f"bias_hh_l{layer}").data
+        self.b_ih.data = getattr(cudnnlstm, f"bias_ih_l{layer}").data

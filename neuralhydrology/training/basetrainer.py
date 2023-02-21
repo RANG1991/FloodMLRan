@@ -75,8 +75,6 @@ class BaseTrainer(object):
         self._set_random_seeds()
         self._set_device()
 
-        self.loss_list = []
-
     def _get_dataset(self) -> BaseDataset:
         return get_dataset(cfg=self.cfg, period="train", is_train=True, scaler=self._scaler)
 
@@ -96,7 +94,11 @@ class BaseTrainer(object):
         return get_tester(cfg=self.cfg, run_dir=self.cfg.run_dir, period="validation", init_model=False)
 
     def _get_data_loader(self, ds: BaseDataset) -> torch.utils.data.DataLoader:
-        return DataLoader(ds, batch_size=self.cfg.batch_size, shuffle=False, num_workers=self.cfg.num_workers)
+        return DataLoader(ds,
+                          batch_size=self.cfg.batch_size,
+                          shuffle=True,
+                          num_workers=self.cfg.num_workers,
+                          collate_fn=ds.collate_fn)
 
     def _freeze_model_parts(self):
         # freeze all model weights
@@ -136,20 +138,29 @@ class BaseTrainer(object):
         tensorboard logging, and Tester class.
         If called in a ``continue_training`` context, this model will also restore the model and optimizer state.
         """
+        if self.cfg.is_finetuning:
+            # Load scaler from pre-trained model.
+            self._scaler = load_scaler(self.cfg.base_run_dir)
+
+        # Initialize dataset before the model is loaded.
+        ds = self._get_dataset()
+        if len(ds) == 0:
+            raise ValueError("Dataset contains no samples.")
+        self.loader = self._get_data_loader(ds=ds)
+
         self.model = self._get_model().to(self.device)
         if self.cfg.checkpoint_path is not None:
             LOGGER.info(f"Starting training from Checkpoint {self.cfg.checkpoint_path}")
             self.model.load_state_dict(torch.load(str(self.cfg.checkpoint_path), map_location=self.device))
         elif self.cfg.checkpoint_path is None and self.cfg.is_finetuning:
-            # the default for fine-tuning is the last model state
+            # the default for finetuning is the last model state
             checkpoint_path = [x for x in sorted(list(self.cfg.base_run_dir.glob('model_epoch*.pt')))][-1]
             LOGGER.info(f"Starting training from checkpoint {checkpoint_path}")
             self.model.load_state_dict(torch.load(str(checkpoint_path), map_location=self.device))
 
-        # freeze model parts and load scalar from pre-trained model
+        # Freeze model parts from pre-trained model.
         if self.cfg.is_finetuning:
             self._freeze_model_parts()
-            self._scaler = load_scaler(self.cfg.base_run_dir)
 
         self.optimizer = self._get_optimizer()
         self.loss_obj = self._get_loss_obj().to(self.device)
@@ -160,11 +171,6 @@ class BaseTrainer(object):
         # restore optimizer and model state if training is continued
         if self.cfg.is_continue_training:
             self._restore_training_state()
-
-        ds = self._get_dataset()
-        if len(ds) == 0:
-            raise ValueError("Dataset contains no samples.")
-        self.loader = self._get_data_loader(ds=ds)
 
         self.experiment_logger = Logger(cfg=self.cfg)
         if self.cfg.log_tensorboard:
@@ -212,15 +218,12 @@ class BaseTrainer(object):
                 self._save_weights_and_optimizer(epoch)
 
             if (self.validator is not None) and (epoch % self.cfg.validate_every == 0):
-                results = self.validator.evaluate(epoch=epoch,
-                                                  save_results=self.cfg.save_validation_results,
-                                                  metrics=self.cfg.metrics,
-                                                  model=self.model,
-                                                  experiment_logger=self.experiment_logger.valid())
-                for basin_id in results.keys():
-                    if "1D" in results[basin_id].keys() and "NSE" in results[basin_id]["1D"].keys():
-                        LOGGER.info("The NSE loss for basin with ID: {} is: {}".format(basin_id,
-                                                                                       results[basin_id]["1D"]["NSE"]))
+                self.validator.evaluate(epoch=epoch,
+                                        save_results=self.cfg.save_validation_results,
+                                        metrics=self.cfg.metrics,
+                                        model=self.model,
+                                        experiment_logger=self.experiment_logger.valid())
+
                 valid_metrics = self.experiment_logger.summarise()
                 print_msg = f"Epoch {epoch} average validation loss: {valid_metrics['avg_loss']:.5f}"
                 if self.cfg.metrics:
@@ -277,11 +280,12 @@ class BaseTrainer(object):
         for data in pbar:
 
             for key in data.keys():
-                data[key] = data[key].to(self.device)
+                if not key.startswith('date'):
+                    data[key] = data[key].to(self.device)
 
             # apply possible subclass pre-processing
             data = self._pre_model_hook(data)
-            print(data['x_d'].shape)
+
             # get predictions
             predictions = self.model(data)
 
@@ -291,15 +295,12 @@ class BaseTrainer(object):
                     # make sure we add near-zero noise to originally near-zero targets
                     data[key] += (data[key] + self._target_mean / self._target_std) * noise.to(self.device)
 
-            # LOGGER.info(f"Predictions: {predictions}, Data: {data}")
-            loss_current_epoch = self.loss_obj(predictions, data)
-            self.loss_list.append([torch.max(loss_current_epoch), torch.min(loss_current_epoch)])
+            loss = self.loss_obj(predictions, data)
+
             # early stop training if loss is NaN
-            if torch.isnan(loss_current_epoch):
+            if torch.isnan(loss):
                 nan_count += 1
                 if nan_count > self._allow_subsequent_nan_losses:
-                    for i in range(min(len(self.loss_list), 10)):
-                        LOGGER.info(self.loss_list[i][0], self.loss_list[i][1])
                     raise RuntimeError(f"Loss was NaN for {nan_count} times in a row. Stopped training.")
                 LOGGER.warning(f"Loss is Nan; ignoring step. (#{nan_count}/{self._allow_subsequent_nan_losses})")
             else:
@@ -309,7 +310,7 @@ class BaseTrainer(object):
                 self.optimizer.zero_grad()
 
                 # get gradients
-                loss_current_epoch.backward()
+                loss.backward()
 
                 if self.cfg.clip_gradient_norm is not None:
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.clip_gradient_norm)
@@ -317,9 +318,9 @@ class BaseTrainer(object):
                 # update weights
                 self.optimizer.step()
 
-            pbar.set_postfix_str(f"Loss: {loss_current_epoch.item():.4f}")
+            pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
 
-            self.experiment_logger.log_step(loss=loss_current_epoch.item())
+            self.experiment_logger.log_step(loss=loss.item())
 
     def _set_random_seeds(self):
         if self.cfg.seed is None:

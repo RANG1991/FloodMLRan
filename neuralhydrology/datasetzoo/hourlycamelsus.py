@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class HourlyCamelsUS(camelsus.CamelsUS):
-    """data set class providing hourly data for CAMELS US basins.
+    """Data set class providing hourly data for CAMELS US basins.
     
     This class extends the `CamelsUS` dataset class by hourly in- and output data. Currently, only NLDAS forcings are
     available at an hourly resolution.

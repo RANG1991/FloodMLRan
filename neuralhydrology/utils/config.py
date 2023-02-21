@@ -37,8 +37,7 @@ class Config(object):
     ]
     _metadata_keys = ['package_version', 'commit_hash']
 
-    def __init__(self, yml_path_or_dict: Union[Path, dict], dev_mode: bool = True):
-        # raise ValueError("the config file is in: {}".format(yml_path_or_dict))
+    def __init__(self, yml_path_or_dict: Union[Path, dict], dev_mode: bool = False):
         if isinstance(yml_path_or_dict, Path):
             self._cfg = Config._read_and_parse_config(yml_path=yml_path_or_dict)
         elif isinstance(yml_path_or_dict, dict):
@@ -59,7 +58,7 @@ class Config(object):
         """
         return self._cfg
 
-    def dump_config(self, folder: Path, filename: str = 'config_local_cpu.yml'):
+    def dump_config(self, folder: Path, filename: str = 'config.yml'):
         """Save the run configuration as a .yml file to disk.
 
         Parameters
@@ -67,7 +66,7 @@ class Config(object):
         folder : Path
             Folder in which the configuration will be stored.
         filename : str, optional
-            Name of the file that will be stored. Default: 'config_local_cpu.yml'.
+            Name of the file that will be stored. Default: 'config.yml'.
 
         Raises
         ------
@@ -134,8 +133,7 @@ class Config(object):
     def _get_value_verbose(self, key: str) -> Union[float, int, str, list, dict, Path, pd.Timestamp]:
         """Use this function internally to return attributes of the config that are mandatory"""
         if key not in self._cfg.keys():
-            raise ValueError(f"{key} is not specified in the config (.yml)."
-			                 "The keys are: {}".format(self._cfg.keys()))
+            raise ValueError(f"{key} is not specified in the config (.yml).")
         elif self._cfg[key] is None:
             raise ValueError(f"{key} is mandatory but 'None' in the config.")
         else:
@@ -200,6 +198,15 @@ class Config(object):
             else:
                 pass
 
+        # Check autoregressive inputs.
+        if 'autoregressive_inputs' in cfg:
+            if len(cfg['autoregressive_inputs']) > 1:
+                raise ValueError('Currently only one autoregressive input is supported.')
+            if cfg['autoregressive_inputs'] and len(cfg['target_variables']) > 1:
+                raise ValueError('Autoregressive models currently only support a single target variable.')
+            if not cfg['autoregressive_inputs'][0].startswith(cfg['target_variables'][0]):
+                raise ValueError('Autoregressive input must be a lagged version of the target variable.')
+
         # Add more config parsing if necessary
         return cfg
 
@@ -223,6 +230,10 @@ class Config(object):
     @property
     def allow_subsequent_nan_losses(self) -> int:
         return self._cfg.get("allow_subsequent_nan_losses", 0)
+
+    @property
+    def autoregressive_inputs(self) -> Union[List[str], Dict[str, List[str]]]:
+        return self._as_default_list(self._cfg.get("autoregressive_inputs", []))
 
     @property
     def base_run_dir(self) -> Path:
@@ -523,6 +534,10 @@ class Config(object):
     @property
     def predict_last_n(self) -> Union[int, Dict[str, int]]:
         return self._get_value_verbose("predict_last_n")
+
+    @property
+    def random_holdout_from_dynamic_features(self) -> Dict[str, float]:
+        return self._as_default_dict(self._cfg.get("random_holdout_from_dynamic_features", {}))
 
     @property
     def rating_curve_file(self) -> Path:

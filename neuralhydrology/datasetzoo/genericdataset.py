@@ -11,7 +11,7 @@ from neuralhydrology.utils.config import Config
 
 
 class GenericDataset(BaseDataset):
-    """data set class for the generic dataset that reads data for any region based on common file layout conventions.
+    """Data set class for the generic dataset that reads data for any region based on common file layout conventions.
 
     To use this dataset, the data_dir must contain a folder 'time_series' and (if static attributes are used) a folder
     'attributes'. The folder 'time_series' contains one netcdf file (.nc or .nc4) per basin, named '<basin_id>.nc/nc4'.
@@ -19,6 +19,10 @@ class GenericDataset(BaseDataset):
     contains one or more comma-separated file (.csv) with static attributes, indexed by basin id. Attributes files can 
     be divided into groups of basins or groups of features (but not both, see `genericdataset.load_attributes` for
     more details).
+
+    Note: Invalid values have to be marked as NaN (e.g. using NumPy's np.nan) in the netCDF files and not something like
+    -999 for invalid discharge measurements, which is often found in hydrology datasets. If missing values are not 
+    marked as NaN's, the GenericDataset will not be able to identify these values as missing data points.
 
     Parameters
     ----------
@@ -68,7 +72,8 @@ class GenericDataset(BaseDataset):
 
         return df
 
-    def _load_attributes(self):
+    def _load_attributes(self) -> pd.DataFrame:
+        """Load static catchment attributes."""
         return load_attributes(self.cfg.data_dir, basins=self.basins)
 
 
