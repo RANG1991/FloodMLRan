@@ -4,12 +4,16 @@ import numpy as np
 import pandas as pd
 import torch
 from pathlib import Path
-import re
 from datetime import datetime
 import matplotlib
-import matplotlib.pyplot as plt
-import multiprocessing
-from multiprocessing import Pool
+import psutil
+import gc
+import codecs
+import json
+import pickle
+import os
+from tqdm import tqdm
+import sys
 
 matplotlib.use("AGG")
 
@@ -53,6 +57,18 @@ DYNAMIC_DATA_FOLDER = "../data/CAMELS_US/basin_mean_forcing"
 STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
 
+FOLDER_WITH_BASINS_PICKLES = "../data/CAMELS_US/pickled_basins_data"
+
+JSON_FILE_MEAN_STD_COUNT = f"{FOLDER_WITH_BASINS_PICKLES}/mean_std_count_of_data.json"
+
+X_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_mean_dict.pkl"
+
+X_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_std_dict.pkl"
+
+Y_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_mean_dict.pkl"
+
+Y_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_std_dict.pkl"
+
 
 class Dataset_CAMELS(Dataset):
     def __init__(
@@ -70,6 +86,8 @@ class Dataset_CAMELS(Dataset):
             test_end_date,
             stage,
             all_stations_ids,
+            specific_model_type,
+            create_new_files,
             static_attributes_names=[],
             sequence_length=270,
             x_means=None,
@@ -99,13 +117,20 @@ class Dataset_CAMELS(Dataset):
         self.test_start_date = test_start_date
         self.test_end_date = test_end_date
         self.stage = stage
+        self.specific_model_type = specific_model_type
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         (self.dict_station_id_to_data,
          x_means,
          x_stds,
          y_mean,
          y_std
-         ) = self.read_all_dynamic_and_discharge_data_files(all_stations_ids=all_stations_ids)
+         ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
+                                              create_new_files=create_new_files)
+
+        self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}", self.x_mean_dict, force=True)
+        self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}", self.x_std_dict, force=True)
+        self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}", self.y_mean_dict, force=True)
+        self.save_pickle_if_not_exists(f"{Y_STD_DICT_FILE}", self.y_std_dict, force=True)
 
         self.y_mean = y_mean if stage == "train" else self.y_mean
         self.y_std = y_std if stage == "train" else self.y_std
@@ -120,8 +145,8 @@ class Dataset_CAMELS(Dataset):
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
         for key in self.dict_station_id_to_data.keys():
-            current_x_data = self.dict_station_id_to_data[key][0]
-            current_y_data = self.dict_station_id_to_data[key][1]
+            current_x_data = self.dict_station_id_to_data[key]["x_data"]
+            current_y_data = self.dict_station_id_to_data[key]["y_data"]
 
             current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
                 (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
@@ -153,6 +178,32 @@ class Dataset_CAMELS(Dataset):
         self.inner_index_in_data_of_basin += 1
         return self.current_basin, X_data_tensor, y_data_tensor
 
+    @staticmethod
+    def read_pickle_if_exists(pickle_file_name):
+        dict_obj = {}
+        if os.path.exists(pickle_file_name):
+            with open(pickle_file_name, "rb") as f:
+                dict_obj = pickle.load(f)
+        return dict_obj
+
+    @staticmethod
+    def save_pickle_if_not_exists(pickle_file_name, obj_to_save, force=False):
+        if not os.path.exists(pickle_file_name) or force:
+            with open(pickle_file_name, "wb") as f:
+                pickle.dump(obj_to_save, f)
+
+    def check_is_valid_station_id(self, station_id, create_new_files):
+        return (station_id in self.list_stations_static
+                and (not os.path.exists(
+                    f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}.pkl")
+                     or any([not os.path.exists(
+                            f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}"),
+                             station_id not in self.x_mean_dict,
+                             station_id not in self.x_std_dict,
+                             station_id not in self.y_mean_dict,
+                             station_id not in self.y_std_dict,
+                             create_new_files])))
+
     def read_static_attributes(self):
         attributes_path = Path(self.static_data_folder)
         txt_files = attributes_path.glob("camels_*.txt")
@@ -169,33 +220,67 @@ class Dataset_CAMELS(Dataset):
         df = df[self.list_static_attributes_names]
         return df, df.index.to_list()
 
-    def read_all_dynamic_and_discharge_data_files(self, all_stations_ids):
-        cumm_m_x = 0
-        cumm_s_x = 0
-        cumm_m_y = 0
-        cumm_s_y = 0
-        count_of_samples = 0
+    def read_all_dynamic_data_files(self, all_stations_ids, create_new_files):
+        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}") and not create_new_files:
+            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}", 'r',
+                                   encoding='utf-8').read()
+            json_obj = json.loads(obj_text)
+            cumm_m_x = np.array(json_obj["cumm_m_x"])
+            cumm_s_x = np.array(json_obj["cumm_s_x"])
+            min_spatial = float(json_obj["min_spatial"])
+            max_spatial = float(json_obj["max_spatial"])
+            cumm_m_y = float(json_obj["cumm_m_y"])
+            cumm_s_y = float(json_obj["cumm_s_y"])
+            count_of_samples = int(json_obj["count_of_samples"])
+        else:
+            cumm_m_x = 0
+            cumm_s_x = 0
+            min_spatial = -1
+            max_spatial = -1
+            cumm_m_y = 0
+            cumm_s_y = 0
+            count_of_samples = 0
         dict_station_id_to_data = {}
-        for station_id in all_stations_ids:
-            X_data, y_data = self.read_single_station_dynamic_and_discharge_file(station_id)
-            if len(X_data) == 0 or len(y_data) == 0:
-                continue
-            dict_station_id_to_data[station_id] = (X_data, y_data)
-            prev_mean_x = cumm_m_x
-            count_of_samples = count_of_samples + (len(y_data))
-            cumm_m_x = cumm_m_x + (
-                    (X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) / count_of_samples).sum(
-                axis=0)
-            cumm_s_x = cumm_s_x + ((X_data[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
-                    X_data[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
-
-            prev_mean_y = cumm_m_y
-            cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0)
-            cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0)
-
+        pbar = tqdm(all_stations_ids, file=sys.stdout)
+        pbar.set_description(f"processing basins - {self.stage}")
+        for station_id in pbar:
+            print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
+            if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
+                X_data_non_spatial, y_data = self.read_single_station_dynamic_and_discharge_file(station_id)
+                if len(X_data_non_spatial) == 0 or len(y_data) == 0:
+                    del X_data_non_spatial
+                    del y_data
+                    continue
+                prev_mean_x = cumm_m_x
+                count_of_samples = count_of_samples + (len(y_data))
+                cumm_m_x = cumm_m_x + (
+                        (X_data_non_spatial[:,
+                         :len(self.list_dynamic_attributes_names)] - cumm_m_x) / count_of_samples).sum(
+                    axis=0)
+                cumm_s_x = cumm_s_x + ((X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
+                        X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
+                prev_mean_y = cumm_m_y
+                cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0).item()
+                cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
+                dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data}
+            else:
+                print(f"station with id: {station_id} has no valid file or the file already exists")
+        gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
-        std_y = np.sqrt(cumm_s_y / (count_of_samples - 1))
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y.item(), std_y.item()
+        std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
+        with codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}", 'w',
+                         encoding='utf-8') as json_file:
+            json_obj = {
+                "cumm_m_x": cumm_m_x.tolist(),
+                "cumm_s_x": cumm_s_x.tolist(),
+                "min_spatial": min_spatial,
+                "max_spatial": max_spatial,
+                "cumm_m_y": cumm_m_y,
+                "cumm_s_y": cumm_s_y,
+                "count_of_samples": count_of_samples
+            }
+            json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, min_spatial, max_spatial
 
     def read_single_station_dynamic_and_discharge_file(self, station_id):
         if station_id not in self.list_stations_static:
@@ -303,9 +388,9 @@ class Dataset_CAMELS(Dataset):
         self.inner_index_in_data_of_basin = 0
         lookup_table_basins = {}
         length_of_dataset = 0
-        self.current_basin = list(self.dict_station_id_to_data.keys())[0]
+        self.current_basin = list(self.dict_station_id_to_data.keys())["x_data"]
         for key in self.dict_station_id_to_data.keys():
-            for _ in range(len(self.dict_station_id_to_data[key][0]) - self.sequence_length):
+            for _ in range(len(self.dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
                 lookup_table_basins[length_of_dataset] = key
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins

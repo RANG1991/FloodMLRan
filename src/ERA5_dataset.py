@@ -14,7 +14,6 @@ import sys
 import psutil
 import gc
 import pickle
-from os import listdir
 from os.path import isfile, join
 import codecs
 import json
@@ -75,10 +74,10 @@ STATIC_ATTRIBUTES_NAMES = [
 
 DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = [
     "total_precipitation_sum",
-    # "temperature_2m_min",
-    # "temperature_2m_max",
-    # "potential_evaporation_sum",
-    # "surface_net_solar_radiation_mean",
+    "temperature_2m_min",
+    "temperature_2m_max",
+    "potential_evaporation_sum",
+    "surface_net_solar_radiation_mean",
 ]
 
 DISCHARGE_STR_CARAVAN = "streamflow"
