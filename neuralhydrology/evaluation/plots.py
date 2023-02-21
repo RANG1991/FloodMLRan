@@ -1,8 +1,8 @@
 from typing import Tuple
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 mpl.use("AGG")
-import matplotlib.pyplot as plt
 import numpy as np
 
 
