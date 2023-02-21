@@ -6,7 +6,6 @@
 #SBATCH --time=10:0:0
 #SBATCH --mem=40G
 #SBATCH --gres gpu
-#SBATCH -J jupyter
 
 # Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/
@@ -18,4 +17,4 @@ source $virtual_env
 # module load cuda/11.2
 
 # Start Running NeuralHydrology code of Frederik
-/sci/labs/efratmorin/ranga/FloodMLRan/neuralhydrology/nh_run.py train --config-file /sci/labs/efratmorin/ranga/FloodMLRan/config_files_dir/config.yml
+/sci/labs/efratmorin/ranga/FloodMLRan/neuralhydrology/nh_run.py train --config-file /sci/labs/efratmorin/ranga/FloodMLRan/config_files_dir/config_ERA5.yml

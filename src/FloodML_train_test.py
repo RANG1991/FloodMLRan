@@ -86,7 +86,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
         loss.backward()
         # aggregate_gradients(model, world_size)
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
         optimizer.step()
         running_loss += loss.item()
         # print(f"Loss: {loss.item():.4f}")
@@ -694,7 +694,7 @@ def choose_hyper_parameters_validation(
     if model_name.lower() == "transformer_lstm":
         num_hidden_units = [1]
     else:
-        num_hidden_units = [156]
+        num_hidden_units = [256]
     dict_results = {
         "dropout rate": [],
         "sequence length": [],
