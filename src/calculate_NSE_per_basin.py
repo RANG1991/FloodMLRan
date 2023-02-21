@@ -42,7 +42,8 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
     # evaluate the cumulative
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
-    plt.xscale("symlog")
+    # plt.xscale("symlog")
+    plt.xlim((-1, 1))
     plt.plot(base[:-1], cumulative, label=f"model name: {model_name} run number: {run_number}")
 
 
@@ -51,10 +52,10 @@ def main():
     d = create_dict_basin_id_to_NSE(input_file_name)
     run_numbers = set([run_number for _, run_number in d.keys()])
     model_names = set([model_name for model_name, _ in d.keys()])
-    for run_number in run_numbers:
+    for model_name in model_names:
         plot_title = f"NSE CDF of process ID - " \
-                     f"{input_file_name.replace('slurm-', '').replace('.out', '')} in run number - {run_number}"
-        for model_name in model_names:
+                     f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
+        for run_number in run_numbers:
             if (model_name, run_number) not in d.keys() or len(d[(model_name, run_number)].items()) == 0:
                 continue
             dict_basins_id_to_mean_nse_loss = {}
