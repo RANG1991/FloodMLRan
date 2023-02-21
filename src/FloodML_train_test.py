@@ -32,9 +32,9 @@ import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
 import wandb
 
-wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
-
-wandb.init(project="FloodML", entity="r999")
+# wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
+#
+# wandb.init(project="FloodML", entity="r999")
 
 matplotlib.use("AGG")
 
@@ -92,7 +92,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         # print(f"Loss: {loss.item():.4f}")
         # pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
     print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}")
-    wandb.log({"loss": running_loss / (len(loader))})
+    # wandb.log({"loss": running_loss / (len(loader))})
     return running_loss / (len(loader))
 
 
@@ -581,10 +581,10 @@ def run_training_and_test(
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     if world_size > 1:
         model = DDP(model, device_ids=[rank])
-    config = wandb.config
-    config.learning_rate = learning_rate
-    config.wandb = True
-    wandb.watch(model)
+    # config = wandb.config
+    # config.learning_rate = learning_rate
+    # config.wandb = True
+    # wandb.watch(model)
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)

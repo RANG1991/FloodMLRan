@@ -174,7 +174,8 @@ class Dataset_CAMELS(Dataset):
         if self.current_basin != next_basin:
             self.current_basin = next_basin
             self.inner_index_in_data_of_basin = 0
-        X_data, y_data = self.dict_station_id_to_data[self.current_basin]
+        X_data, y_data = self.dict_station_id_to_data[self.current_basin]["x_data"], \
+            self.dict_station_id_to_data[self.current_basin]["y_data"]
         X_data_tensor = torch.tensor(
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
@@ -182,7 +183,8 @@ class Dataset_CAMELS(Dataset):
             y_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
-        return self.current_basin, X_data_tensor, y_data_tensor
+        return self.y_std_dict[
+            self.current_basin], self.current_basin, X_data_tensor, torch.tensor([]), y_data_tensor
 
     @staticmethod
     def read_pickle_if_exists(pickle_file_name):
