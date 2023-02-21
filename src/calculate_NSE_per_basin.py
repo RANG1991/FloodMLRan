@@ -67,7 +67,7 @@ def plot_NSE_CDF_graphs_my_code():
 
 
 def plot_NSE_CDF_graph_frederik_code():
-    input_file_name = "slurm-5817832.out"
+    input_file_name = "slurm-5817859.out"
     model_name = "LSTM_Frederik"
     plot_title = f"NSE CDF of process ID - " \
                  f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
