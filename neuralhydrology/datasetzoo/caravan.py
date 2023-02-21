@@ -63,11 +63,14 @@ class Caravan(BaseDataset):
 
     def _load_basin_data(self, basin: str) -> pd.DataFrame:
         """Load timeseries data from netcdf files."""
+        basin = f"us_{basin}"
         return load_caravan_timeseries(data_dir=self.cfg.data_dir, basin=basin)
 
     def _load_attributes(self) -> pd.DataFrame:
         """Load input and output data from text files."""
-        return load_caravan_attributes(data_dir=self.cfg.data_dir)
+        basins_ids = [f"us_{basin_id}".replace("\n", "") for basin_id in open(self.cfg.train_basin_file).readlines()]
+        return load_caravan_attributes(data_dir=self.cfg.data_dir, subdataset="us",
+                                       basins=basins_ids)
 
 
 def load_caravan_attributes(data_dir: Path,

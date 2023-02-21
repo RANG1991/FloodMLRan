@@ -1,5 +1,8 @@
 import pickle
 from pathlib import Path
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import torch
 from neuralhydrology.evaluation import metrics

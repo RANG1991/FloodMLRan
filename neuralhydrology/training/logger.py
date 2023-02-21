@@ -2,7 +2,6 @@ import subprocess
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Union, List
-
 import matplotlib as mpl
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter

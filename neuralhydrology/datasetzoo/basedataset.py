@@ -640,7 +640,7 @@ class BaseDataset(Dataset):
 
             # preprocess each basin feature vector as pytorch tensor
             for basin in self.basins:
-                attributes = df.loc[df.index == basin].values.flatten()
+                attributes = df.loc[df.index == f"us_{basin}"].values.flatten()
                 self._attributes[basin] = torch.from_numpy(attributes.astype(np.float32))
 
     def _load_data(self):

@@ -1,5 +1,4 @@
 from typing import Tuple
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,7 +6,7 @@ import numpy as np
 
 def percentile_plot(y: np.ndarray,
                     y_hat: np.ndarray,
-                    title: str = '') -> Tuple[mpl.figure.Figure, mpl.axes._subplots.Axes]:
+                    title: str = ''):
     """Plot the time series of observed values with 3 specific prediction intervals (i.e.: 25 to 75, 10 to 90, 5 to 95).
 
     Parameters
@@ -49,7 +48,7 @@ def percentile_plot(y: np.ndarray,
 
 def regression_plot(y: np.ndarray,
                     y_hat: np.ndarray,
-                    title: str = '') -> Tuple[mpl.figure.Figure, mpl.axes._subplots.Axes]:
+                    title: str = ''):
     """Plot the time series of observed and simulated values.
 
     Parameters
