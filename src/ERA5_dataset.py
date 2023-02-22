@@ -164,8 +164,10 @@ class Dataset_ERA5(Dataset):
         (self.df_attr,
          self.list_stations_static,
          self.countries_abbreviations_stations_dict
-         ) = self.read_static_attributes_all_countries(["us"], limit_size_above_1000=limit_size_above_1000)
-        self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
+         ) = self.read_static_attributes_all_countries(["au", "br", "ca", "cl", "gb", "lamah", "us"],
+                                                       limit_size_above_1000=limit_size_above_1000)
+        # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
+        self.all_station_ids = self.list_stations_static
         self.use_Caravan_dataset = use_Caravan_dataset
         self.specific_model_type = specific_model_type
         self.sequence_length_spatial = sequence_length_spatial
@@ -184,7 +186,7 @@ class Dataset_ERA5(Dataset):
          y_std,
          min_spatial,
          max_spatial
-         ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
+         ) = self.read_all_dynamic_data_files(all_stations_ids=self.all_station_ids,
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_height=self.max_height,
                                               create_new_files=create_new_files)
@@ -372,11 +374,11 @@ class Dataset_ERA5(Dataset):
     def read_static_attributes_single_country(self, country_abbreviation, countries_abbreviations_stations_dict,
                                               limit_size_above_1000=False):
         df_attr_caravan = pd.read_csv(
-            Path(self.static_data_folder) / f"attributes_hydroatlas_{country_abbreviation}.csv",
+            Path(self.static_data_folder) / country_abbreviation / f"attributes_hydroatlas_{country_abbreviation}.csv",
             dtype={"gauge_id": str},
         )
         df_attr_hydroatlas = pd.read_csv(
-            Path(self.static_data_folder) / f"attributes_caravan_{country_abbreviation}.csv",
+            Path(self.static_data_folder) / country_abbreviation / f"attributes_caravan_{country_abbreviation}.csv",
             dtype={"gauge_id": str},
         )
         df_attr = df_attr_caravan.merge(df_attr_hydroatlas, on="gauge_id")

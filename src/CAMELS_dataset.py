@@ -96,12 +96,12 @@ class Dataset_CAMELS(Dataset):
             y_mean=None,
             y_std=None
     ):
-        self.x_mean_dict = {}
-        self.x_std_dict = {}
+        self.x_mean_dict = self.read_pickle_if_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}")
+        self.x_std_dict = self.read_pickle_if_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}")
         self.x_means = x_means if x_means is not None else None
         self.x_stds = x_stds if x_stds is not None else None
-        self.y_mean_dict = {}
-        self.y_std_dict = {}
+        self.y_mean_dict = self.read_pickle_if_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}")
+        self.y_std_dict = self.read_pickle_if_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}")
         self.y_mean = y_mean if y_mean is not None else None
         self.y_std = y_std if y_std is not None else None
         self.sequence_length = sequence_length
