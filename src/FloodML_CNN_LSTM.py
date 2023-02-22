@@ -15,7 +15,7 @@ class CNN(nn.Module):
     only generates a single number!!! (single scalar)
     """
 
-    def __init__(self, num_channels: int, output_size_cnn, image_input_size):
+    def __init__(self, num_channels, output_size_cnn, image_input_size):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
@@ -27,13 +27,13 @@ class CNN(nn.Module):
         self.stride_size_pool = self.filter_size_pool
         self.conv_layers = nn.ModuleList([
             torch.nn.Conv2d(in_channels=self.initial_num_channels, out_channels=self.channels_out_conv_1,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same"),
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
             nn.ReLU(),
-            torch.nn.MaxPool2d(self.filter_size_pool),
-            torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="same"),
-            nn.ReLU(),
-            torch.nn.MaxPool2d(self.filter_size_pool)
+            torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            # torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+            #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+            # nn.ReLU(),
+            # torch.nn.MaxPool2d(self.filter_size_pool)
         ])
         size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels)
         self.size_for_fc = int(size_for_fc)
@@ -100,7 +100,7 @@ class CNN_LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
-        input_size = (image_input_size[0] * image_input_size[1] * num_channels)
+        input_size = 32
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size)
         self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,
