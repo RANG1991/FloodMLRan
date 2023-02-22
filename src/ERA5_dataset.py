@@ -239,15 +239,15 @@ class Dataset_ERA5(Dataset):
                                                              (len(self.list_dynamic_attributes_names))
                                                              + (len(self.list_static_attributes_names)))
                     current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
-                    current_x_data_spatial = np.concatenate([np.expand_dims(current_x_data_spatial, axis=1),
-                                                             np.repeat(
-                                                                 np.expand_dims(current_x_data_non_spatial[:,
-                                                                                1:len(
-                                                                                    self.list_dynamic_attributes_names)
-                                                                                ],
-                                                                                axis=-1),
-                                                                 self.max_dim * self.max_dim,
-                                                                 axis=-1)], axis=1)
+                    # current_x_data_spatial = np.concatenate([np.expand_dims(current_x_data_spatial, axis=1),
+                    #                                          np.repeat(
+                    #                                              np.expand_dims(current_x_data_non_spatial[:,
+                    #                                                             1:len(
+                    #                                                                 self.list_dynamic_attributes_names)
+                    #                                                             ],
+                    #                                                             axis=-1),
+                    #                                              self.max_dim * self.max_dim,
+                    #                                              axis=-1)], axis=1)
                     del current_x_data
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                        "x_data_spatial": current_x_data_spatial}

@@ -23,9 +23,9 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
                                  num_channels=self.in_cnn_channels,
                                  dropout_rate=dropout,
                                  image_input_size=(self.image_width, self.image_height),
-                                 num_attributes=input_dim)
+                                 num_attributes=self.input_dim - 1)
 
     def forward(self, x_non_spatial, x_spatial):
         _, (h_n, c_n) = self.lstm(x_non_spatial[:, :-self.sequence_length_cnn_lstm, :])
-        output = self.cnn_lstm(x_non_spatial[:, -self.sequence_length_cnn_lstm:, :], x_spatial, h_n, c_n)
+        output = self.cnn_lstm(x_non_spatial[:, -self.sequence_length_cnn_lstm:, 1:], x_spatial, h_n, c_n)
         return output
