@@ -184,8 +184,8 @@ class Dataset_ERA5(Dataset):
          x_stds,
          y_mean,
          y_std,
-         min_spatial,
-         max_spatial
+         x_spatial_mean,
+         x_spatial_std
          ) = self.read_all_dynamic_data_files(all_stations_ids=self.all_station_ids,
                                               specific_model_type=specific_model_type,
                                               max_width=self.max_width, max_height=self.max_height,
@@ -234,7 +234,9 @@ class Dataset_ERA5(Dataset):
                 else:
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                                 + (len(self.list_static_attributes_names))):]
-                    current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
+
+                    # current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
+
                     indices_all_features_non_spatial = range(0,
                                                              (len(self.list_dynamic_attributes_names))
                                                              + (len(self.list_static_attributes_names)))
@@ -425,16 +427,16 @@ class Dataset_ERA5(Dataset):
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
-            min_spatial = float(json_obj["min_spatial"])
-            max_spatial = float(json_obj["max_spatial"])
+            cumm_m_x_spatial = float(json_obj["cumm_m_x_spatial"])
+            cumm_s_x_spatial = float(json_obj["cumm_s_x_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
             cumm_s_y = float(json_obj["cumm_s_y"])
             count_of_samples = int(json_obj["count_of_samples"])
         else:
             cumm_m_x = 0
             cumm_s_x = 0
-            min_spatial = -1
-            max_spatial = -1
+            cumm_m_x_spatial = -1
+            cumm_s_x_spatial = -1
             cumm_m_y = 0
             cumm_s_y = 0
             count_of_samples = 0
@@ -480,6 +482,7 @@ class Dataset_ERA5(Dataset):
                     axis=0)
                 cumm_s_x = cumm_s_x + ((X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
                         X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
+
                 prev_mean_y = cumm_m_y
                 cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0).item()
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
@@ -489,10 +492,15 @@ class Dataset_ERA5(Dataset):
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
-                    max_spatial = X_data_spatial.max().item() if (
-                            X_data_spatial.max().item() > max_spatial or max_spatial == -1) else max_spatial
-                    min_spatial = X_data_spatial.min().item() if (
-                            X_data_spatial.min().item() < min_spatial or min_spatial == -1) else min_spatial
+
+                    prev_mean_x_spatial = cumm_m_x_spatial
+                    cumm_m_x_spatial = cumm_m_x_spatial + (
+                            (X_data_spatial[:] - cumm_m_x_spatial) / count_of_samples).sum(
+                        axis=0)
+                    cumm_s_x_spatial = cumm_s_x_spatial + (
+                            (X_data_spatial[:] - cumm_m_x_spatial) * (X_data_spatial[:] - prev_mean_x_spatial)).sum(
+                        axis=0)
+
                     X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
                     del X_data_spatial
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data}
@@ -502,19 +510,20 @@ class Dataset_ERA5(Dataset):
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
+        std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
         with codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'w',
                          encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
-                "min_spatial": min_spatial,
-                "max_spatial": max_spatial,
+                "cumm_m_x_spatial": cumm_m_x_spatial.tolist(),
+                "cumm_s_x_spatial": cumm_s_x_spatial.tolist(),
                 "cumm_m_y": cumm_m_y,
                 "cumm_s_y": cumm_s_y,
                 "count_of_samples": count_of_samples
             }
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, min_spatial, max_spatial
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         if station_id not in self.countries_abbreviations_stations_dict.keys():
