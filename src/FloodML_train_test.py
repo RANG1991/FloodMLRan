@@ -554,7 +554,7 @@ def run_training_and_test(
                                    input_dim=len(dynamic_attributes_names) + len(
                                        training_data.list_static_attributes_names),
                                    hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-                                   in_channels_cnn=len(dynamic_attributes_names), image_width=training_data.max_dim,
+                                   in_channels_cnn=1, image_width=training_data.max_dim,
                                    image_height=training_data.max_dim)
     elif model_name.lower() == "lstm":
         model = LSTM(
