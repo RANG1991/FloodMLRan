@@ -23,7 +23,7 @@ STATIC_ATTRIBUTES_NAMES = [
     "pet_mean",
     "aridity",
     "p_seasonality",
-    "frac_snow_daily",
+    "frac_snow",
     "high_prec_freq",
     "high_prec_dur",
     "low_prec_freq",
@@ -31,7 +31,7 @@ STATIC_ATTRIBUTES_NAMES = [
     "elev_mean",
     "slope_mean",
     "area_gages2",
-    "forest_frac",
+    "frac_forest",
     "lai_max",
     "lai_diff",
     "gvf_max",
@@ -44,7 +44,7 @@ STATIC_ATTRIBUTES_NAMES = [
     "sand_frac",
     "silt_frac",
     "clay_frac",
-    "carb_rocks_frac",
+    "carbonate_rocks_frac",
     "geol_permeability"
 ]
 
