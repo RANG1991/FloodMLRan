@@ -44,7 +44,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_name = "slurm-5833808.out"
+    input_file_name = "slurm-5834477.out"
     d = create_dict_basin_id_to_NSE_my_code(f"{input_file_name}")
     run_numbers = set([run_number for _, run_number in d.keys()])
     model_names = set([model_name for model_name, _ in d.keys()])
@@ -91,7 +91,7 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     # plt.xscale("symlog")
-    plt.xlim((-1, 1))
+    plt.xlim((0, 1))
     plt.plot(base[:-1], cumulative, label=f"model name: {model_name} run number: {run_number}")
 
 
