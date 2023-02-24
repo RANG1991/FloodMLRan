@@ -33,9 +33,9 @@ def download_ERA5_one_year(client, year, month):
             'year': f'{year}',
             'variable': 'total_precipitation',
             'format': 'netcdf',
-            'area': [
-                42, 83, 53, 141,
-            ]
+            # 'area': [
+            #     42, 83, 53, 141,
+            # ]
         })
     sleep = 30
     while True:
