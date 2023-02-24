@@ -26,11 +26,8 @@ import random
 import torch
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
-from torch.nn.parallel import DistributedDataParallel as DDP
-import torch.multiprocessing as mp
 import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
-import wandb
 
 # wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
 #
@@ -61,7 +58,7 @@ def aggregate_gradients(model, world_size):
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_to_console,
-                specific_model_type, world_size):
+                specific_model_type):
     # set model to train mode (important for dropout)
     torch.cuda.empty_cache()
     model.train()
@@ -90,7 +87,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         optimizer.step()
         running_loss += loss.item()
         # print(f"Loss: {loss.item():.4f}")
-        # pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
+        pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
     print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}")
     # wandb.log({"loss": running_loss / (len(loader))})
     return running_loss / (len(loader))
@@ -431,50 +428,25 @@ def run_single_parameters_check_with_val_on_years(
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
-    ctx = mp.get_context('spawn')
-    nse_queue_single_pass = ctx.Queue(1000)
-    training_loss_queue_single_pass = ctx.Queue(1000)
-    list_preds_dicts_ranks = ctx.Queue(1000)
-    mp.spawn(run_training_and_test,
-             args=(num_processes_ddp,
-                   (learning_rate * num_processes_ddp
-                    * (num_workers_data_loader if num_workers_data_loader > 0 else 1)),
-                   sequence_length,
-                   num_hidden_units,
-                   num_epochs,
-                   training_data,
-                   test_data,
-                   dropout_rate,
-                   static_attributes_names,
-                   dynamic_attributes_names,
-                   model_name,
-                   nse_queue_single_pass,
-                   training_loss_queue_single_pass,
-                   list_preds_dicts_ranks,
-                   1,
-                   optim_name,
-                   num_workers_data_loader,
-                   profile_code,
-                   sequence_length_spatial,
-                   print_tqdm_to_console,
-                   specific_model_type
-                   ),
-             nprocs=num_processes_ddp,
-             join=True)
-    training_loss_dict_single_pass = {}
-    while not training_loss_queue_single_pass.empty():
-        epoch_num, loss = training_loss_queue_single_pass.get()
-        if epoch_num not in training_loss_dict_single_pass.keys():
-            training_loss_dict_single_pass[epoch_num] = []
-        training_loss_dict_single_pass[epoch_num].append(loss)
-    training_loss_list_single_pass = []
-    for i in range(1, num_epochs + 1):
-        training_loss_list_single_pass.append((sum(training_loss_dict_single_pass[i])
-                                               / len(training_loss_dict_single_pass[i])))
-    nse_list_last_epoch = []
-    nse_list_last_epoch_temp = nse_queue_single_pass.get()
-    nse_list_last_epoch.extend(nse_list_last_epoch_temp[:])
-    del nse_list_last_epoch_temp
+    nse_list_last_epoch, training_loss_list_single_pass = \
+        run_training_and_test(learning_rate,
+                              sequence_length,
+                              num_hidden_units,
+                              num_epochs,
+                              training_data,
+                              test_data,
+                              dropout_rate,
+                              static_attributes_names,
+                              dynamic_attributes_names,
+                              model_name,
+                              1,
+                              optim_name,
+                              num_workers_data_loader,
+                              profile_code,
+                              sequence_length_spatial,
+                              print_tqdm_to_console,
+                              specific_model_type
+                              )
     if len(nse_list_last_epoch) > 0:
         print(
             f"parameters are: dropout={dropout_rate} sequence_length={sequence_length} "
@@ -513,8 +485,6 @@ class DistributedSamplerNoDuplicate(DistributedSampler):
 
 
 def run_training_and_test(
-        rank,
-        world_size,
         learning_rate,
         sequence_length,
         num_hidden_units,
@@ -525,9 +495,6 @@ def run_training_and_test(
         static_attributes_names,
         dynamic_attributes_names,
         model_name,
-        nse_queue_single_pass,
-        training_loss_queue_single_pass,
-        queue_preds_dicts_ranks,
         calc_nse_interval,
         optim_name,
         num_workers_data_loader,
@@ -571,35 +538,18 @@ def run_training_and_test(
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
-    if world_size > 1:
-        setup(rank, world_size)
-        torch.cuda.set_device(rank)
-    model.to(device=rank)
+    model = model.to(device="cuda")
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    if world_size > 1:
-        model = DDP(model, device_ids=[rank])
     # config = wandb.config
     # config.learning_rate = learning_rate
     # config.wandb = True
     # wandb.watch(model)
-    if world_size > 1:
-        distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=False)
-        distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
-        train_dataloader = DataLoader(training_data, batch_size=256 // world_size, sampler=distributed_sampler_train,
-                                      pin_memory=True,
-                                      num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
-        test_dataloader = DataLoader(test_data, batch_size=256 // world_size, sampler=distributed_sampler_test,
-                                     pin_memory=True,
-                                     num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
-    else:
-        train_dataloader = DataLoader(training_data, batch_size=256,
-                                      num_workers=num_workers_data_loader, shuffle=False, worker_init_fn=seed_worker)
-        test_dataloader = DataLoader(test_data, batch_size=256,
-                                     num_workers=num_workers_data_loader, shuffle=False, worker_init_fn=seed_worker)
-    if rank == 0 and profile_code:
+    train_dataloader = DataLoader(training_data, batch_size=256, num_workers=num_workers_data_loader, shuffle=True)
+    test_dataloader = DataLoader(test_data, batch_size=256, num_workers=0)
+    if profile_code:
         p = profile(
             activities=[ProfilerActivity.CUDA],
             schedule=torch.profiler.schedule(
@@ -607,50 +557,31 @@ def run_training_and_test(
                 warmup=1,
                 active=2), on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"))
         p.start()
+    list_training_loss_single_pass = []
+    nse_list_last_pass = []
     for i in range(num_epochs):
-        if world_size > 1:
-            train_dataloader.sampler.set_epoch(i)
         train_dataloader.dataset.inner_index_in_data_of_basin = 0
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
-                                             epoch=(i + 1), device=rank,
+                                             epoch=(i + 1), device="cuda",
                                              print_tqdm_to_console=print_tqdm_to_console,
-                                             specific_model_type=specific_model_type,
-                                             world_size=world_size)
-        if rank == 0 and profile_code:
+                                             specific_model_type=specific_model_type)
+        if profile_code:
             p.step()
-        training_loss_queue_single_pass.put(((i + 1), loss_on_training_epoch))
+        list_training_loss_single_pass.append(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            if world_size > 1:
-                test_dataloader.sampler.set_epoch(i)
             test_dataloader.dataset.inner_index_in_data_of_basin = 0
-            preds_obs_dict_per_basin = eval_model(model, test_dataloader, device=rank, epoch=(i + 1),
+            preds_obs_dict_per_basin = eval_model(model, test_dataloader, device="cuda", epoch=(i + 1),
                                                   print_tqdm_to_console=print_tqdm_to_console,
                                                   specific_model_type=specific_model_type)
-            queue_preds_dicts_ranks.put(preds_obs_dict_per_basin.copy())
-            if world_size > 1:
-                dist.barrier()
-            if rank == 0:
-                preds_obs_dict_per_basin_all_ranks = {}
-                for _ in range(world_size):
-                    preds_obs_dict_per_basin = queue_preds_dicts_ranks.get()
-                    for key in preds_obs_dict_per_basin:
-                        if key not in preds_obs_dict_per_basin_all_ranks:
-                            preds_obs_dict_per_basin_all_ranks[key] = []
-                        preds_obs_dict_per_basin_all_ranks[key].extend(preds_obs_dict_per_basin[key])
-                nse_list_single_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin_all_ranks,
-                                                                              (i + 1))
-                if best_median_nse is None or best_median_nse < median_nse:
-                    if not nse_queue_single_pass.empty():
-                        nse_queue_single_pass.get()
-                    nse_queue_single_pass.put(nse_list_single_pass)
-                    best_median_nse = median_nse
-                print(f"best NSE so far: {best_median_nse}")
-            if world_size > 1:
-                dist.barrier()
-        if rank == 0 and i == 3 and profile_code:
+            nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin,
+                                                                        (i + 1))
+            if best_median_nse is None or best_median_nse < median_nse:
+                nse_list_last_pass = nse_list_last_pass
+                best_median_nse = median_nse
+            print(f"best NSE so far: {best_median_nse}")
+        if profile_code:
             p.stop()
-    if world_size > 1:
-        cleanup()
+    return nse_list_last_pass, list_training_loss_single_pass
 
 
 def seed_worker(worker_id):
