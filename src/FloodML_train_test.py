@@ -503,7 +503,6 @@ def run_training_and_test(
         print_tqdm_to_console,
         specific_model_type
 ):
-    best_median_nse = None
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer_lstm":
@@ -547,7 +546,7 @@ def run_training_and_test(
     # config.learning_rate = learning_rate
     # config.wandb = True
     # wandb.watch(model)
-    train_dataloader = DataLoader(training_data, batch_size=256, num_workers=num_workers_data_loader, shuffle=False)
+    train_dataloader = DataLoader(training_data, batch_size=256, num_workers=num_workers_data_loader, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=256, num_workers=0)
     if profile_code:
         p = profile(
@@ -557,6 +556,7 @@ def run_training_and_test(
                 warmup=1,
                 active=2), on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"))
         p.start()
+    best_median_nse = None
     list_training_loss_single_pass = []
     nse_list_last_pass = []
     for i in range(num_epochs):
@@ -573,10 +573,8 @@ def run_training_and_test(
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device="cuda", epoch=(i + 1),
                                                   print_tqdm_to_console=print_tqdm_to_console,
                                                   specific_model_type=specific_model_type)
-            nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin,
-                                                                        (i + 1))
+            nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             if best_median_nse is None or best_median_nse < median_nse:
-                nse_list_last_pass = nse_list_last_pass
                 best_median_nse = median_nse
             print(f"best NSE so far: {best_median_nse}")
         if profile_code:
