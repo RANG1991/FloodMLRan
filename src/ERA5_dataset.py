@@ -505,12 +505,13 @@ class Dataset_ERA5(Dataset):
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
-                "cumm_m_x_spatial": cumm_m_x_spatial.tolist(),
-                "cumm_s_x_spatial": cumm_s_x_spatial.tolist(),
                 "cumm_m_y": cumm_m_y,
                 "cumm_s_y": cumm_s_y,
                 "count_of_samples": count_of_samples
             }
+            if specific_model_type.lower() == "conv" or specific_model_type.lower() == "cnn":
+                json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
+                json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial
 
