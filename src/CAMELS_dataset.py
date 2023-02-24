@@ -19,10 +19,19 @@ from os.path import isfile, join
 matplotlib.use("AGG")
 
 STATIC_ATTRIBUTES_NAMES = [
+    "p_mean",
+    "pet_mean",
+    "aridity",
+    "p_seasonality",
+    "frac_snow_daily",
+    "high_prec_freq",
+    "high_prec_dur",
+    "low_prec_freq",
+    "low_prec_dur",
     "elev_mean",
     "slope_mean",
     "area_gages2",
-    "frac_forest",
+    "forest_frac",
     "lai_max",
     "lai_diff",
     "gvf_max",
@@ -35,17 +44,10 @@ STATIC_ATTRIBUTES_NAMES = [
     "sand_frac",
     "silt_frac",
     "clay_frac",
-    "carbonate_rocks_frac",
-    "geol_permeability",
-    "p_mean",
-    "pet_mean",
-    "aridity",
-    "frac_snow",
-    "high_prec_freq",
-    "high_prec_dur",
-    "low_prec_freq",
-    "low_prec_dur",
+    "carb_rocks_frac",
+    "geol_permeability"
 ]
+
 DYNAMIC_ATTRIBUTES_NAMES = [
     "prcp(mm/day)",
     "srad(w/m2)",
