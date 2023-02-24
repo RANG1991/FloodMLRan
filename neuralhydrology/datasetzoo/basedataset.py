@@ -356,12 +356,12 @@ class BaseDataset(Dataset):
                     # offsets has the warmup offset needed for each frequency; the overall warmup starts with the
                     # earliest date, i.e., the largest offset across all frequencies.
                     warmup_start_date = min(start_date - offset for offset in offsets)
-                    df_sub = df[warmup_start_date:end_date]
+                    df_sub = df[start_date:end_date]
 
                     # make sure the df covers the full date range from warmup_start_date to end_date, filling any gaps
                     # with NaNs. This may increase runtime, but is a very robust way to make sure dates and predictions
                     # keep in sync. In training, the introduced NaNs will be discarded, so this only affects evaluation.
-                    full_range = pd.date_range(start=warmup_start_date, end=end_date, freq=native_frequency)
+                    full_range = pd.date_range(start=start_date, end=end_date, freq=native_frequency)
                     df_sub = df_sub.reindex(pd.DatetimeIndex(full_range, name=df_sub.index.name))
 
                     # as double check, set all targets before period start to NaN

@@ -123,7 +123,7 @@ class Dataset_CAMELS(Dataset):
         self.specific_model_type = specific_model_type
         self.df_attr, self.list_stations_static = self.read_static_attributes()
         self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
-        (self.dict_station_id_to_data,
+        (dict_station_id_to_data,
          x_means,
          x_stds,
          y_mean,
@@ -147,22 +147,23 @@ class Dataset_CAMELS(Dataset):
         x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
-        for key in self.dict_station_id_to_data.keys():
-            current_x_data = self.dict_station_id_to_data[key]["x_data"]
-            current_y_data = self.dict_station_id_to_data[key]["y_data"]
-            current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
-                (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
-                (x_data_std_dynamic + (10 ** (-6)))
+        if create_new_files or len(dict_station_id_to_data) > 0:
+            for key in dict_station_id_to_data.keys():
+                current_x_data = dict_station_id_to_data[key]["x_data"]
+                current_y_data = dict_station_id_to_data[key]["y_data"]
+                current_x_data[:, :(len(self.list_dynamic_attributes_names))] = \
+                    (current_x_data[:, :(len(self.list_dynamic_attributes_names))] - x_data_mean_dynamic) / \
+                    (x_data_std_dynamic + (10 ** (-6)))
 
-            current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
-                (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
-                (x_data_std_static + (10 ** (-6)))
-            current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
-            dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
-            self.dict_station_id_to_data[key] = dict_curr_basin
-            with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl",
-                      'wb') as f:
-                pickle.dump(dict_curr_basin, f)
+                current_x_data[:, (len(self.list_dynamic_attributes_names)):] = \
+                    (current_x_data[:, (len(self.list_dynamic_attributes_names)):] - x_data_mean_static) / \
+                    (x_data_std_static + (10 ** (-6)))
+                current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
+                dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
+                dict_station_id_to_data[key] = dict_curr_basin
+                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl",
+                          'wb') as f:
+                    pickle.dump(dict_curr_basin, f)
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
         self.all_station_ids = list(dict_station_id_to_data_from_file.keys())
         self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
@@ -175,18 +176,23 @@ class Dataset_CAMELS(Dataset):
         next_basin = self.lookup_table[index]
         if self.current_basin != next_basin:
             self.current_basin = next_basin
+            # print(f"dealing with basin: {self.current_basin}")
             self.inner_index_in_data_of_basin = 0
-        X_data, y_data = self.dict_station_id_to_data[self.current_basin]["x_data"], \
-            self.dict_station_id_to_data[self.current_basin]["y_data"]
-        X_data_tensor = torch.tensor(
+            self.dict_curr_basin = {}
+            with open(
+                    f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}.pkl",
+                    'rb') as f:
+                self.dict_curr_basin = pickle.load(f)
+        X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
+        X_data_tensor_non_spatial = torch.tensor(
             X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
         ).to(torch.float32)
         y_data_tensor = torch.tensor(
-            y_data[self.inner_index_in_data_of_basin + self.sequence_length]
+            y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
         ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.y_std_dict[
-            self.current_basin], self.current_basin, X_data_tensor, torch.tensor([]), y_data_tensor
+            self.current_basin], self.current_basin, X_data_tensor_non_spatial, torch.tensor([]), y_data_tensor
 
     @staticmethod
     def read_pickle_if_exists(pickle_file_name):

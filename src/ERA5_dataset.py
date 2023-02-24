@@ -54,22 +54,33 @@ ATTRIBUTES_TO_TEXT_DESC = {
 }
 
 STATIC_ATTRIBUTES_NAMES = [
-    "ele_mt_sav",
-    "slp_dg_sav",
-    "basin_area",
-    "for_pc_sse",
-    "cly_pc_sav",
-    "slt_pc_sav",
-    "snd_pc_sav",
-    "soc_th_sav",
     "p_mean",
     "pet_mean",
     "aridity",
+    "p_seasonality",
     "frac_snow",
     "high_prec_freq",
     "high_prec_dur",
     "low_prec_freq",
     "low_prec_dur",
+    "elev_mean",
+    "slope_mean",
+    "area_gages2",
+    "frac_forest",
+    "lai_max",
+    "lai_diff",
+    "gvf_max",
+    "gvf_diff",
+    "soil_depth_pelletier",
+    "soil_depth_statsgo",
+    "soil_porosity",
+    "soil_conductivity",
+    "max_water_content",
+    "sand_frac",
+    "silt_frac",
+    "clay_frac",
+    "carbonate_rocks_frac",
+    "geol_permeability"
 ]
 
 DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = [
@@ -367,7 +378,7 @@ class Dataset_ERA5(Dataset):
             ).to(torch.float32).squeeze()
         else:
             y_data_tensor = torch.tensor(
-                y_data[self.inner_index_in_data_of_basin + self.sequence_length]
+                y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
             ).to(torch.float32).squeeze()
         self.inner_index_in_data_of_basin += 1
         return self.y_std_dict[

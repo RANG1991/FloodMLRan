@@ -595,9 +595,9 @@ def run_training_and_test(
                                      pin_memory=True,
                                      num_workers=num_workers_data_loader, worker_init_fn=seed_worker)
     else:
-        train_dataloader = DataLoader(training_data, batch_size=256, pin_memory=True,
+        train_dataloader = DataLoader(training_data, batch_size=256,
                                       num_workers=num_workers_data_loader, shuffle=False, worker_init_fn=seed_worker)
-        test_dataloader = DataLoader(test_data, batch_size=256, pin_memory=True,
+        test_dataloader = DataLoader(test_data, batch_size=256,
                                      num_workers=num_workers_data_loader, shuffle=False, worker_init_fn=seed_worker)
     if rank == 0 and profile_code:
         p = profile(
@@ -806,7 +806,7 @@ def initialize_seed(seed):
 
 
 def main():
-    torch.backends.cudnn.enabled = False
+    # torch.backends.cudnn.enabled = False
     initialize_seed(123)
     parser = argparse.ArgumentParser()
     parser.add_argument(
