@@ -57,30 +57,20 @@ STATIC_ATTRIBUTES_NAMES = [
     "p_mean",
     "pet_mean",
     "aridity",
-    "p_seasonality",
+    "seasonality",
     "frac_snow",
     "high_prec_freq",
     "high_prec_dur",
     "low_prec_freq",
     "low_prec_dur",
-    "elev_mean",
-    "slope_mean",
-    "area_gages2",
-    "frac_forest",
-    "lai_max",
-    "lai_diff",
-    "gvf_max",
-    "gvf_diff",
-    "soil_depth_pelletier",
-    "soil_depth_statsgo",
-    "soil_porosity",
-    "soil_conductivity",
-    "max_water_content",
-    "sand_frac",
-    "silt_frac",
-    "clay_frac",
-    "carbonate_rocks_frac",
-    "geol_permeability"
+    "ele_mt_sav",
+    "slp_dg_sav",
+    "basin_area",
+    "for_pc_sse",
+    "cly_pc_sav",
+    "slt_pc_sav",
+    "snd_pc_sav",
+    "soc_th_sav",
 ]
 
 DYNAMIC_ATTRIBUTES_NAMES_CARAVAN = [
@@ -320,69 +310,57 @@ class Dataset_ERA5(Dataset):
         return self.dataset_length
 
     def __getitem__(self, index) -> T_co:
-        next_basin = self.lookup_table[index]
-        if self.current_basin != next_basin:
-            self.current_basin = next_basin
-            # print(f"dealing with basin: {self.current_basin}")
-            self.inner_index_in_data_of_basin = 0
-            self.dict_curr_basin = {}
-            with open(f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}{self.suffix_pickle_file}.pkl",
-                      'rb') as f:
-                self.dict_curr_basin = pickle.load(f)
+        basin_id, inner_ind = self.lookup_table[index]
+        with open(f"{FOLDER_WITH_BASINS_PICKLES}/{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl",
+                  'rb') as f:
+            dict_curr_basin = pickle.load(f)
         X_data_tensor_spatial = torch.tensor([])
         if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "transformer_lstm":
-            X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
+            X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+                X_data[inner_ind: inner_ind + self.sequence_length]
             ).to(torch.float32)
         elif self.specific_model_type.lower() == "conv":
             X_data, X_data_spatial, y_data = \
-                self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
+                dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length -
-                                                          self.sequence_length_spatial]
-            ).to(torch.float32)
-            X_data_tensor_spatial = torch.tensor(
-                X_data_spatial[self.inner_index_in_data_of_basin + self.sequence_length -
-                               self.sequence_length_spatial: self.inner_index_in_data_of_basin + self.sequence_length]
-            ).to(torch.float32)
-        elif self.specific_model_type.lower() == "cnn":
-            X_data, X_data_spatial, y_data = \
-                self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
-            ).to(torch.float32)
-            X_data_tensor_spatial = torch.tensor(
-                X_data_spatial[self.inner_index_in_data_of_basin + self.sequence_length -
-                               self.sequence_length_spatial: self.inner_index_in_data_of_basin + self.sequence_length]
-            ).to(torch.float32)
-        elif self.specific_model_type.lower() == "transformer_seq2seq":
-            X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
-            ).to(torch.float32)
-        else:
-            X_data, X_data_spatial, y_data = \
-                self.dict_curr_basin["x_data"], self.dict_curr_basin["x_data_spatial"], self.dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
+                X_data[inner_ind: inner_ind + self.sequence_length - self.sequence_length_spatial]
             ).to(torch.float32)
             X_data_tensor_spatial = torch.tensor(
                 X_data_spatial[
-                self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]).to(
+                inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+        elif self.specific_model_type.lower() == "cnn":
+            X_data, X_data_spatial, y_data = \
+                dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor(
+                X_data_spatial[
+                inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+        elif self.specific_model_type.lower() == "transformer_seq2seq":
+            X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+        else:
+            X_data, X_data_spatial, y_data = dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], \
+                dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor(X_data_spatial[inner_ind: inner_ind + self.sequence_length]).to(
                 torch.float32)
         if self.specific_model_type.lower() == "transformer_seq2seq":
             y_data_tensor = torch.tensor(
-                y_data[
-                self.inner_index_in_data_of_basin + 1: self.inner_index_in_data_of_basin + self.sequence_length + 1]
+                y_data[inner_ind + 1: inner_ind + self.sequence_length + 1]
             ).to(torch.float32).squeeze()
         else:
-            y_data_tensor = torch.tensor(
-                y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
-            ).to(torch.float32).squeeze()
-        self.inner_index_in_data_of_basin += 1
-        return self.y_std_dict[
-            self.current_basin], self.current_basin, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor
+            y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]
+                                         ).to(torch.float32).squeeze()
+        return self.y_std_dict[basin_id], basin_id, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor
 
     def read_static_attributes_single_country(self, country_abbreviation, countries_abbreviations_stations_dict,
                                               limit_size_above_1000=False):
@@ -691,14 +669,11 @@ class Dataset_ERA5(Dataset):
         return df_dynamic_data
 
     def create_look_table(self, dict_station_id_to_data):
-        self.inner_index_in_data_of_basin = 0
         lookup_table_basins = {}
         length_of_dataset = 0
-        self.current_basin = list(dict_station_id_to_data.keys())[0]
-        self.dict_curr_basin = dict_station_id_to_data[self.current_basin]
         for key in dict_station_id_to_data.keys():
-            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
-                lookup_table_basins[length_of_dataset] = key
+            for ind in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
+                lookup_table_basins[length_of_dataset] = (key, ind)
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
 
