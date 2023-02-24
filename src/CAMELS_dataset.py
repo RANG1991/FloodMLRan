@@ -173,26 +173,14 @@ class Dataset_CAMELS(Dataset):
         return self.dataset_length
 
     def __getitem__(self, index) -> T_co:
-        next_basin = self.lookup_table[index]
-        if self.current_basin != next_basin:
-            self.current_basin = next_basin
-            # print(f"dealing with basin: {self.current_basin}")
-            self.inner_index_in_data_of_basin = 0
-            self.dict_curr_basin = {}
-            with open(
-                    f"{FOLDER_WITH_BASINS_PICKLES}/{self.current_basin}_{self.stage}.pkl",
-                    'rb') as f:
-                self.dict_curr_basin = pickle.load(f)
-        X_data, y_data = self.dict_curr_basin["x_data"], self.dict_curr_basin["y_data"]
-        X_data_tensor_non_spatial = torch.tensor(
-            X_data[self.inner_index_in_data_of_basin: self.inner_index_in_data_of_basin + self.sequence_length]
-        ).to(torch.float32)
-        y_data_tensor = torch.tensor(
-            y_data[self.inner_index_in_data_of_basin + self.sequence_length - 1]
-        ).to(torch.float32).squeeze()
-        self.inner_index_in_data_of_basin += 1
-        return self.y_std_dict[
-            self.current_basin], self.current_basin, X_data_tensor_non_spatial, torch.tensor([]), y_data_tensor
+        basin_id, inner_ind = self.lookup_table[index]
+        with open(f"{FOLDER_WITH_BASINS_PICKLES}/{basin_id}_{self.stage}.pkl", 'rb') as f:
+            dict_curr_basin = pickle.load(f)
+        X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
+        X_data_tensor_non_spatial = torch.tensor(X_data[inner_ind: inner_ind + self.sequence_length]).to(torch.float32)
+        y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]).to(torch.float32).squeeze()
+        return self.y_std_dict[basin_id], basin_id, X_data_tensor_non_spatial, torch.tensor(
+            []), y_data_tensor
 
     @staticmethod
     def read_pickle_if_exists(pickle_file_name):
@@ -395,14 +383,11 @@ class Dataset_CAMELS(Dataset):
         return self.dataset_length
 
     def create_look_table(self, dict_station_id_to_data):
-        self.inner_index_in_data_of_basin = 0
         lookup_table_basins = {}
         length_of_dataset = 0
-        self.current_basin = list(dict_station_id_to_data.keys())[0]
-        self.dict_curr_basin = dict_station_id_to_data[self.current_basin]
         for key in dict_station_id_to_data.keys():
-            for _ in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
-                lookup_table_basins[length_of_dataset] = key
+            for ind in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
+                lookup_table_basins[length_of_dataset] = (key, ind)
                 length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
 

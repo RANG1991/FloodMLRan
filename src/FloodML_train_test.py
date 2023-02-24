@@ -547,7 +547,7 @@ def run_training_and_test(
     # config.learning_rate = learning_rate
     # config.wandb = True
     # wandb.watch(model)
-    train_dataloader = DataLoader(training_data, batch_size=256, num_workers=num_workers_data_loader, shuffle=True)
+    train_dataloader = DataLoader(training_data, batch_size=256, num_workers=num_workers_data_loader, shuffle=False)
     test_dataloader = DataLoader(test_data, batch_size=256, num_workers=0)
     if profile_code:
         p = profile(
