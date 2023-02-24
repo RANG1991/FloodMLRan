@@ -60,7 +60,7 @@ def download_ERA5_one_year(client, year, month):
             raise Exception(
                 "%s. %s." % (reply["error"].get("message"), reply["error"].get("reason"))
             )
-    r.download(f'../data/ERA5/Precipitation/tp_CA_{year}_{month}.nc')
+    r.download(f'../data/ERA5/Precipitation/tp_ALL_{year}_{month}.nc')
 
 
 def main():
