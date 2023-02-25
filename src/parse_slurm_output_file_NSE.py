@@ -72,7 +72,8 @@ def generate_csv_from_output_file(output_file, static_attr_file):
 
 
 def main():
-    generate_csv_from_output_file("./slurm-5796991.out", "data/ERA5/Caravan/attributes/us/attributes_hydroatlas_us.csv")
+    generate_csv_from_output_file("./slurm-5859236.out",
+                                  "../data/ERA5/Caravan/attributes/us/attributes_hydroatlas_us.csv")
 
 
 if __name__ == "__main__":
