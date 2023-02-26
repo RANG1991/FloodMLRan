@@ -71,8 +71,7 @@ class FloodML_Base_Dataset(Dataset):
         self.sequence_length_spatial = sequence_length_spatial
         self.create_new_files = create_new_files
         (self.df_attr,
-         self.list_stations_static,
-         self.countries_abbreviations_stations_dict
+         self.list_stations_static
          ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
         # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
         self.all_station_ids = self.list_stations_static

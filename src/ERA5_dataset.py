@@ -97,6 +97,7 @@ RESIZE_HEIGHT = 10
 class Dataset_ERA5(FloodML_Base_Dataset):
     def __init__(
             self,
+            main_folder,
             dynamic_data_folder,
             static_data_folder,
             dynamic_attributes_names,
@@ -124,28 +125,30 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         self.countries_abbreviations_stations_dict = {}
         self.countries_abbreviations = ["au", "br", "ca", "cl", "gb", "lamah", "us"]
         self.use_Caravan_dataset = use_Caravan_dataset
-        super().__init__(dynamic_data_folder,
-                         static_data_folder,
-                         dynamic_attributes_names,
-                         discharge_str,
-                         train_start_date,
-                         train_end_date,
-                         validation_start_date,
-                         validation_end_date,
-                         test_start_date,
-                         test_end_date,
-                         stage,
-                         all_stations_ids,
-                         sequence_length_spatial,
-                         specific_model_type,
-                         static_attributes_names,
-                         sequence_length,
-                         x_means,
-                         x_stds,
-                         y_mean,
-                         y_std,
-                         create_new_files,
-                         limit_size_above_1000)
+        super().__init__(
+            main_folder,
+            dynamic_data_folder,
+            static_data_folder,
+            dynamic_attributes_names,
+            discharge_str,
+            train_start_date,
+            train_end_date,
+            validation_start_date,
+            validation_end_date,
+            test_start_date,
+            test_end_date,
+            stage,
+            all_stations_ids,
+            sequence_length_spatial,
+            specific_model_type,
+            static_attributes_names,
+            sequence_length,
+            x_means,
+            x_stds,
+            y_mean,
+            y_std,
+            create_new_files,
+            limit_size_above_1000)
 
     def read_static_attributes_single_country(self, country_abbreviation, countries_abbreviations_stations_dict,
                                               limit_size_above_1000=False):
@@ -187,9 +190,9 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
                                    / f"{country_abbreviation}_{station_id}.csv")
-                and os.path.exists(Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc")
+                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
                 and (not os.path.exists(
-                    f"{self.main_folder}/pickled_basins_data//{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
+                    f"{self.main_folder}/pickled_basins_data/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
                             f"{self.main_folder}/pickled_basins_data/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}"),
                              station_id not in self.x_mean_dict,
@@ -210,7 +213,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         df_attr = pd.concat(list_static_df)
         return df_attr, self.list_stations_static
 
-    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_height,
+    def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
                                     create_new_files):
         if os.path.exists(
                 f"{self.main_folder}/pickled_basins_data/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") and not create_new_files:

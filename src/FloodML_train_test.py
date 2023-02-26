@@ -269,6 +269,7 @@ def prepare_datasets(
     if dataset_to_use == "ERA5" or dataset_to_use == "CARAVAN":
         use_Caravan_dataset = True if dataset_to_use == "CARAVAN" else False
         training_data = ERA5_dataset.Dataset_ERA5(
+            main_folder=ERA5_dataset.MAIN_FOLDER,
             dynamic_data_folder=dynamic_data_folder,
             static_data_folder=static_data_folder,
             dynamic_attributes_names=dynamic_attributes_names,
@@ -290,6 +291,7 @@ def prepare_datasets(
             limit_size_above_1000=limit_size_above_1000
         )
         test_data = ERA5_dataset.Dataset_ERA5(
+            main_folder=ERA5_dataset.MAIN_FOLDER,
             dynamic_data_folder=dynamic_data_folder,
             static_data_folder=static_data_folder,
             dynamic_attributes_names=dynamic_attributes_names,
