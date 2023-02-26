@@ -2,16 +2,16 @@ from torch.utils.data import Dataset
 from torch.utils.data.dataset import T_co
 import numpy as np
 import torch
-from pathlib import Path
 import matplotlib
 import os
 import math
 import pickle
-from os.path import isfile, join
+from os.path import join
 import csv
 from glob import glob
 
 matplotlib.use("AGG")
+
 
 class FloodML_Base_Dataset(Dataset):
 
@@ -39,6 +39,8 @@ class FloodML_Base_Dataset(Dataset):
                  y_std=None,
                  create_new_files=False,
                  limit_size_above_1000=False):
+        self.limit_size_above_1000 = limit_size_above_1000
+        self.list_stations_static = []
         self.main_folder = main_folder
         self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
         self.x_mean_dict = self.read_pickle_if_exists(
@@ -68,8 +70,10 @@ class FloodML_Base_Dataset(Dataset):
         self.specific_model_type = specific_model_type
         self.sequence_length_spatial = sequence_length_spatial
         self.create_new_files = create_new_files
-
-    def finalize_after_reading_data_from_files(self):
+        (self.df_attr,
+         self.list_stations_static,
+         self.countries_abbreviations_stations_dict
+         ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
         # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
         self.all_station_ids = self.list_stations_static
         (max_width,
@@ -89,7 +93,7 @@ class FloodML_Base_Dataset(Dataset):
          y_std,
          x_spatial_mean,
          x_spatial_std
-         ) = self.read_all_dynamic_data_files(all_stations_ids=self.all_station_ids,
+         ) = self.read_all_dynamic_attributes(all_stations_ids=self.all_station_ids,
                                               specific_model_type=self.specific_model_type,
                                               max_width=self.max_width, max_height=self.max_height,
                                               create_new_files=self.create_new_files)
@@ -207,7 +211,6 @@ class FloodML_Base_Dataset(Dataset):
     def __len__(self):
         return self.dataset_length
 
-
     def calculate_dataset_length(self):
         return self.dataset_length
 
@@ -274,21 +277,7 @@ class FloodML_Base_Dataset(Dataset):
         return length_of_dataset, lookup_table_basins
 
     def check_is_valid_station_id(self, station_id, create_new_files):
-        if station_id not in self.countries_abbreviations_stations_dict.keys():
-            return False
-        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
-        return (station_id in self.list_stations_static
-                and os.path.exists(Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
-                                   / f"{country_abbreviation}_{station_id}.csv")
-                and os.path.exists(Path(self.dynamic_data_folder) / f"precip24_spatial_{station_id}.nc")
-                and (not os.path.exists(
-                    f"{self.main_folder}/pickled_basins_data//{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
-                     or any([not os.path.exists(f"{self.main_folder}/pickled_basins_data/{}_{self.stage}{self.suffix_pickle_file}"),
-                             station_id not in self.x_mean_dict,
-                             station_id not in self.x_std_dict,
-                             station_id not in self.y_mean_dict,
-                             station_id not in self.y_std_dict,
-                             create_new_files])))
+        raise NotImplementedError
 
     def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
@@ -343,3 +332,10 @@ class FloodML_Base_Dataset(Dataset):
         print(f"max width is: {max_width}")
         print(f"max height is: {max_height}")
         return int(max_width), int(max_height), basin_id_with_maximum_width, basin_id_with_maximum_height
+
+    def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
+                                    create_new_files):
+        raise NotImplementedError
+
+    def read_all_static_attributes(self, limit_size_above_1000=False):
+        raise NotImplementedError
