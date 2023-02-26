@@ -29,14 +29,14 @@ def check_if_discharge_file_exists(station_id, ERA5_discharge_data_folder_name):
     return all_files_exist
 
 
-def check_if_all_percip_files_exist(station_id, output_folder_name):
+def check_if_all_precip_files_exist(station_id, output_folder_name):
     shape_file = output_folder_name + "/shape_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    percip24_file = output_folder_name + "/precip24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
+    precip24_file = output_folder_name + "/precip24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
     dis24_file = output_folder_name + "/dis24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
     data24 = output_folder_name + "/data24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
     info_file = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
     latlon_file = output_folder_name + "/latlon_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    list_files = [shape_file, percip24_file, dis24_file, data24, info_file, latlon_file]
+    list_files = [shape_file, precip24_file, dis24_file, data24, info_file, latlon_file]
     all_files_exist = all(Path(file_name).exists() for file_name in list_files)
     return all_files_exist
 
@@ -131,17 +131,17 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
 def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder_name):
     # convert the precipitation times from UTC (Grinch) to current timezone
     # create a dataframe from the precipitation data and the timedates
-    df_percip = pd.DataFrame(data=ls, index=datetimes, columns=["precip"])
+    df_precip = pd.DataFrame(data=ls, index=datetimes, columns=["precip"])
     # down sample the precipitation data into 1D (1 day) bins and sum the values falling into the same bin
-    df_percip_one_day = df_percip.resample("1D").sum()
-    df_percip_one_day = df_percip_one_day.reset_index()
-    df_percip_one_day = df_percip_one_day.rename(columns={"index": "date"})
-    df_percip_one_day = df_percip_one_day[["date", "precip"]]
-    print(df_percip_one_day)
-    df_percip_one_day.to_csv(
+    df_precip_one_day = df_precip.resample("1D").sum()
+    df_precip_one_day = df_precip_one_day.reset_index()
+    df_precip_one_day = df_precip_one_day.rename(columns={"index": "date"})
+    df_precip_one_day = df_precip_one_day[["date", "precip"]]
+    print(df_precip_one_day)
+    df_precip_one_day.to_csv(
         output_folder_name + "/precip24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv", float_format="%6.1f"
     )
-    return df_percip_one_day
+    return df_precip_one_day
 
 
 def parse_single_basin_precipitation(
@@ -150,7 +150,7 @@ def parse_single_basin_precipitation(
         CAMELS_precip_data_folder,
         output_folder_name,
 ):
-    # all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
+    # all_files_exist = check_if_all_precip_files_exist(station_id, output_folder_name)
     # if all_files_exist:
     #     print("all precipitation file of the basin: {} exists".format(station_id))
     #     return
@@ -338,7 +338,7 @@ def check(ERA5_static_data_file_name, station_id):
     print(basin_static_data)
 
 
-def run_processing_for_single_basin(station_id, basins_data, CAMELS_percip_data_folder_name, output_folder_name):
+def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder_name, output_folder_name):
     print(f"working on station with id: {station_id}")
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["gauge_id"] == station_id]
@@ -346,7 +346,7 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_percip_data_
         parse_single_basin_precipitation(
             station_id,
             basin_data,
-            CAMELS_percip_data_folder_name,
+            CAMELS_precip_data_folder_name,
             output_folder_name
         )
     except Exception as e:

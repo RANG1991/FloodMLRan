@@ -11,7 +11,7 @@ import concurrent.futures
 import pytz
 
 PATH_ROOT = "../../FloodMLRan/data/ERA5"
-COUNTRY_ABBREVIATION = "ca"
+COUNTRY_ABBREVIATIONS = ["au", "br", "ca", "cl", "gb", "lamah"]
 TEST_PERIOD = ("1989-10-01", "1999-09-30")
 TRAINING_PERIOD = ("1999-10-01", "2008-09-30")
 
@@ -26,13 +26,13 @@ def check_if_discharge_file_exists(station_id, ERA5_discharge_data_folder_name):
     return all_files_exist
 
 
-def check_if_all_percip_files_exist(station_id, output_folder_name):
-    shape_file = output_folder_name + "/shape_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    percip24_file = output_folder_name + "/precip24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    dis24_file = output_folder_name + "/dis24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    data24 = output_folder_name + "/data24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    info_file = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
-    latlon_file = output_folder_name + "/latlon_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
+def check_if_all_percip_files_exist(station_id, output_folder_name, country_abbreviation):
+    shape_file = output_folder_name + "/shape_" + station_id.replace(country_abbreviation, "") + ".csv"
+    percip24_file = output_folder_name + "/precip24_" + station_id.replace(country_abbreviation, "") + ".csv"
+    dis24_file = output_folder_name + "/dis24_" + station_id.replace(country_abbreviation, "") + ".csv"
+    data24 = output_folder_name + "/data24_" + station_id.replace(country_abbreviation, "") + ".csv"
+    info_file = output_folder_name + "/info_" + station_id.replace(country_abbreviation, "") + ".txt"
+    latlon_file = output_folder_name + "/latlon_" + station_id.replace(country_abbreviation, "") + ".csv"
     list_files = [shape_file, percip24_file, dis24_file, data24, info_file, latlon_file]
     all_files_exist = all(Path(file_name).exists() for file_name in list_files)
     return all_files_exist
@@ -104,7 +104,7 @@ def get_index_by_lat_lon(lat, lon, lat_grid, lon_grid):
 
 def create_and_write_precipitation_spatial(
         datetimes, ls_spatial, ERA5_static_data_file_name, station_id, output_folder_name, lat_grid, lon_grid,
-        lat_lon_lst):
+        lat_lon_lst, country_abbreviation):
     h = len(lat_grid)
     w = len(lon_grid)
     idx_mat = np.zeros((h, w), dtype=bool)
@@ -124,16 +124,16 @@ def create_and_write_precipitation_spatial(
     ds["precipitation"] = ds["precipitation"] * idx_mat
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
-        lambda s: s.replace(f"{COUNTRY_ABBREVIATION}_", "")
+        lambda s: s.replace(f"{country_abbreviation}_", "")
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
     ds = ds.resample(datetime="1D").sum()
-    ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
+    ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(country_abbreviation, "") + ".nc")
 
 
-def create_and_write_precipitation_mean(
-        datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
-):
+def create_and_write_precipitation_mean(datetimes, ls,
+                                        ERA5_static_data_file_name, station_id,
+                                        output_folder_name, country_abbreviation):
     # convert the precipitation times from UTC (Grinch) to current timezone
     # create a dataframe from the precipitation data and the timedates
     df_percip = pd.DataFrame(data=ls, index=datetimes, columns=["precip"])
@@ -145,11 +145,11 @@ def create_and_write_precipitation_mean(
     print(df_percip_one_day)
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
-        lambda s: s.replace(f"{COUNTRY_ABBREVIATION}_", "")
+        lambda s: s.replace(f"{country_abbreviation}_", "")
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
     df_percip_one_day.to_csv(
-        output_folder_name + "/precip24_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv", float_format="%6.1f"
+        output_folder_name + "/precip24_" + station_id.replace(country_abbreviation, "") + ".csv", float_format="%6.1f"
     )
     return df_percip_one_day
 
@@ -162,6 +162,7 @@ def parse_single_basin_precipitation(
         discharge_folder_name,
         ERA5_static_data_file_name,
         output_folder_name,
+        country_abbreviation
 ):
     # all_files_exist = check_if_all_percip_files_exist(station_id, output_folder_name)
     # if all_files_exist:
@@ -204,7 +205,7 @@ def parse_single_basin_precipitation(
     started_reading_data = False
     for year in range(1988, 2009):
         for month in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]:
-            fn = f"{ERA5_data_folder_name}/tp_{COUNTRY_ABBREVIATION.upper()}_{year}_{month}.nc"
+            fn = f"{ERA5_data_folder_name}/tp_{country_abbreviation.upper()}_{year}_{month}.nc"
             try:
                 dataset = nc.Dataset(fn)
             except Exception as e:
@@ -273,7 +274,12 @@ def parse_single_basin_precipitation(
     ls_precip_new = [precip_new[i] for i in range(0, len(datetimes))]
     datetimes = [time + datetime.timedelta(hours=offset) for time in datetimes]
     df_precip_one_day_non_spatial = create_and_write_precipitation_mean(
-        datetimes, ls, ERA5_static_data_file_name, station_id, output_folder_name,
+        datetimes,
+        ls,
+        ERA5_static_data_file_name,
+        station_id,
+        output_folder_name,
+        country_abbreviation
     )
 
     lonb = lon[ind_lon_min:ind_lon_max + 1]
@@ -284,7 +290,7 @@ def parse_single_basin_precipitation(
     for i in range(0, len(lslon)):
         if np.squeeze(basin_data["geometry"].contains(Point(lslon[i], lslat[i]))):
             lat_lon_lst.append([lslat[i], lslon[i]])
-    fn = output_folder_name + "/latlon_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
+    fn = output_folder_name + "/latlon_" + station_id.replace(country_abbreviation, "") + ".csv"
     pd.DataFrame(data=lat_lon_lst, columns=["lat", "lon"]).to_csv(
         fn, index=False, float_format="%6.1f"
     )
@@ -297,7 +303,8 @@ def parse_single_basin_precipitation(
         output_folder_name,
         latb,
         lonb,
-        lat_lon_lst
+        lat_lon_lst,
+        country_abbreviation
     )
     # down sample the discharge data into 1D (1 day) bins and take the mean of the values falling into the same bin
     # df_dis_one_day = df_dis.resample("1D").mean()
@@ -316,13 +323,13 @@ def parse_single_basin_precipitation(
     #     output_folder_name + "/data24_" + station_id + ".csv", float_format="%6.1f"
     # )
 
-    fn = output_folder_name + "/shape_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
+    fn = output_folder_name + "/shape_" + station_id.replace(country_abbreviation, "") + ".csv"
     pd.DataFrame(
         data=np.array([(len(datetimes),), (precip.shape[1],), (precip.shape[2],)]).T,
         columns=["time", "lat", "lon"],
         index=[1],
     ).to_csv(fn)
-    fn = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
+    fn = output_folder_name + "/info_" + station_id.replace(country_abbreviation, "") + ".txt"
     with open(fn, "w") as f:
         print(
             precip.shape[0],
@@ -345,7 +352,7 @@ def parse_single_basin_precipitation(
         ]
     )
 
-    fn = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
+    fn = output_folder_name + "/info_" + station_id.replace(country_abbreviation, "") + ".txt"
     with open(fn, "w") as f:
         print(
             precip.shape[0],
@@ -359,10 +366,10 @@ def parse_single_basin_precipitation(
         )
 
 
-def check(ERA5_static_data_file_name, station_id):
+def check(ERA5_static_data_file_name, station_id, country_abbreviation):
     df_static_data = pd.read_csv(ERA5_static_data_file_name)
     df_static_data["gauge_id"] = df_static_data["gauge_id"].apply(
-        lambda s: s.replace(f"{COUNTRY_ABBREVIATION}_", "")
+        lambda s: s.replace(f"{country_abbreviation}_", "")
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
     basin_static_data = basin_static_data.append(
@@ -372,8 +379,8 @@ def check(ERA5_static_data_file_name, station_id):
 
 
 def run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
-                                    ERA5_percip_data_folder_name,
-                                    ERA5_static_data_file_name, output_folder_name):
+                                    ERA5_percip_data_folder_name, ERA5_static_data_file_name,
+                                    output_folder_name, country_abbreviation):
     print(f"working on station with id: {station_id}")
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["gauge_id"] == station_id]
@@ -392,39 +399,42 @@ def run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data
             ERA5_discharge_data_folder_name,
             ERA5_static_data_file_name,
             output_folder_name,
+            country_abbreviation
         )
     except Exception as e:
         print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
 
 
 def main(use_multiprocessing=True):
-    boundaries_file_name = (PATH_ROOT +
-                            f"/Caravan/shapefiles/{COUNTRY_ABBREVIATION}/{COUNTRY_ABBREVIATION}_basin_shapes.shp")
-    ERA5_static_data_file_name = (PATH_ROOT + f"/Caravan/attributes/attributes_hydroatlas_{COUNTRY_ABBREVIATION}.csv")
-    ERA5_percip_data_folder_name = PATH_ROOT + "/Precipitation/"
-    ERA5_discharge_data_folder_name = PATH_ROOT + "/Discharge/"
-    output_folder_name = PATH_ROOT + "/ERA_5_all_data/"
-    # check(ERA5_static_data_file_name, "01031500")
-    # return
-    # read the basins' boundaries file using gpd.read_file()
-    basins_data = gpd.read_file(boundaries_file_name)
-    station_ids_list = basins_data["gauge_id"].tolist()
-    if use_multiprocessing:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_station_id = {
-                executor.submit(run_processing_for_single_basin, station_id, basins_data,
-                                ERA5_discharge_data_folder_name,
-                                ERA5_percip_data_folder_name,
-                                ERA5_static_data_file_name, output_folder_name): station_id for station_id in
-                station_ids_list}
-            for future in concurrent.futures.as_completed(future_to_station_id):
-                station_id = future_to_station_id[future]
-                print(f"finished with station id: {station_id}")
-    else:
-        for station_id in station_ids_list:
-            run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
-                                            ERA5_percip_data_folder_name,
-                                            ERA5_static_data_file_name, output_folder_name)
+    for country_abbreviation in COUNTRY_ABBREVIATIONS:
+        boundaries_file_name = (PATH_ROOT +
+                                f"/Caravan/shapefiles/{country_abbreviation}/{country_abbreviation}_basin_shapes.shp")
+        ERA5_static_data_file_name = (
+                PATH_ROOT + f"/Caravan/attributes/attributes_hydroatlas_{country_abbreviation}.csv")
+        ERA5_percip_data_folder_name = PATH_ROOT + "/Precipitation/"
+        ERA5_discharge_data_folder_name = PATH_ROOT + "/Discharge/"
+        output_folder_name = PATH_ROOT + "/ERA_5_all_data/"
+        # check(ERA5_static_data_file_name, "01031500")
+        # return
+        # read the basins' boundaries file using gpd.read_file()
+        basins_data = gpd.read_file(boundaries_file_name)
+        station_ids_list = basins_data["gauge_id"].tolist()
+        if use_multiprocessing:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                future_to_station_id = {
+                    executor.submit(run_processing_for_single_basin, station_id, basins_data,
+                                    ERA5_discharge_data_folder_name,
+                                    ERA5_percip_data_folder_name,
+                                    ERA5_static_data_file_name, output_folder_name): station_id for station_id in
+                    station_ids_list}
+                for future in concurrent.futures.as_completed(future_to_station_id):
+                    station_id = future_to_station_id[future]
+                    print(f"finished with station id: {station_id}")
+        else:
+            for station_id in station_ids_list:
+                run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
+                                                ERA5_percip_data_folder_name, ERA5_static_data_file_name,
+                                                output_folder_name, country_abbreviation)
 
 
 if __name__ == "__main__":
