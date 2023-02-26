@@ -172,15 +172,88 @@ class Dataset_CAMELS(Dataset):
     def __len__(self):
         return self.dataset_length
 
+    @staticmethod
+    def crop_or_pad_precip_spatial(X_data_single_basin, max_width, max_height):
+        max_width_right = int(max_width / 2)
+        max_width_left = math.ceil(max_width / 2)
+        max_height_right = int(max_height / 2)
+        max_height_left = math.ceil(max_height / 2)
+        if X_data_single_basin.shape[1] > max_width:
+            start = X_data_single_basin.shape[1] // 2 - (max_width // 2)
+            X_data_single_basin = X_data_single_basin[:, start:start + max_width, :]
+        else:
+            X_data_single_basin = np.pad(X_data_single_basin,
+                                         ((0, 0),
+                                          (max_width_right - int(X_data_single_basin.shape[1] / 2),
+                                           max_width_left - math.ceil(X_data_single_basin.shape[1] / 2)),
+                                          (0, 0)),
+                                         "constant",
+                                         constant_values=0)
+        if X_data_single_basin.shape[2] > max_height:
+            start = X_data_single_basin.shape[2] // 2 - (max_height // 2)
+            X_data_single_basin = X_data_single_basin[:, start:start + max_height, :]
+        else:
+            X_data_single_basin = np.pad(X_data_single_basin,
+                                         ((0, 0),
+                                          (0, 0),
+                                          (max_height_right - int(X_data_single_basin.shape[2] / 2),
+                                           max_height_left - math.ceil(X_data_single_basin.shape[2] / 2))),
+                                         "constant",
+                                         constant_values=0)
+        return X_data_single_basin
+
     def __getitem__(self, index) -> T_co:
         basin_id, inner_ind = self.lookup_table[index]
-        with open(f"{FOLDER_WITH_BASINS_PICKLES}/{basin_id}_{self.stage}.pkl", 'rb') as f:
+        with open(f"{FOLDER_WITH_BASINS_PICKLES}/{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl",
+                  'rb') as f:
             dict_curr_basin = pickle.load(f)
-        X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
-        X_data_tensor_non_spatial = torch.tensor(X_data[inner_ind: inner_ind + self.sequence_length]).to(torch.float32)
-        y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]).to(torch.float32).squeeze()
-        return self.y_std_dict[basin_id], basin_id, X_data_tensor_non_spatial, torch.tensor(
-            []), y_data_tensor
+        X_data_tensor_spatial = torch.tensor([])
+        if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "transformer_lstm":
+            X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+        elif self.specific_model_type.lower() == "conv":
+            X_data, X_data_spatial, y_data = \
+                dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length - self.sequence_length_spatial]
+            ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor(
+                X_data_spatial[
+                inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+        elif self.specific_model_type.lower() == "cnn":
+            X_data, X_data_spatial, y_data = \
+                dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor(
+                X_data_spatial[
+                inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+        elif self.specific_model_type.lower() == "transformer_seq2seq":
+            X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+        else:
+            X_data, X_data_spatial, y_data = dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], \
+                dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+            X_data_tensor_spatial = torch.tensor(X_data_spatial[inner_ind: inner_ind + self.sequence_length]).to(
+                torch.float32)
+        if self.specific_model_type.lower() == "transformer_seq2seq":
+            y_data_tensor = torch.tensor(
+                y_data[inner_ind + 1: inner_ind + self.sequence_length + 1]
+            ).to(torch.float32).squeeze()
+        else:
+            y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]
+                                         ).to(torch.float32).squeeze()
+        return self.y_std_dict[basin_id], basin_id, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor
 
     @staticmethod
     def read_pickle_if_exists(pickle_file_name):
