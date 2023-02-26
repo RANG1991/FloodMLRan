@@ -203,9 +203,10 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1988, 2009):
+    for year in range(1981, 1993):
+        print(f"parsing year: {year} of basin: {station_id}")
         for month in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]:
-            fn = f"{ERA5_data_folder_name}/tp_{country_abbreviation.upper()}_{year}_{month}.nc"
+            fn = f"{ERA5_data_folder_name}/tp_ALL_{year}_{month}.nc"
             try:
                 dataset = nc.Dataset(fn)
             except Exception as e:
@@ -423,10 +424,10 @@ def main(use_multiprocessing=True):
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 future_to_station_id = {
                     executor.submit(run_processing_for_single_basin, station_id, basins_data,
-                                    ERA5_discharge_data_folder_name,
-                                    ERA5_percip_data_folder_name,
-                                    ERA5_static_data_file_name, output_folder_name): station_id for station_id in
-                    station_ids_list}
+                                    ERA5_discharge_data_folder_name, ERA5_percip_data_folder_name,
+                                    ERA5_static_data_file_name, output_folder_name,
+                                    country_abbreviation): station_id for station_id in station_ids_list
+                }
                 for future in concurrent.futures.as_completed(future_to_station_id):
                     station_id = future_to_station_id[future]
                     print(f"finished with station id: {station_id}")
@@ -438,4 +439,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main(False)
+    main()

@@ -357,7 +357,7 @@ def main(use_multiprocessing=True):
     CAMELS_precip_data_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ncfiles_2010/"
     boundaries_file_name = (
             PATH_ROOT + f"/ERA5/Caravan/shapefiles/{COUNTRY_ABBREVIATION}/{COUNTRY_ABBREVIATION}_basin_shapes.shp")
-    output_folder_name = PATH_ROOT + "/CAMELS_US/ncfiles_2010_preprocessed_files/"
+    output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_spatial/"
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["gauge_id"].tolist()
     if use_multiprocessing:
