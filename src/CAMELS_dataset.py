@@ -59,6 +59,7 @@ DISCHARGE_STR = "qobs"
 DYNAMIC_DATA_FOLDER = "../data/CAMELS_US/basin_mean_forcing"
 STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
+DYNAMIC_DATA_FOLDER_SPATIAL = ""
 
 FOLDER_WITH_BASINS_PICKLES = "../data/CAMELS_US/pickled_basins_data"
 
@@ -98,12 +99,13 @@ class Dataset_CAMELS(Dataset):
             y_mean=None,
             y_std=None
     ):
-        self.x_mean_dict = self.read_pickle_if_exists(f"{X_MEAN_DICT_FILE}")
-        self.x_std_dict = self.read_pickle_if_exists(f"{X_STD_DICT_FILE}")
+        self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
+        self.x_mean_dict = self.read_pickle_if_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}")
+        self.x_std_dict = self.read_pickle_if_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}")
         self.x_means = x_means if x_means is not None else None
         self.x_stds = x_stds if x_stds is not None else None
-        self.y_mean_dict = self.read_pickle_if_exists(f"{Y_MEAN_DICT_FILE}")
-        self.y_std_dict = self.read_pickle_if_exists(f"{Y_STD_DICT_FILE}")
+        self.y_mean_dict = self.read_pickle_if_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}")
+        self.y_std_dict = self.read_pickle_if_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}")
         self.y_mean = y_mean if y_mean is not None else None
         self.y_std = y_std if y_std is not None else None
         self.sequence_length = sequence_length
@@ -131,10 +133,10 @@ class Dataset_CAMELS(Dataset):
          ) = self.read_all_dynamic_data_files(all_stations_ids=all_stations_ids,
                                               create_new_files=create_new_files)
 
-        self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}", self.x_mean_dict, force=True)
-        self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}", self.x_std_dict, force=True)
-        self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}", self.y_mean_dict, force=True)
-        self.save_pickle_if_not_exists(f"{Y_STD_DICT_FILE}", self.y_std_dict, force=True)
+        self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.x_mean_dict, force=True)
+        self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}", self.x_std_dict, force=True)
+        self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.y_mean_dict, force=True)
+        self.save_pickle_if_not_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}", self.y_std_dict, force=True)
 
         self.y_mean = y_mean if stage == "train" else self.y_mean
         self.y_std = y_std if stage == "train" else self.y_std
@@ -161,7 +163,7 @@ class Dataset_CAMELS(Dataset):
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
                 dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
                 dict_station_id_to_data[key] = dict_curr_basin
-                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}.pkl",
+                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
                           'wb') as f:
                     pickle.dump(dict_curr_basin, f)
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
@@ -272,7 +274,7 @@ class Dataset_CAMELS(Dataset):
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_station_ids
                 and (not os.path.exists(
-                    f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}.pkl")
+                    f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
                             f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}"),
                              station_id not in self.x_mean_dict,
@@ -280,6 +282,68 @@ class Dataset_CAMELS(Dataset):
                              station_id not in self.y_mean_dict,
                              station_id not in self.y_std_dict,
                              create_new_files])))
+
+    def read_single_station_file_spatial(self, station_id):
+        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
+        station_data_file_spatial = (Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc")
+        station_data_file_discharge = (
+                Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
+                / f"{country_abbreviation}_{station_id}.csv"
+        )
+        ds = nc.Dataset(station_data_file_spatial)
+        ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
+        df_dis_data = pd.read_csv(station_data_file_discharge)
+        (
+            dataset_xarray_filtered,
+            df_dis_data_filtered,
+        ) = self.read_and_filter_dynamic_data_spatial(ds, df_dis_data)
+        X_data_spatial = np.asarray(dataset_xarray_filtered["precipitation"])
+        y_data = df_dis_data_filtered[self.discharge_str].to_numpy().flatten()
+        y_data = y_data.reshape(-1, 1)
+        static_attrib_station = (
+            (self.df_attr[self.df_attr["gauge_id"] == station_id])
+            .drop("gauge_id", axis=1)
+            .to_numpy()
+            .reshape(1, -1)
+        )
+        if self.stage == "train":
+            if station_id not in self.y_mean_dict.keys():
+                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+            if station_id not in self.y_std_dict.keys():
+                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+        return X_data_spatial, y_data
+
+    def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
+        df_dis_data.loc[self.discharge_str] = df_dis_data[self.discharge_str].apply(
+            lambda x: float(x)
+        )
+        df_dis_data = df_dis_data[df_dis_data[self.discharge_str] >= 0]
+        df_dis_data = df_dis_data.dropna()
+        df_dis_data["date"] = pd.to_datetime(df_dis_data.date)
+        start_date = (
+            self.train_start_date
+            if self.stage == "train"
+            else self.test_start_date
+            if self.stage == "test"
+            else self.validation_start_date
+        )
+        start_date = datetime.strptime(start_date, "%d/%m/%Y")
+        end_date = (
+            self.train_end_date
+            if self.stage == "train"
+            else self.test_end_date
+            if self.stage == "test"
+            else self.validation_end_date
+        )
+        end_date = datetime.strptime(end_date, "%d/%m/%Y")
+        df_dis_data = df_dis_data[
+            (df_dis_data["date"] >= start_date) & (df_dis_data["date"] <= end_date)
+            ]
+        dataset_xarray["datetime"] = pd.DatetimeIndex(dataset_xarray["datetime"].values)
+        dataset_xarray_filtered = dataset_xarray.isel(
+            datetime=dataset_xarray.datetime.isin(df_dis_data["date"])
+        )
+        return dataset_xarray_filtered, df_dis_data
 
     def read_static_attributes(self):
         attributes_path = Path(self.static_data_folder)
@@ -298,8 +362,8 @@ class Dataset_CAMELS(Dataset):
         return df, df.index.to_list()
 
     def read_all_dynamic_data_files(self, all_stations_ids, create_new_files):
-        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}") and not create_new_files:
-            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}", 'r',
+        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
+            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'r',
                                    encoding='utf-8').read()
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
@@ -467,7 +531,7 @@ class Dataset_CAMELS(Dataset):
     def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
         for basin_id in self.all_station_ids:
-            file_name = join(f"{FOLDER_WITH_BASINS_PICKLES}", f"{basin_id}_{self.stage}.pkl")
+            file_name = join(f"{FOLDER_WITH_BASINS_PICKLES}", f"{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl")
             if os.path.exists(file_name):
                 with open(file_name, "rb") as f:
                     pickled_data = pickle.load(f)
