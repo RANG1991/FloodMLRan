@@ -120,8 +120,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             y_std=None,
             use_Caravan_dataset=True,
             create_new_files=False,
-            limit_size_above_1000=False
-    ):
+            limit_size_above_1000=False):
         self.countries_abbreviations_stations_dict = {}
         self.countries_abbreviations = ["au", "br", "ca", "cl", "gb", "lamah", "us"]
         self.use_Caravan_dataset = use_Caravan_dataset
