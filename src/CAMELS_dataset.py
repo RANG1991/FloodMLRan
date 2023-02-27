@@ -63,7 +63,7 @@ STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
 
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
 
-DYNAMIC_DATA_FOLDER_SPATIAL = ""
+DYNAMIC_DATA_FOLDER_SPATIAL = "../data/CAMELS_US/CAMELS_spatial/"
 
 MAIN_FOLDER = "../data/CAMELS_US/"
 
@@ -123,6 +123,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_station_ids
+
                 and (not os.path.exists(
                     f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
@@ -134,15 +135,11 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                              create_new_files])))
 
     def read_single_station_file_spatial(self, station_id):
-        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
-        station_data_file_spatial = (Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc")
-        station_data_file_discharge = (
-                Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
-                / f"{country_abbreviation}_{station_id}.csv"
-        )
+        station_data_file_spatial = (Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial__{station_id}.nc")
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
-        df_dis_data = pd.read_csv(station_data_file_discharge)
+        df_dis_data = self.read_discharge_data(station_id)
+        df_dis_data.columns = map(str.lower, df_dis_data.columns)
         (
             dataset_xarray_filtered,
             df_dis_data_filtered,
@@ -169,6 +166,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         )
         df_dis_data = df_dis_data[df_dis_data[self.discharge_str] >= 0]
         df_dis_data = df_dis_data.dropna()
+        # the index column is the date column
         df_dis_data["date"] = pd.to_datetime(df_dis_data.date)
         start_date = (
             self.train_start_date
@@ -202,14 +200,15 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         dfs = []
         for txt_file in txt_files:
             df_temp = pd.read_csv(txt_file, sep=";", header=0, dtype={"gauge_id": str})
-            df_temp = df_temp.set_index("gauge_id")
             dfs.append(df_temp)
-        df = pd.concat(dfs, axis=1)
+        df = pd.concat(dfs)
+        if limit_size_above_1000:
+            df = df[df["basin_area"] >= 1000]
         # convert huc column to double-digit strings
         df["huc"] = df["huc_02"].apply(lambda x: str(x).zfill(2))
         df = df.drop("huc_02", axis=1)
-        df = df[self.list_static_attributes_names]
-        return df, df.index.to_list()
+        df = df[self.list_static_attributes_names + ["gauge_id"]]
+        return df, df["gauge_id"].to_list()
 
     def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
                                     create_new_files):
@@ -222,12 +221,16 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
+            cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
+            cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
             cumm_s_y = float(json_obj["cumm_s_y"])
             count_of_samples = int(json_obj["count_of_samples"])
         else:
             cumm_m_x = 0
             cumm_s_x = 0
+            cumm_m_x_spatial = -1
+            cumm_s_x_spatial = -1
             cumm_m_y = 0
             cumm_s_y = 0
             count_of_samples = 0
@@ -237,11 +240,36 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         for station_id in pbar:
             print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
             if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
-                X_data_non_spatial, y_data = self.read_single_station_dynamic_and_discharge_file(station_id)
-                if len(X_data_non_spatial) == 0 or len(y_data) == 0:
-                    del X_data_non_spatial
-                    del y_data
-                    continue
+                if (specific_model_type.lower() == "conv" or
+                        specific_model_type.lower() == "cnn"):
+                    if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial__{station_id}.nc"):
+                        continue
+                    X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
+                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
+                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
+                        del X_data_spatial
+                        del X_data_non_spatial
+                        del y_data
+                        continue
+                    max_dim = max(max_width, max_height)
+                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
+                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).sum(
+                        axis=0)
+                    plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
+                               gray_image)
+                    if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
+                        print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
+                        del X_data_spatial
+                        del X_data_non_spatial
+                        del y_data
+                        continue
+                else:
+                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
+                    if len(X_data_non_spatial) == 0 or len(y_data) == 0:
+                        del X_data_non_spatial
+                        del y_data
+                        continue
+
                 prev_mean_x = cumm_m_x
                 count_of_samples = count_of_samples + (len(y_data))
                 cumm_m_x = cumm_m_x + (
@@ -250,17 +278,39 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     axis=0)
                 cumm_s_x = cumm_s_x + ((X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - cumm_m_x) * (
                         X_data_non_spatial[:, :len(self.list_dynamic_attributes_names)] - prev_mean_x)).sum(axis=0)
+
                 prev_mean_y = cumm_m_y
                 cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0).item()
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
+
+                if (specific_model_type.lower() == "conv" or
+                        specific_model_type.lower() == "cnn"):
+                    X_data_spatial = np.array(
+                        X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
+                        dtype=np.float64)
+
+                    prev_mean_x_spatial = cumm_m_x_spatial
+                    cumm_m_x_spatial = cumm_m_x_spatial + (
+                            (X_data_spatial[:] - cumm_m_x_spatial) / count_of_samples).sum(
+                        axis=0)
+                    cumm_s_x_spatial = cumm_s_x_spatial + (
+                            (X_data_spatial[:] - cumm_m_x_spatial) * (X_data_spatial[:] - prev_mean_x_spatial)).sum(
+                        axis=0)
+
+                    X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
+                    del X_data_spatial
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data}
+
             else:
                 print(f"station with id: {station_id} has no valid file or the file already exists")
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
-        with codecs.open(f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}", 'w',
-                         encoding='utf-8') as json_file:
+        std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
+        with codecs.open(
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
+                'w',
+                encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
@@ -268,10 +318,48 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 "cumm_s_y": cumm_s_y,
                 "count_of_samples": count_of_samples
             }
+            if specific_model_type.lower() == "conv" or specific_model_type.lower() == "cnn":
+                json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
+                json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, -1, -1
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial
 
-    def read_single_station_dynamic_and_discharge_file(self, station_id):
+    def get_basin_area(self, station_id):
+        forcing_path = Path(self.dynamic_data_folder)
+        file_path = list(forcing_path.glob(f"**/{station_id}_*_forcing_leap.txt"))
+        file_path = file_path[0]
+        with open(file_path, "r") as fp:
+            # load area from header
+            fp.readline()
+            fp.readline()
+            area = int(fp.readline())
+        return area
+
+    def read_discharge_data(self, station_id):
+        discharge_path = Path(self.discharge_data_folder)
+        file_path = list(discharge_path.glob(f"**/{station_id}_streamflow_qc.txt"))
+        file_path = file_path[0]
+        col_names = ["basin", "Year", "Mnth", "Day", "QObs", "flag"]
+        df_discharge = pd.read_csv(
+            file_path, sep="\s+", header=None, names=col_names
+        )
+        df_discharge["date"] = pd.to_datetime(
+            df_discharge.Year.map(str)
+            + "/"
+            + df_discharge.Mnth.map(str)
+            + "/"
+            + df_discharge.Day.map(str),
+            format="%Y/%m/%d",
+        )
+        # normalize discharge from cubic feet per second to mm per day
+        basin_area = self.get_basin_area(station_id)
+        df_discharge.QObs = (
+                28316846.592 * df_discharge.QObs * 86400 / (basin_area * 10 ** 6)
+        )
+        df_discharge = df_discharge.drop(columns=["Year", "Mnth", "Day"])
+        return df_discharge
+
+    def read_single_station_file(self, station_id):
         if station_id not in self.all_station_ids:
             return np.array([]), np.array([]), np.array([])
         forcing_path = Path(self.dynamic_data_folder)
@@ -281,7 +369,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             # load area from header
             fp.readline()
             fp.readline()
-            area = int(fp.readline())
+            _ = int(fp.readline())
             # load the dataframe from the rest of the stream
             df_forcing = pd.read_csv(fp, sep="\s+")
             df_forcing["date"] = pd.to_datetime(
@@ -292,32 +380,12 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 + df_forcing.Day.map(str),
                 format="%Y/%m/%d",
             )
-            df_forcing = df_forcing.set_index("date")
-            discharge_path = Path(self.discharge_data_folder)
-            file_path = list(discharge_path.glob(f"**/{station_id}_streamflow_qc.txt"))
-            file_path = file_path[0]
-            col_names = ["basin", "Year", "Mnth", "Day", "QObs", "flag"]
-            df_discharge = pd.read_csv(
-                file_path, sep="\s+", header=None, names=col_names
-            )
-            df_discharge["date"] = pd.to_datetime(
-                df_discharge.Year.map(str)
-                + "/"
-                + df_discharge.Mnth.map(str)
-                + "/"
-                + df_discharge.Day.map(str),
-                format="%Y/%m/%d",
-            )
-            df_discharge = df_discharge.set_index("date")
-            # normalize discharge from cubic feet per second to mm per day
-            df_discharge.QObs = (
-                    28316846.592 * df_discharge.QObs * 86400 / (area * 10 ** 6)
-            )
             df_forcing = df_forcing.drop(columns=["Year", "Mnth", "Day"])
-            df_discharge = df_discharge.drop(columns=["Year", "Mnth", "Day"])
-            df_dynamic_data = df_forcing.join(df_discharge, on="date")
+            df_discharge = self.read_discharge_data(station_id)
+            df_dynamic_data = df_forcing.merge(df_discharge, on="date")
             df_dynamic_data.columns = map(str.lower, df_dynamic_data.columns)
             df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
+            df_dynamic_data = df_dynamic_data.set_index("date")
 
             y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
             X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
@@ -326,7 +394,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
             y_data = y_data.reshape(-1, 1)
             static_attrib_station = (
-                (self.df_attr[self.df_attr.index == station_id])
+                (self.df_attr[self.df_attr["gauge_id"] == station_id])
                 .to_numpy()
                 .reshape(1, -1)
             )
@@ -349,7 +417,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[
-            self.list_dynamic_attributes_names + [self.discharge_str]
+            self.list_dynamic_attributes_names + [self.discharge_str, "date"]
             ].copy()
         df_dynamic_data[self.list_dynamic_attributes_names] = df_dynamic_data[
             self.list_dynamic_attributes_names
@@ -366,6 +434,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         end_date = self.train_end_date if self.stage == "train" else self.test_end_date
         end_date = datetime.strptime(end_date, "%d/%m/%Y")
         df_dynamic_data = df_dynamic_data[
-            (df_dynamic_data.index >= start_date) & (df_dynamic_data.index <= end_date)
+            (df_dynamic_data["date"] >= start_date) & (df_dynamic_data["date"] <= end_date)
             ]
         return df_dynamic_data
