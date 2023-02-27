@@ -148,8 +148,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         y_data = df_dis_data_filtered[self.discharge_str].to_numpy().flatten()
         y_data = y_data.reshape(-1, 1)
         static_attrib_station = (
-            (self.df_attr[self.df_attr["gauge_id"] == station_id])
-            .drop("gauge_id", axis=1)
+            (self.df_attr[self.df_attr.index == station_id])
             .to_numpy()
             .reshape(1, -1)
         )
@@ -200,15 +199,16 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         dfs = []
         for txt_file in txt_files:
             df_temp = pd.read_csv(txt_file, sep=";", header=0, dtype={"gauge_id": str})
+            df_temp = df_temp.set_index("gauge_id")
             dfs.append(df_temp)
-        df = pd.concat(dfs)
+        df = pd.concat(dfs, axis=1)
         if limit_size_above_1000:
             df = df[df["basin_area"] >= 1000]
         # convert huc column to double-digit strings
         df["huc"] = df["huc_02"].apply(lambda x: str(x).zfill(2))
         df = df.drop("huc_02", axis=1)
-        df = df[self.list_static_attributes_names + ["gauge_id"]]
-        return df, df["gauge_id"].to_list()
+        df = df[self.list_static_attributes_names]
+        return df, df.index.tolist()
 
     def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
                                     create_new_files):
@@ -242,8 +242,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn"):
-                    if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial__{station_id}.nc"):
-                        continue
+                    # if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial__{station_id}.nc"):
+                    #     continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
@@ -393,8 +393,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 return np.array([]), np.array([]), np.array([])
             X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
             y_data = y_data.reshape(-1, 1)
+            df_only_selected_attrib = self.df_attr[self.list_static_attributes_names]
             static_attrib_station = (
-                (self.df_attr[self.df_attr["gauge_id"] == station_id])
+                (df_only_selected_attrib[df_only_selected_attrib.index == station_id])
                 .to_numpy()
                 .reshape(1, -1)
             )
