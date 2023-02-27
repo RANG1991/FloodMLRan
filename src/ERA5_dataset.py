@@ -191,9 +191,9 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                                    / f"{country_abbreviation}_{station_id}.csv")
                 and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
                 and (not os.path.exists(
-                    f"{self.main_folder}/pickled_basins_data/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
+                    f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
-                            f"{self.main_folder}/pickled_basins_data/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}"),
+                            f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}"),
                              station_id not in self.x_mean_dict,
                              station_id not in self.x_std_dict,
                              station_id not in self.y_mean_dict,
@@ -215,9 +215,9 @@ class Dataset_ERA5(FloodML_Base_Dataset):
     def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
                                     create_new_files):
         if os.path.exists(
-                f"{self.main_folder}/pickled_basins_data/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
             obj_text = codecs.open(
-                f"{self.main_folder}/pickled_basins_data/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'r',
                 encoding='utf-8').read()
             json_obj = json.loads(obj_text)
@@ -308,7 +308,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
         std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
         with codecs.open(
-                f"{self.main_folder}/pickled_basins_data/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'w',
                 encoding='utf-8') as json_file:
             json_obj = {

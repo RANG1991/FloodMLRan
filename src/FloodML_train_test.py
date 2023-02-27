@@ -318,6 +318,7 @@ def prepare_datasets(
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
+            main_folder=CAMELS_dataset.MAIN_FOLDER,
             dynamic_data_folder=dynamic_data_folder,
             static_data_folder=static_data_folder,
             discharge_data_folder=discharge_data_folder,
@@ -331,12 +332,14 @@ def prepare_datasets(
             test_end_date="30/09/1999",
             stage="train",
             specific_model_type=specific_model_type,
+            sequence_length_spatial=sequence_length_spatial,
             create_new_files=create_new_files,
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
         )
         test_data = CAMELS_dataset.Dataset_CAMELS(
+            main_folder=CAMELS_dataset.MAIN_FOLDER,
             dynamic_data_folder=dynamic_data_folder,
             static_data_folder=static_data_folder,
             dynamic_attributes_names=dynamic_attributes_names,
@@ -350,6 +353,7 @@ def prepare_datasets(
             test_end_date="30/09/1999",
             stage="validation",
             specific_model_type=specific_model_type,
+            sequence_length_spatial=sequence_length_spatial,
             create_new_files=create_new_files,
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,

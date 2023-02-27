@@ -56,22 +56,16 @@ DYNAMIC_ATTRIBUTES_NAMES = [
 ]
 
 DISCHARGE_STR = "qobs"
+
 DYNAMIC_DATA_FOLDER = "../data/CAMELS_US/basin_mean_forcing"
+
 STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
+
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
+
 DYNAMIC_DATA_FOLDER_SPATIAL = ""
 
-FOLDER_WITH_BASINS_PICKLES = "../data/CAMELS_US/pickled_basins_data"
-
-JSON_FILE_MEAN_STD_COUNT = f"{FOLDER_WITH_BASINS_PICKLES}/mean_std_count_of_data.json"
-
-X_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_mean_dict.pkl"
-
-X_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_std_dict.pkl"
-
-Y_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_mean_dict.pkl"
-
-Y_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_std_dict.pkl"
+MAIN_FOLDER = "../data/CAMELS_US/"
 
 
 class Dataset_CAMELS(FloodML_Base_Dataset):
@@ -101,6 +95,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             y_mean=None,
             y_std=None,
             limit_size_above_1000=False):
+        self.discharge_data_folder = discharge_data_folder
         super().__init__(
             main_folder,
             dynamic_data_folder,
@@ -129,9 +124,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_station_ids
                 and (not os.path.exists(
-                    f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
+                    f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
-                            f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}"),
+                            f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}"),
                              station_id not in self.x_mean_dict,
                              station_id not in self.x_std_dict,
                              station_id not in self.y_mean_dict,
@@ -218,9 +213,12 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
     def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
                                     create_new_files):
-        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
-            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'r',
-                                   encoding='utf-8').read()
+        if os.path.exists(
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
+            obj_text = codecs.open(
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
+                'r',
+                encoding='utf-8').read()
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
@@ -261,7 +259,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
-        with codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}", 'w',
+        with codecs.open(f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}", 'w',
                          encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),

@@ -39,19 +39,21 @@ class FloodML_Base_Dataset(Dataset):
                  y_std=None,
                  create_new_files=False,
                  limit_size_above_1000=False):
-        self.limit_size_above_1000 = limit_size_above_1000
-        self.list_stations_static = []
         self.main_folder = main_folder
+        self.limit_size_above_1000 = limit_size_above_1000
+        self.folder_with_basins_pickles = f"{main_folder}/pickled_basins_data"
+        self.list_stations_static = []
         self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
         self.x_mean_dict = self.read_pickle_if_exists(
-            f"{main_folder}/pickled_basins_data/x_mean_dict.pkl{self.suffix_pickle_file}")
-        self.x_std_dict = self.read_pickle_if_exists(f"{main_folder}/x_std_dict.pkl{self.suffix_pickle_file}")
+            f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}")
+        self.x_std_dict = self.read_pickle_if_exists(
+            f"{self.folder_with_basins_pickles}/x_std_dict.pkl{self.suffix_pickle_file}")
         self.x_means = x_means if x_means is not None else None
         self.x_stds = x_stds if x_stds is not None else None
         self.y_mean_dict = self.read_pickle_if_exists(
-            f"{main_folder}/pickled_basins_data/y_mean_dict.pkl{self.suffix_pickle_file}")
+            f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}")
         self.y_std_dict = self.read_pickle_if_exists(
-            f"{main_folder}/pickled_basins_data/y_std_dict.pkl{self.suffix_pickle_file}")
+            f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}")
         self.y_mean = y_mean if y_mean is not None else None
         self.y_std = y_std if y_std is not None else None
         self.sequence_length = sequence_length
@@ -73,8 +75,7 @@ class FloodML_Base_Dataset(Dataset):
         (self.df_attr,
          self.list_stations_static
          ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
-        # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
-        self.all_station_ids = self.list_stations_static
+        self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
         (max_width,
          max_height,
          basin_id_with_maximum_width,
@@ -96,18 +97,17 @@ class FloodML_Base_Dataset(Dataset):
                                               specific_model_type=self.specific_model_type,
                                               max_width=self.max_width, max_height=self.max_height,
                                               create_new_files=self.create_new_files)
-
         self.save_pickle_if_not_exists(
-            f"{self.main_folder}/pickled_basins_data/x_mean_dict.pkl{self.suffix_pickle_file}", self.x_mean_dict,
+            f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}", self.x_mean_dict,
             force=True)
         self.save_pickle_if_not_exists(
-            f"{self.main_folder}/pickled_basins_data/x_std_dict.pkl{self.suffix_pickle_file}", self.x_std_dict,
+            f"{self.folder_with_basins_pickles}/x_std_dict.pkl{self.suffix_pickle_file}", self.x_std_dict,
             force=True)
         self.save_pickle_if_not_exists(
-            f"{self.main_folder}/pickled_basins_data/y_mean_dict.pkl{self.suffix_pickle_file}", self.y_mean_dict,
+            f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}", self.y_mean_dict,
             force=True)
         self.save_pickle_if_not_exists(
-            f"{self.main_folder}/pickled_basins_data/y_std_dict.pkl{self.suffix_pickle_file}", self.y_std_dict,
+            f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}", self.y_std_dict,
             force=True)
 
         self.y_mean = y_mean if self.stage == "train" else self.y_mean
@@ -155,7 +155,7 @@ class FloodML_Base_Dataset(Dataset):
                     del current_x_data
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                        "x_data_spatial": current_x_data_spatial}
-                with open(f"{self.main_folder}/pickled_basins_data/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
+                with open(f"{self.folder_with_basins_pickles}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
                           'wb') as f:
                     pickle.dump(dict_curr_basin, f)
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
@@ -215,7 +215,7 @@ class FloodML_Base_Dataset(Dataset):
 
     def __getitem__(self, index) -> T_co:
         basin_id, inner_ind = self.lookup_table[index]
-        with open(f"{self.main_folder}/pickled_basins_data/{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl",
+        with open(f"{self.folder_with_basins_pickles}/{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl",
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
         X_data_tensor_spatial = torch.tensor([])
@@ -281,7 +281,7 @@ class FloodML_Base_Dataset(Dataset):
     def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
         for basin_id in self.all_station_ids:
-            file_name = join(f"{self.main_folder}/pickled_basins_data/",
+            file_name = join(f"{self.folder_with_basins_pickles}/",
                              f"{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl")
             if os.path.exists(file_name):
                 with open(file_name, "rb") as f:
