@@ -269,7 +269,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 "count_of_samples": count_of_samples
             }
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, -1, -1
 
     def read_single_station_dynamic_and_discharge_file(self, station_id):
         if station_id not in self.all_station_ids:
