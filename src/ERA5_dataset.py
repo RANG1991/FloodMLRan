@@ -168,9 +168,9 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         df_attr = df_attr.dropna()
         if limit_size_above_1000:
             df_attr = df_attr[df_attr["basin_area"] >= 1000]
-        # self.list_static_attributes_names = df_attr.columns.to_list()
-        # if "gauge_id" in self.list_static_attributes_names:
-        #     self.list_static_attributes_names.remove("gauge_id")
+        self.list_static_attributes_names = df_attr.columns.to_list()
+        if "gauge_id" in self.list_static_attributes_names:
+            self.list_static_attributes_names.remove("gauge_id")
         df_attr = df_attr[["gauge_id"] + self.list_static_attributes_names]
         # maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
         # mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
