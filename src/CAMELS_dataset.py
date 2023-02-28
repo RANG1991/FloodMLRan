@@ -242,8 +242,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn"):
-                    # if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial__{station_id}.nc"):
-                    #     continue
+                    if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial__{station_id}.nc"):
+                        continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
                     if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
