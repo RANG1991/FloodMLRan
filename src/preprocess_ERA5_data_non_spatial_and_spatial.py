@@ -203,7 +203,7 @@ def parse_single_basin_precipitation(
     list_of_total_precipitations_all_years = []
     started_reading_data = False
     for year in range(1981, 2001):
-        print(f"parsing year: {year} of basin: {station_id}")
+        print(f"parsing year: {year} of basin: {station_id}", flush=True)
         for month in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]:
             fn = f"{ERA5_data_folder_name}/tp_ALL_{year}_{month}.nc"
             try:
@@ -381,12 +381,12 @@ def check(ERA5_static_data_file_name, station_id, country_abbreviation):
 def run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
                                     ERA5_percip_data_folder_name, ERA5_static_data_file_name,
                                     output_folder_name, country_abbreviation):
-    print(f"working on basin with id: {station_id}")
+    print(f"working on basin with id: {station_id}", flush=True)
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["gauge_id"] == station_id]
     gdf = basin_data["geometry"].to_crs({'proj': 'cea'})
     if (gdf.area.values[0] / 10 ** 6) < 1000:
-        print(f"basin with id: {station_id} has area smaller than 1000, returning")
+        print(f"basin with id: {station_id} has area smaller than 1000, returning", flush=True)
         return
     # try:
     #     parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
@@ -406,7 +406,7 @@ def run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data
             country_abbreviation
         )
     except Exception as e:
-        print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
+        print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}", flush=True)
 
 
 def main(use_multiprocessing=True):
@@ -433,7 +433,7 @@ def main(use_multiprocessing=True):
                 }
                 for future in concurrent.futures.as_completed(future_to_station_id):
                     station_id = future_to_station_id[future]
-                    print(f"finished with station id: {station_id}")
+                    print(f"finished with station id: {station_id}", flush=True)
         else:
             for station_id in station_ids_list:
                 run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
@@ -442,4 +442,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main(False)
+    main()
