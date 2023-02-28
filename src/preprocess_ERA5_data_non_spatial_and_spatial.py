@@ -126,7 +126,8 @@ def create_and_write_precipitation_spatial(
     )
     basin_static_data = df_static_data[df_static_data["gauge_id"] == str(station_id)]
     ds = ds.resample(datetime="1D").sum()
-    ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(country_abbreviation, "") + ".nc")
+    ds.to_netcdf(
+        path=output_folder_name + "/precip24_spatial_" + station_id.replace(f"{country_abbreviation}_", "") + ".nc")
 
 
 def create_and_write_precipitation_mean(datetimes, ls,
