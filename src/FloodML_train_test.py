@@ -530,7 +530,8 @@ def run_training_and_test(
                                    image_height=training_data.max_dim)
     elif model_name.lower() == "lstm":
         model = LSTM(
-            input_dim=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
+            num_static_attr=len(training_data.list_static_attributes_names),
+            num_dynamic_attr=len(dynamic_attributes_names),
             hidden_dim=num_hidden_units,
             dropout=dropout)
     elif model_name.lower() == "cnn_lstm":
