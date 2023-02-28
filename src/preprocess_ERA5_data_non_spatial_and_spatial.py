@@ -381,9 +381,13 @@ def check(ERA5_static_data_file_name, station_id, country_abbreviation):
 def run_processing_for_single_basin(station_id, basins_data, ERA5_discharge_data_folder_name,
                                     ERA5_percip_data_folder_name, ERA5_static_data_file_name,
                                     output_folder_name, country_abbreviation):
-    print(f"working on station with id: {station_id}")
+    print(f"working on basin with id: {station_id}")
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["gauge_id"] == station_id]
+    gdf = basin_data["geometry"].to_crs({'proj': 'cea'})
+    if (gdf.area.values[0] / 10 ** 6) < 1000:
+        print(f"basin with id: {station_id} has area smaller than 1000, returning")
+        return
     # try:
     #     parse_single_basin_discharge(station_id, basin_data, ERA5_discharge_data_folder_name)
     # except Exception as e:
@@ -438,4 +442,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main()
+    main(False)
