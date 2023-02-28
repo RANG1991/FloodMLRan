@@ -1,6 +1,5 @@
 import netCDF4 as nc
 import geopandas as gpd
-from climata.usgs import InstantValueIO
 import pandas as pd
 import numpy as np
 import datetime
@@ -8,7 +7,6 @@ from shapely.geometry import Point
 from pathlib import Path
 import xarray as xr
 import concurrent.futures
-import pytz
 
 PATH_ROOT = "../../FloodMLRan/data/ERA5"
 COUNTRY_ABBREVIATIONS = ["au", "br", "ca", "cl", "gb", "lamah"]
@@ -203,7 +201,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1981, 1993):
+    for year in range(1981, 2001):
         print(f"parsing year: {year} of basin: {station_id}")
         for month in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]:
             fn = f"{ERA5_data_folder_name}/tp_ALL_{year}_{month}.nc"
@@ -421,7 +419,7 @@ def main(use_multiprocessing=True):
         basins_data = gpd.read_file(boundaries_file_name)
         station_ids_list = basins_data["gauge_id"].tolist()
         if use_multiprocessing:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
                 future_to_station_id = {
                     executor.submit(run_processing_for_single_basin, station_id, basins_data,
                                     ERA5_discharge_data_folder_name, ERA5_percip_data_folder_name,
