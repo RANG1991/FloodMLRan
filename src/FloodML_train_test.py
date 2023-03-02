@@ -263,7 +263,8 @@ def prepare_datasets(
         sequence_length_spatial,
         create_box_plots=False,
         create_new_files=False,
-        limit_size_above_1000=False
+        limit_size_above_1000=False,
+        use_all_static_attr=False
 ):
     print(f"running with dataset: {dataset_to_use}")
     if dataset_to_use == "ERA5" or dataset_to_use == "CARAVAN":
@@ -288,7 +289,8 @@ def prepare_datasets(
             use_Caravan_dataset=use_Caravan_dataset,
             create_new_files=create_new_files,
             sequence_length_spatial=sequence_length_spatial,
-            limit_size_above_1000=limit_size_above_1000
+            limit_size_above_1000=limit_size_above_1000,
+            use_all_static_attr=use_all_static_attr
         )
         test_data = ERA5_dataset.Dataset_ERA5(
             main_folder=ERA5_dataset.MAIN_FOLDER,
@@ -314,7 +316,8 @@ def prepare_datasets(
             x_stds=training_data.x_stds,
             create_new_files=create_new_files,
             sequence_length_spatial=sequence_length_spatial,
-            limit_size_above_1000=limit_size_above_1000
+            limit_size_above_1000=limit_size_above_1000,
+            use_all_static_attr=use_all_static_attr
         )
     elif dataset_to_use == "CAMELS":
         training_data = CAMELS_dataset.Dataset_CAMELS(
@@ -337,6 +340,7 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
+            use_all_static_attr=use_all_static_attr
         )
         test_data = CAMELS_dataset.Dataset_CAMELS(
             main_folder=CAMELS_dataset.MAIN_FOLDER,
@@ -362,6 +366,7 @@ def prepare_datasets(
             y_mean=training_data.y_mean,
             x_means=training_data.x_means,
             x_stds=training_data.x_stds,
+            use_all_static_attr=use_all_static_attr
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")
@@ -410,7 +415,8 @@ def run_single_parameters_check_with_val_on_years(
         create_new_files,
         sequence_length_spatial,
         print_tqdm_to_console,
-        limit_size_above_1000
+        limit_size_above_1000,
+        use_all_static_attr
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
@@ -430,7 +436,8 @@ def run_single_parameters_check_with_val_on_years(
         sequence_length_spatial=sequence_length_spatial,
         specific_model_type=specific_model_type,
         create_new_files=create_new_files,
-        limit_size_above_1000=limit_size_above_1000
+        limit_size_above_1000=limit_size_above_1000,
+        use_all_static_attr=use_all_static_attr
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
@@ -612,7 +619,8 @@ def choose_hyper_parameters_validation(
         create_new_files,
         sequence_length_spatial,
         print_tqdm_to_console,
-        limit_size_above_1000
+        limit_size_above_1000,
+        use_all_static_attr
 ):
     train_stations_list = []
     val_stations_list = []
@@ -685,7 +693,8 @@ def choose_hyper_parameters_validation(
             create_new_files=create_new_files,
             sequence_length_spatial=sequence_length_spatial,
             print_tqdm_to_console=print_tqdm_to_console,
-            limit_size_above_1000=limit_size_above_1000
+            limit_size_above_1000=limit_size_above_1000,
+            use_all_static_attr=use_all_static_attr
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -779,10 +788,12 @@ def main():
     parser.add_argument("--create_new_files", action="store_true")
     parser.add_argument("--print_tqdm_to_console", action="store_true")
     parser.add_argument("--limit_size_above_1000", action="store_true")
+    parser.add_argument("--use_all_static_attr", action="store_true")
     parser.set_defaults(profile_code=False)
     parser.set_defaults(create_new_files=False)
     parser.set_defaults(print_tqdm_to_console=False)
     parser.set_defaults(limit_size_above_1000=False)
+    parser.set_defaults(use_all_static_attr=False)
     command_args = parser.parse_args()
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
@@ -804,7 +815,8 @@ def main():
             create_new_files=command_args.create_new_files,
             sequence_length_spatial=command_args.sequence_length_spatial,
             print_tqdm_to_console=command_args.print_tqdm_to_console,
-            limit_size_above_1000=command_args.limit_size_above_1000
+            limit_size_above_1000=command_args.limit_size_above_1000,
+            use_all_static_attr=command_args.use_all_static_attr
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
@@ -826,7 +838,8 @@ def main():
             create_new_files=command_args.create_new_files,
             sequence_length_spatial=command_args.sequence_length_spatial,
             print_tqdm_to_console=command_args.print_tqdm_to_console,
-            limit_size_above_1000=command_args.limit_size_above_1000
+            limit_size_above_1000=command_args.limit_size_above_1000,
+            use_all_static_attr=command_args.use_all_static_attr
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")

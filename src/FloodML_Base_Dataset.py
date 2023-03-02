@@ -38,9 +38,11 @@ class FloodML_Base_Dataset(Dataset):
                  y_mean=None,
                  y_std=None,
                  create_new_files=False,
-                 limit_size_above_1000=False):
+                 limit_size_above_1000=False,
+                 use_all_static_attr=False):
         self.main_folder = main_folder
         self.limit_size_above_1000 = limit_size_above_1000
+        self.use_all_static_attr = use_all_static_attr
         self.folder_with_basins_pickles = f"{main_folder}/pickled_basins_data"
         self.list_stations_static = []
         self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"

@@ -94,7 +94,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             x_stds=None,
             y_mean=None,
             y_std=None,
-            limit_size_above_1000=False):
+            limit_size_above_1000=False,
+            use_all_static_attr=False):
         self.discharge_data_folder = discharge_data_folder
         super().__init__(
             main_folder,
@@ -119,7 +120,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             y_mean,
             y_std,
             create_new_files,
-            limit_size_above_1000)
+            limit_size_above_1000,
+            use_all_static_attr)
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_station_ids

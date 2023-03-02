@@ -120,7 +120,9 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             y_std=None,
             use_Caravan_dataset=True,
             create_new_files=False,
-            limit_size_above_1000=False):
+            limit_size_above_1000=False,
+            use_all_static_attr=False
+    ):
         self.countries_abbreviations_stations_dict = {}
         self.countries_abbreviations = ["au", "br", "ca", "cl", "gb", "lamah", "us"]
         self.use_Caravan_dataset = use_Caravan_dataset
@@ -147,7 +149,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             y_mean,
             y_std,
             create_new_files,
-            limit_size_above_1000)
+            limit_size_above_1000,
+            use_all_static_attr)
 
     def read_static_attributes_single_country(self, country_abbreviation, countries_abbreviations_stations_dict,
                                               limit_size_above_1000=False):
@@ -168,9 +171,10 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         df_attr = df_attr.dropna()
         if limit_size_above_1000:
             df_attr = df_attr[df_attr["basin_area"] >= 1000]
-        self.list_static_attributes_names = df_attr.columns.to_list()
-        if "gauge_id" in self.list_static_attributes_names:
-            self.list_static_attributes_names.remove("gauge_id")
+        if self.use_all_static_attr:
+            self.list_static_attributes_names = df_attr.columns.to_list()
+            if "gauge_id" in self.list_static_attributes_names:
+                self.list_static_attributes_names.remove("gauge_id")
         df_attr = df_attr[["gauge_id"] + self.list_static_attributes_names]
         # maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
         # mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
