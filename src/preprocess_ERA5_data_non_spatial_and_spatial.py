@@ -174,6 +174,12 @@ def parse_single_basin_precipitation(
     max_lon = np.squeeze(np.ceil(bounds["maxx"].values * 10) / 10)
     max_lat = np.squeeze(np.ceil(bounds["maxy"].values * 10) / 10)
 
+    if min_lon < 0:
+        min_lon += 360
+
+    if max_lon < 0:
+        max_lon += 360
+
     # fn = discharge_folder_name + "/timezone_" + station_id + ".txt"
     # with open(fn, "r") as f:
     #     lines = f.readlines()
@@ -202,7 +208,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1988, 2010):
+    for year in range(1988, 2008):
         print(f"parsing year: {year} of basin: {station_id}", flush=True)
         for month in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]:
             fn = f"{ERA5_data_folder_name}/tp_ALL_{year}_{month}.nc"
