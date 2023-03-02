@@ -424,7 +424,7 @@ def main(use_multiprocessing=True):
         basins_data = gpd.read_file(boundaries_file_name)
         station_ids_list = basins_data["gauge_id"].tolist()
         if use_multiprocessing:
-            with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=20) as executor:
                 future_to_station_id = {
                     executor.submit(run_processing_for_single_basin, station_id, basins_data,
                                     ERA5_discharge_data_folder_name, ERA5_percip_data_folder_name,
