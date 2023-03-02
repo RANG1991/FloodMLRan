@@ -235,6 +235,11 @@ def parse_single_basin_precipitation(
             tp[:, :, :] = tp[:, :, :] * 1000
             # zero out any precipitation that is less than 0
             tp[tp < 0] = 0
+
+            if np.count_nonzero(tp) == 0:
+                print(f"in basin with ID: {station_id} the total precipitation in "
+                      f"year: {year} and month: {month} equals to zero")
+
             # ti is an array containing the dates as the number of
             # hours since 1900-01-01 00:00 so this is the starting date
             starting_date = datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M")
