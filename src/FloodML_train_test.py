@@ -563,7 +563,7 @@ def run_training_and_test(
     # config.wandb = True
     # wandb.watch(model)
     train_dataloader = DataLoader(training_data, batch_size=256, num_workers=num_workers_data_loader, shuffle=True)
-    test_dataloader = DataLoader(test_data, batch_size=256, num_workers=0)
+    test_dataloader = DataLoader(test_data, batch_size=256, num_workers=num_workers_data_loader)
     if profile_code:
         p = profile(
             activities=[ProfilerActivity.CUDA],
