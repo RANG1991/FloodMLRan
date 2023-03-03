@@ -32,8 +32,8 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
     def forward(self, x_non_spatial, x_spatial):
-        x_d = x_non_spatial[:, :, :self.num_dynamic_attributes]
-        x_s = x_non_spatial[:, :, -self.num_static_attributes:]
+        x_d = x_non_spatial[:, :, :self.num_dynamic_attr]
+        x_s = x_non_spatial[:, :, -self.num_static_attr:]
         x_s = self.embedding(x_s)
         x_non_spatial = torch.cat([x_d, x_s], axis=-1)
         _, (h_n, c_n) = self.lstm(x_non_spatial[:, :-self.sequence_length_cnn_lstm, :])
