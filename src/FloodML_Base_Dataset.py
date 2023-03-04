@@ -79,6 +79,7 @@ class FloodML_Base_Dataset(Dataset):
          ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
         # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
         self.all_station_ids = self.list_stations_static
+        self.all_station_ids.remove("05LB002")
         (max_width,
          max_height,
          basin_id_with_maximum_width,

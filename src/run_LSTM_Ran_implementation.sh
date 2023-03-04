@@ -2,7 +2,7 @@
 
 # Change number of tasks, amount of memory and time limit according to your needs
 
-#SBATCH -n 10
+#SBATCH -n 20
 #SBATCH --time=50:0:0
 #SBATCH --mem=160G
 #SBATCH --gres gpu:a30:1
@@ -19,7 +19,7 @@ source $virtual_env
 for i in 1 2 3 4 5
 do
   echo "run number: $i"
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CNN_LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 7 --limit_size_above_1000 --num_workers_data_loader 10 --create_new_files --use_all_static_attr
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 7 --limit_size_above_1000 --num_workers_data_loader 10 --create_new_files --use_all_static_attr
+  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CNN_LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 14 --limit_size_above_1000 --num_workers_data_loader 20 --create_new_files --use_all_static_attr
+  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 14 --limit_size_above_1000 --num_workers_data_loader 20 --create_new_files --use_all_static_attr
 #  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CONV_LSTM --dataset CARAVAN --optim Adam --num_epochs 15 --sequence_length_spatial 7 --limit_size_above_1000
 done
