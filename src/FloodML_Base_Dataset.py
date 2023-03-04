@@ -12,6 +12,36 @@ from glob import glob
 
 matplotlib.use("AGG")
 
+STATIONS_WITH_ERRORS = ['02BA002',
+                        '02QC001',
+                        '02YS001',
+                        '04FA002',
+                        '05DB003',
+                        '05EE003',
+                        '05EF005',
+                        '05FA018',
+                        '05FD005',
+                        '05KF001',
+                        '05LB002',
+                        '05MH004',
+                        '05RA001',
+                        '07AB002',
+                        '07BB003',
+                        '07FD008',
+                        '07LC002',
+                        '08CG003',
+                        '08DD001',
+                        '08GD005',
+                        '08GD007',
+                        '08KG003',
+                        '08LA004',
+                        '08NE001',
+                        '08NG046',
+                        '08NN022',
+                        '09AE004',
+                        '10AC003',
+                        '10AC004']
+
 
 class FloodML_Base_Dataset(Dataset):
 
@@ -78,8 +108,8 @@ class FloodML_Base_Dataset(Dataset):
          self.list_stations_static
          ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
         # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
-        self.all_station_ids = self.list_stations_static
-        self.all_station_ids.remove("05LB002")
+        self.all_station_ids = [station_id for station_id in self.list_stations_static if station_id not in
+                                STATIONS_WITH_ERRORS]
         (max_width,
          max_height,
          basin_id_with_maximum_width,
