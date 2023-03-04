@@ -546,8 +546,7 @@ def run_training_and_test(
             input_dim=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
             image_height=training_data.max_dim, image_width=training_data.max_dim,
             hidden_dim=num_hidden_units, sequence_length_conv_lstm=sequence_length_spatial,
-            in_cnn_channels=1,
-            dropout=dropout,
+            in_cnn_channels=1, dropout=dropout,
             num_static_attributes=len(training_data.list_static_attributes_names),
             num_dynamic_attributes=len(dynamic_attributes_names))
     else:
@@ -638,7 +637,7 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
     dropout_rates = [0.4]
     sequence_lengths = [270]
     if model_name.lower() == "transformer_lstm":

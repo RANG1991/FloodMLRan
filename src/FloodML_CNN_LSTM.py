@@ -19,8 +19,8 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = self.initial_num_channels * 2
-        self.channels_out_conv_2 = self.initial_num_channels * 4
+        self.channels_out_conv_1 = 4
+        self.channels_out_conv_2 = 8
         self.filter_size_conv = 3
         self.stride_size_conv = 1
         self.filter_size_pool = 2
@@ -40,13 +40,12 @@ class CNN(nn.Module):
         size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels)
         self.size_for_fc = int(size_for_fc)
         self.fc = nn.Linear(self.size_for_fc, output_size_cnn)
-        self.dropout = torch.nn.Dropout(0.4)
 
     def forward(self, x):
         for layer in self.conv_layers:
             x = layer(x)
         x = x.view(-1, self.size_for_fc)
-        x = self.fc(self.dropout(x))
+        x = self.fc(x)
         return x
 
     @staticmethod
@@ -102,7 +101,7 @@ class CNN_LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
-        input_size = 32
+        input_size = 10
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size)
         self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,
