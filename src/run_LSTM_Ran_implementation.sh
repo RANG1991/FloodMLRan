@@ -16,10 +16,10 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 source $virtual_env
 # module load cuda/11.2
 
-for i in 1 2
+for i in 1 2 3
 do
   echo "run number: $i"
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CNN_LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 14 --limit_size_above_1000 --num_workers_data_loader 20 --create_new_files --use_all_static_attr
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 14 --limit_size_above_1000 --num_workers_data_loader 20 --create_new_files --use_all_static_attr
+  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CNN_LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 14 --limit_size_above_1000 --num_workers_data_loader 10 --create_new_files --use_all_static_attr
+  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CARAVAN --optim Adam --num_epochs 10 --sequence_length_spatial 14 --limit_size_above_1000 --num_workers_data_loader 10 --create_new_files --use_all_static_attr
 #  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CONV_LSTM --dataset CARAVAN --optim Adam --num_epochs 15 --sequence_length_spatial 7 --limit_size_above_1000
 done
