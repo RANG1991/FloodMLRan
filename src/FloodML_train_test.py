@@ -580,7 +580,8 @@ def run_training_and_test(
                                              print_tqdm_to_console=print_tqdm_to_console,
                                              specific_model_type=specific_model_type)
         if model_name.lower() == "cnn_lstm":
-            print(f"the number of 'images is: {model.cnn_lstm.number_of_images_counter}")
+            print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
+            model.cnn_lstm.number_of_images_counter = 0
         if profile_code:
             p.step()
         list_training_loss_single_pass.append(((i + 1), loss_on_training_epoch))
