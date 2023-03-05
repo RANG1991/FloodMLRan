@@ -109,6 +109,7 @@ class CNN_LSTM(nn.Module):
                             batch_first=True)
         self.dropout = nn.Dropout(p=self.dropout_rate)
         self.fc = nn.Linear(in_features=self.hidden_size, out_features=1)
+        self.number_of_images_counter = 0
 
     def forward(self, x_non_spatial, x_spatial, h_n, c_n) -> torch.Tensor:
         """
@@ -119,6 +120,7 @@ class CNN_LSTM(nn.Module):
         """
         batch_size, time_steps, _ = x_non_spatial.size()
         c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.lat, self.lon)
+        self.number_of_images_counter += (batch_size * time_steps)
         # CNN part
         c_out = self.cnn(c_in)
         # CNN output should be in the size of (input size - attributes_size)

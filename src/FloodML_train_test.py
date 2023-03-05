@@ -575,16 +575,16 @@ def run_training_and_test(
     list_training_loss_single_pass = []
     nse_list_last_pass = []
     for i in range(num_epochs):
-        train_dataloader.dataset.inner_index_in_data_of_basin = 0
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device="cuda",
                                              print_tqdm_to_console=print_tqdm_to_console,
                                              specific_model_type=specific_model_type)
+        if model_name.lower() == "cnn_lstm":
+            print(f"the number of 'images is: {model.cnn_lstm.number_of_images_counter}")
         if profile_code:
             p.step()
         list_training_loss_single_pass.append(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            test_dataloader.dataset.inner_index_in_data_of_basin = 0
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device="cuda", epoch=(i + 1),
                                                   print_tqdm_to_console=print_tqdm_to_console,
                                                   specific_model_type=specific_model_type)
@@ -637,7 +637,7 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4]
     sequence_lengths = [270]
     if model_name.lower() == "transformer_lstm":
