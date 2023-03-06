@@ -259,9 +259,13 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                     max_dim = max(max_width, max_height)
                     X_data_spatial_list = []
                     for i in range(X_data_spatial.shape[0]):
-                        X_data_spatial_list.append(
-                            np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (max_dim, max_dim),
-                                                      interpolation=cv2.INTER_LINEAR), axis=0))
+                        try:
+                            X_data_spatial_list.append(
+                                np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (max_dim, max_dim),
+                                                          interpolation=cv2.INTER_LINEAR), axis=0))
+                        except Exception:
+                            X_data_spatial_list.append(
+                                self.crop_or_pad_precip_spatial(X_data_spatial[i, :, :], max_dim, max_dim))
                     X_data_spatial = np.concatenate(X_data_spatial_list)
                     # X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
                     gray_image = X_data_spatial.reshape((X_data_spatial.shape[0], max_dim, max_dim)).sum(axis=0)
