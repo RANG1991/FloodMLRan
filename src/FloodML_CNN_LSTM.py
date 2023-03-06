@@ -21,7 +21,7 @@ class CNN(nn.Module):
         self.initial_input_size = image_input_size
         self.channels_out_conv_1 = 4
         self.channels_out_conv_2 = 8
-        self.filter_size_conv = 3
+        self.filter_size_conv = 2
         self.stride_size_conv = 1
         self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
@@ -120,6 +120,7 @@ class CNN_LSTM(nn.Module):
         """
         batch_size, time_steps, _ = x_non_spatial.size()
         c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.lat, self.lon)
+        # c_in = torch.zeros_like(c_in)
         self.number_of_images_counter += (batch_size * time_steps)
         # CNN part
         c_out = self.cnn(c_in)

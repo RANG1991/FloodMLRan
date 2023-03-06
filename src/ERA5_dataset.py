@@ -18,6 +18,7 @@ matplotlib.use("AGG")
 import netCDF4 as nc
 import matplotlib.pyplot as plt
 import xarray as xr
+import cv2
 
 ATTRIBUTES_TO_TEXT_DESC = {
     "p_mean": "Mean daily precipitation",
@@ -256,9 +257,14 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                         del y_data
                         continue
                     max_dim = max(max_width, max_height)
-                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
-                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).sum(
-                        axis=0)
+                    X_data_spatial_list = []
+                    for i in range(X_data_spatial.shape[0]):
+                        X_data_spatial_list.append(
+                            np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (max_dim, max_dim),
+                                                      interpolation=cv2.INTER_LINEAR), axis=0))
+                    X_data_spatial = np.concatenate(X_data_spatial_list)
+                    # X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
+                    gray_image = X_data_spatial.reshape((X_data_spatial.shape[0], max_dim, max_dim)).sum(axis=0)
                     plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
                                gray_image)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
