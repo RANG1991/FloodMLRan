@@ -9,6 +9,7 @@ import pickle
 from os.path import join
 import csv
 from glob import glob
+from pathlib import Path
 
 matplotlib.use("AGG")
 
@@ -349,7 +350,7 @@ class FloodML_Base_Dataset(Dataset):
         basin_id_with_maximum_width = -1
         file_names = glob(f"{shape_files_folder}/shape_*.csv")
         for file_name in file_names:
-            basin_id = file_name.replace(f"{shape_files_folder}/shape", "").replace("_", "").strip(".csv")
+            basin_id = Path(file_name).name.replace(f"shape_", "").replace("_", "").strip(".csv")
             if basin_id in basins_ids and self.check_is_valid_station_id(station_id=basin_id, create_new_files=True):
                 with open(file_name, newline="\n") as csvfile:
                     shape_file_reader = csv.reader(csvfile, delimiter=",")
