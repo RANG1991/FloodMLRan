@@ -120,7 +120,7 @@ class FloodML_Base_Dataset(Dataset):
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max_width
         self.max_height = max_height
-        self.max_dim = max(self.max_height, self.max_width)
+        self.max_dim = 32
         (dict_station_id_to_data,
          x_means,
          x_stds,
