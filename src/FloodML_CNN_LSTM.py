@@ -42,11 +42,11 @@ class CNN(nn.Module):
                             kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
             torch.nn.BatchNorm2d(self.channels_out_conv_3),
             nn.ReLU(),
-            torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
-            torch.nn.Conv2d(in_channels=self.channels_out_conv_3, out_channels=self.channels_out_conv_4,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
-            torch.nn.BatchNorm2d(self.channels_out_conv_4),
-            nn.ReLU()
+            # torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            # torch.nn.Conv2d(in_channels=self.channels_out_conv_3, out_channels=self.channels_out_conv_4,
+            #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+            # torch.nn.BatchNorm2d(self.channels_out_conv_4),
+            # nn.ReLU()
         ])
         size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels)
         self.size_for_fc = int(size_for_fc)
