@@ -189,7 +189,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1950, 1999):
+    for year in range(1950, 2009):
         print(f"parsing year: {year} of basin : {station_id}")
         fn = f"{CAMELS_precip_data_folder}/gridded_obs.daily.Prcp.{year}.nc.gz"
         try:
@@ -375,4 +375,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main(False)
+    main()

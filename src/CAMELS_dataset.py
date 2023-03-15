@@ -209,6 +209,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         # convert huc column to double-digit strings
         df["huc"] = df["huc_02"].apply(lambda x: str(x).zfill(2))
         df = df.drop("huc_02", axis=1)
+        if self.use_all_static_attr:
+            self.list_static_attributes_names = df.columns.to_list()
+            if "gauge_id" in self.list_static_attributes_names:
+                self.list_static_attributes_names.remove("gauge_id")
         df = df[self.list_static_attributes_names]
         return df, df.index.tolist()
 
