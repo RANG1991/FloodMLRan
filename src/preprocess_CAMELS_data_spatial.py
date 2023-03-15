@@ -189,7 +189,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1950, 2009):
+    for year in range(1988, 2009):
         print(f"parsing year: {year} of basin : {station_id}")
         fn = f"{CAMELS_precip_data_folder}/gridded_obs.daily.Prcp.{year}.nc.gz"
         try:
@@ -224,10 +224,10 @@ def parse_single_basin_precipitation(
         tp[tp < 0] = 0
         # ti is an array containing the dates as the number of
         # hours since 1900-01-01 00:00 so this is the starting date
-        starting_date = datetime.datetime.strptime("1900-01-01 00:00", "%Y-%m-%d %H:%M")
+        starting_date = datetime.datetime.strptime("1949-01-01 00:00", "%Y-%m-%d %H:%M")
         # convert the time to datetime format
         datetimes = [
-            (starting_date + datetime.timedelta(hours=int(ti[i])))
+            (starting_date + datetime.timedelta(days=int(ti[i])))
             for i in range(0, len(ti))
         ]
         # append the datetimes from specific year to the list of datetimes of all years
@@ -246,18 +246,6 @@ def parse_single_basin_precipitation(
     datetimes = df_precip_times.index.to_pydatetime()
     # convert the precipitation data to the correct format by subtracting each hour from its previous hour
     # starting from 1 - this is because the precipitation data is cumulative
-    precip_mean_lat_lon_new = []
-    precip_new = []
-    for i in range(precip_mean_lat_lon.shape[0]):
-        if datetimes[i].hour != 1 and i > 0:
-            precip_mean_lat_lon_new.append(
-                precip_mean_lat_lon[i] - precip_mean_lat_lon[i - 1]
-            )
-            precip_new.append(precip[i, :, :] - precip[i - 1, :, :])
-        else:
-            precip_mean_lat_lon_new.append(precip_mean_lat_lon[i])
-            precip_new.append(precip[i, :, :])
-    ls_precip_new = [precip_new[i] for i in range(0, len(datetimes))]
     datetimes = [time + datetime.timedelta(hours=offset) for time in datetimes]
 
     lonb = lon[ind_lon_min:ind_lon_max + 1]
@@ -275,7 +263,7 @@ def parse_single_basin_precipitation(
 
     create_and_write_precipitation_spatial(
         datetimes,
-        ls_precip_new,
+        precip,
         station_id,
         output_folder_name,
         latb,
@@ -375,4 +363,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main()
+    main(False)
