@@ -191,7 +191,7 @@ def parse_single_basin_precipitation(
     started_reading_data = False
     for year in range(1988, 2009):
         print(f"parsing year: {year} of basin : {station_id}")
-        fn = f"{CAMELS_precip_data_folder}/gridded_obs.daily.Prcp.{year}.nc.gz"
+        fn = f"{CAMELS_precip_data_folder}/nldas_met_update.obs.daily.pr.{year}.nc.gz"
         try:
             with gzip.open(fn) as gz:
                 dataset = netCDF4.Dataset('dummy', mode='r', memory=gz.read())
@@ -214,7 +214,7 @@ def parse_single_basin_precipitation(
             ind_lat_max = np.where(max_lat_array > 0, max_lat_array, np.inf).argmin()
             started_reading_data = True
         tp = np.asarray(
-            dataset["Prcp"][
+            dataset["pr"][
             :, ind_lat_min: ind_lat_max + 1, ind_lon_min: ind_lon_max + 1
             ]
         )

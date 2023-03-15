@@ -14,6 +14,7 @@ import sys
 import netCDF4 as nc
 import xarray as xr
 from FloodML_Base_Dataset import FloodML_Base_Dataset
+from matplotlib import pyplot as plt
 
 matplotlib.use("AGG")
 
@@ -259,7 +260,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         continue
                     max_dim = max(max_width, max_height)
                     X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
-                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).sum(
+                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], max_dim, max_dim).sum(
                         axis=0)
                     plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
                                gray_image)
@@ -292,9 +293,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn"):
                     X_data_spatial = np.array(
-                        X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
+                        X_data_spatial.reshape(X_data_non_spatial.shape[0], max_dim * max_dim),
                         dtype=np.float64)
-
                     prev_mean_x_spatial = cumm_m_x_spatial
                     cumm_m_x_spatial = cumm_m_x_spatial + (
                             (X_data_spatial[:] - cumm_m_x_spatial) / count_of_samples).sum(
