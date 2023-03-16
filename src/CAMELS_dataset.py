@@ -256,12 +256,14 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data = self.read_single_station_file(station_id)
-                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
+                    if any([X_data_spatial.shape[1] == 0, X_data_spatial.shape[2] == 0]) or len(
+                            y_data) == 0 or len(X_data_non_spatial) == 0 or np.count_nonzero(X_data_spatial) == 0:
+                        print("some of the data is empty, deleting and skipping this basin")
                         del X_data_spatial
                         del X_data_non_spatial
                         del y_data
                         continue
-                    max_dim = max(max_width, max_height)
+                    self.max_dim = 47
                     X_data_spatial_list = []
                     for i in range(X_data_spatial.shape[0]):
                         X_data_spatial_list.append(
@@ -319,7 +321,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             else:
                 print(f"station with id: {station_id} has no valid file or the file already exists")
         gc.collect()
-        std_x = np.sqrt(cumm_s_x.astype(np.float64) / (count_of_samples - 1))
+        std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
         std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
         with codecs.open(
