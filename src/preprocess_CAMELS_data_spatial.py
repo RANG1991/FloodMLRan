@@ -224,7 +224,7 @@ def parse_single_basin_precipitation(
         tp[tp < 0] = 0
         # ti is an array containing the dates as the number of
         # hours since 1900-01-01 00:00 so this is the starting date
-        starting_date = datetime.datetime.strptime("1949-01-01 00:00", "%Y-%m-%d %H:%M")
+        starting_date = datetime.datetime.strptime("1940-01-01 00:00", "%Y-%m-%d %H:%M")
         # convert the time to datetime format
         datetimes = [
             (starting_date + datetime.timedelta(days=int(ti[i])))
@@ -363,4 +363,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main()
+    main(False)
