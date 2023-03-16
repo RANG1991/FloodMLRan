@@ -212,8 +212,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         df = df.drop("huc_02", axis=1)
         if self.use_all_static_attr:
             self.list_static_attributes_names = df.columns.to_list()
-            if "gauge_id" in self.list_static_attributes_names:
-                self.list_static_attributes_names.remove("gauge_id")
+            for column_name in ["huc", "gauge_name", "gauge_lat", "gauge_lon", "geol_1st_class", "geol_2nd_class",
+                                "high_prec_timing", "low_prec_timing", "dom_land_cover"]:
+                if column_name in self.list_static_attributes_names:
+                    self.list_static_attributes_names.remove(column_name)
         df = df[self.list_static_attributes_names]
         return df, df.index.tolist()
 
@@ -310,7 +312,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             else:
                 print(f"station with id: {station_id} has no valid file or the file already exists")
         gc.collect()
-        std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
+        std_x = np.sqrt(cumm_s_x.astype(np.float64) / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
         std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
         with codecs.open(
