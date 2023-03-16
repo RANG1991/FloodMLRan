@@ -363,4 +363,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main(False)
+    main()
