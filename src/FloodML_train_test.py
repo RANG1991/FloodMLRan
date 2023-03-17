@@ -340,7 +340,8 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            use_all_static_attr=use_all_static_attr
+            use_all_static_attr=use_all_static_attr,
+            limit_size_above_1000=limit_size_above_1000
         )
         test_data = CAMELS_dataset.Dataset_CAMELS(
             main_folder=CAMELS_dataset.MAIN_FOLDER,
@@ -366,7 +367,8 @@ def prepare_datasets(
             y_mean=training_data.y_mean,
             x_means=training_data.x_means,
             x_stds=training_data.x_stds,
-            use_all_static_attr=use_all_static_attr
+            use_all_static_attr=use_all_static_attr,
+            limit_size_above_1000=limit_size_above_1000
         )
     else:
         raise Exception(f"wrong dataset type: {dataset_to_use}")
