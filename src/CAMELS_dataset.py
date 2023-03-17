@@ -207,7 +207,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             dfs.append(df_temp)
         df = pd.concat(dfs, axis=1)
         if limit_size_above_1000:
-            df = df[df["basin_area"] >= 1000]
+            df = df[df["area_gages2"] >= 1000]
         # convert huc column to double-digit strings
         df["huc"] = df["huc_02"].apply(lambda x: str(x).zfill(2))
         df = df.drop("huc_02", axis=1)
