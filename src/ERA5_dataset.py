@@ -413,7 +413,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:
-            return np.array([]), np.array([])
+            return np.array([]), np.array([]), np.array([])
         X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
         y_data = y_data.reshape(-1, 1)
         static_attrib_station = (

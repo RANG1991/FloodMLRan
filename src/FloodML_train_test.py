@@ -433,7 +433,7 @@ def run_single_parameters_check_with_val_on_years(
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer_LSTM" if \
-            "Transformer_LSTM" in model_name else "LSTM"
+            "Transformer_LSTM" in model_name else "Transformer_HF" if "Transformer_HF" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,

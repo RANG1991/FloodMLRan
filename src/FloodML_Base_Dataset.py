@@ -160,6 +160,7 @@ class FloodML_Base_Dataset(Dataset):
             for key in dict_station_id_to_data.keys():
                 current_x_data = dict_station_id_to_data[key]["x_data"]
                 current_y_data = dict_station_id_to_data[key]["y_data"]
+                current_list_dates = dict_station_id_to_data[key]["list_dates"]
 
                 indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
 
@@ -179,7 +180,8 @@ class FloodML_Base_Dataset(Dataset):
 
                 if (self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() ==
                         "transformer_seq2seq" or self.specific_model_type.lower() == "transformer_lstm"):
-                    dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
+                    dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data,
+                                       "list_dates": current_list_dates}
                 else:
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                                 + (len(self.list_static_attributes_names))):]
@@ -189,7 +191,8 @@ class FloodML_Base_Dataset(Dataset):
                     current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
                     del current_x_data
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
-                                       "x_data_spatial": current_x_data_spatial}
+                                       "x_data_spatial": current_x_data_spatial,
+                                       "list_dates": current_list_dates}
                 with open(f"{self.folder_with_basins_pickles}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
                           'wb') as f:
                     pickle.dump(dict_curr_basin, f)
