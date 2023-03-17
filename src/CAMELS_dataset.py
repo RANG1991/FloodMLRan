@@ -255,7 +255,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial__{station_id}.nc"):
                         continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
-                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
+                    X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)
                     if any([X_data_spatial.shape[1] == 0, X_data_spatial.shape[2] == 0]) or len(
                             y_data) == 0 or len(X_data_non_spatial) == 0 or np.count_nonzero(X_data_spatial) == 0:
                         print("some of the data is empty, deleting and skipping this basin")
@@ -282,7 +282,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         del y_data
                         continue
                 else:
-                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
+                    X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)
                     if len(X_data_non_spatial) == 0 or len(y_data) == 0:
                         del X_data_non_spatial
                         del y_data
@@ -316,8 +316,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
                     X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
                     del X_data_spatial
-                dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data}
-
+                dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data,
+                                                       "list_dates": list_dates}
             else:
                 print(f"station with id: {station_id} has no valid file or the file already exists")
         gc.collect()
@@ -401,7 +401,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             df_discharge = self.read_discharge_data(station_id)
             df_dynamic_data = df_forcing.merge(df_discharge, on="date")
             df_dynamic_data.columns = map(str.lower, df_dynamic_data.columns)
-            df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
+            df_dynamic_data, list_dates = self.read_and_filter_dynamic_data(df_dynamic_data)
             df_dynamic_data = df_dynamic_data.set_index("date")
 
             y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
@@ -431,7 +431,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
             # y_data -= (self.y_mean_dict[station_id].numpy())
             # y_data /= (self.y_std_dict[station_id].numpy())
-            return X_data, y_data
+            return X_data, y_data, list_dates
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[
@@ -454,4 +454,5 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         df_dynamic_data = df_dynamic_data[
             (df_dynamic_data["date"] >= start_date) & (df_dynamic_data["date"] <= end_date)
             ]
-        return df_dynamic_data
+        list_dates = df_dynamic_data["date"].apply(lambda x: np.array([x.year, x.month, x.day])).tolist()
+        return df_dynamic_data, list_dates

@@ -80,9 +80,10 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
             y_hat = model(xs_non_spatial, ys_prefix_random)[:, -1, :]
             ys = ys[:, -1]
         elif specific_model_type.lower() == "transformer_hf":
-            y_hat = model(past_values=xs_non_spatial[:, :, :len(loader.dataset.list_dynamic_attributes_names)],
-                          past_time_features=dates,
-                          static_real_features=xs_non_spatial[:, :, len(loader.dataset.list_dynamic_attributes_names):])
+            dates_repeated = dates.unsqueeze(1).repeat(1, xs_non_spatial.shape[1], 1)
+            y_hat = model(past_values=xs_non_spatial,
+                          past_time_features=dates_repeated,
+                          past_observed_mask=torch.ones_like(xs_non_spatial))
         else:
             y_hat = model(xs_non_spatial)
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
@@ -126,10 +127,10 @@ def eval_model(model, loader, device, epoch, print_tqdm_to_console,
                 y_hat = y_hat.squeeze()
                 ys = ys[:, -1]
             elif specific_model_type.lower() == "transformer_hf":
-                y_hat = model(past_values=xs_non_spatial[:, :, :len(loader.dataset.list_dynamic_attributes_names)],
-                              past_time_features=dates,
-                              static_real_features=xs_non_spatial[:, :,
-                                                   len(loader.dataset.list_dynamic_attributes_names):])
+                dates_repeated = dates.unsqueeze(1).repeat(1, xs_non_spatial.shape[1], 1)
+                y_hat = model(past_values=xs_non_spatial,
+                              past_time_features=dates_repeated,
+                              past_observed_mask=torch.ones_like(xs_non_spatial))
             else:
                 y_hat = model(xs_non_spatial).squeeze()
             pred_actual = (
@@ -562,7 +563,9 @@ def run_training_and_test(
             num_static_attributes=len(training_data.list_static_attributes_names),
             num_dynamic_attributes=len(dynamic_attributes_names))
     elif model_name.lower() == "transformer_hf":
-        configuration = TimeSeriesTransformerConfig(prediction_length=1)
+        configuration = TimeSeriesTransformerConfig(prediction_length=1,
+                                                    lags_sequence=np.linspace(1, sequence_length + 1,
+                                                                              sequence_length).astype(int).tolist())
         model = TimeSeriesTransformerModel(configuration)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
