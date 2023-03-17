@@ -28,6 +28,7 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
+from transformers import TimeSeriesTransformerConfig, TimeSeriesTransformerModel
 
 # wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
 #
@@ -69,7 +70,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
     pbar.set_description(f"Epoch {epoch}")
     # request mini-batch of data from the loader
     running_loss = 0.0
-    for stds, station_id_batch, xs_non_spatial, xs_spatial, ys in pbar:
+    for stds, station_id_batch, xs_non_spatial, xs_spatial, ys, dates in pbar:
         xs_non_spatial, ys = xs_non_spatial.to(device), ys.to(device)
         optimizer.zero_grad()
         if xs_spatial.nelement() > 0:
@@ -78,6 +79,10 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
             ys_prefix_random = torch.cat([torch.zeros(size=(ys.shape[0], 1), device="cuda"), ys[:, :-1]], axis=-1)
             y_hat = model(xs_non_spatial, ys_prefix_random)[:, -1, :]
             ys = ys[:, -1]
+        elif specific_model_type.lower() == "transformer_hf":
+            y_hat = model(past_values=xs_non_spatial[:, :, :len(loader.dataset.list_dynamic_attributes_names)],
+                          past_time_features=dates,
+                          static_real_features=xs_non_spatial[:, :, len(loader.dataset.list_dynamic_attributes_names):])
         else:
             y_hat = model(xs_non_spatial)
         loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
@@ -107,7 +112,7 @@ def eval_model(model, loader, device, epoch, print_tqdm_to_console,
     # in inference mode, we don't need to store intermediate steps for backprob
     with torch.no_grad():
         # request mini-batch of data from the loader
-        for _, station_id_batch, xs_non_spatial, xs_spatial, ys in pbar:
+        for _, station_id_batch, xs_non_spatial, xs_spatial, ys, dates in pbar:
             # push data to GPU (if available)
             xs_non_spatial, ys = xs_non_spatial.to(device), ys.to(device)
             # get model predictions
@@ -120,6 +125,11 @@ def eval_model(model, loader, device, epoch, print_tqdm_to_console,
                     y_hat_prev = y_hat
                 y_hat = y_hat.squeeze()
                 ys = ys[:, -1]
+            elif specific_model_type.lower() == "transformer_hf":
+                y_hat = model(past_values=xs_non_spatial[:, :, :len(loader.dataset.list_dynamic_attributes_names)],
+                              past_time_features=dates,
+                              static_real_features=xs_non_spatial[:, :,
+                                                   len(loader.dataset.list_dynamic_attributes_names):])
             else:
                 y_hat = model(xs_non_spatial).squeeze()
             pred_actual = (
@@ -551,6 +561,9 @@ def run_training_and_test(
             in_cnn_channels=1, dropout=dropout,
             num_static_attributes=len(training_data.list_static_attributes_names),
             num_dynamic_attributes=len(dynamic_attributes_names))
+    elif model_name.lower() == "transformer_hf":
+        configuration = TimeSeriesTransformerConfig(prediction_length=1)
+        model = TimeSeriesTransformerModel(configuration)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -767,7 +780,7 @@ def main():
     parser.add_argument(
         "--model",
         help="which model to use",
-        choices=["LSTM", "Transformer_LSTM", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq"],
+        choices=["LSTM", "Transformer_LSTM", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF"],
         default="LSTM",
     )
     parser.add_argument(

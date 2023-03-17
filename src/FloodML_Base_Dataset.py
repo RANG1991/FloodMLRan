@@ -254,6 +254,7 @@ class FloodML_Base_Dataset(Dataset):
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
         X_data_tensor_spatial = torch.tensor([])
+        list_dates = dict_curr_basin["list_dates"]
         if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "transformer_lstm":
             X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
@@ -296,10 +297,13 @@ class FloodML_Base_Dataset(Dataset):
             y_data_tensor = torch.tensor(
                 y_data[inner_ind + 1: inner_ind + self.sequence_length + 1]
             ).to(torch.float32).squeeze()
+            dates_tensor = torch.tensor(list_dates[inner_ind + 1: inner_ind + self.sequence_length + 1])
         else:
             y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]
                                          ).to(torch.float32).squeeze()
-        return self.y_std_dict[basin_id], basin_id, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor
+            dates_tensor = torch.tensor(list_dates[inner_ind + self.sequence_length - 1])
+        return self.y_std_dict[
+            basin_id], basin_id, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor, dates_tensor
 
     def create_look_table(self, dict_station_id_to_data):
         lookup_table_basins = {}
