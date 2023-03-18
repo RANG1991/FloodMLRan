@@ -568,6 +568,7 @@ def run_training_and_test(
             num_dynamic_attributes=len(dynamic_attributes_names))
     elif model_name.lower() == "transformer_hf":
         configuration = TimeSeriesTransformerConfig(prediction_length=1,
+                                                    context_length=sequence_length,
                                                     lags_sequence=np.linspace(1, sequence_length,
                                                                               sequence_length - 1).astype(int).tolist(),
                                                     num_time_features=3,
