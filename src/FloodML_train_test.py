@@ -17,7 +17,7 @@ from datetime import datetime
 import statistics
 import argparse
 from FloodML_LSTM import LSTM
-from FloodML_Transformer_LSTM import ERA5_Transformer_LSTM
+from FloodML_Transformer_Encoder import Transformer_Encoder
 from FloodML_2_LSTM_Conv_LSTM import TWO_LSTM_CONV_LSTM
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
 from FloodML_Transformer_Seq2Seq import Transformer_Seq2Seq
@@ -437,8 +437,8 @@ def run_single_parameters_check_with_val_on_years(
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
-        "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer_LSTM" if \
-            "Transformer_LSTM" in model_name else "Transformer_HF" if "Transformer_HF" in model_name else "LSTM"
+        "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer" if \
+            "Transformer" in model_name else "Transformer_HF" if "Transformer_HF" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,
@@ -535,13 +535,8 @@ def run_training_and_test(
 ):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
-    if model_name.lower() == "transformer_lstm":
-        model = ERA5_Transformer_LSTM(sequence_length=sequence_length,
-                                      num_in_features_encoder=len(dynamic_attributes_names)
-                                                              + len(training_data.list_static_attributes_names),
-                                      num_hidden_lstm=num_hidden_units,
-                                      dropout_rate=dropout,
-                                      num_out_features_encoder=128)
+    if model_name.lower() == "transformer":
+        model = Transformer_Encoder(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
     elif model_name.lower() == "transformer_seq2seq":
         model = Transformer_Seq2Seq(
             in_features=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
@@ -670,7 +665,7 @@ def choose_hyper_parameters_validation(
     learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4]
     sequence_lengths = [270]
-    if model_name.lower() == "transformer_lstm":
+    if model_name.lower() == "transformer":
         num_hidden_units = [1]
     else:
         num_hidden_units = [256]
@@ -794,7 +789,7 @@ def main():
     parser.add_argument(
         "--model",
         help="which model to use",
-        choices=["LSTM", "Transformer_LSTM", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF"],
+        choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF"],
         default="LSTM",
     )
     parser.add_argument(
