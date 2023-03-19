@@ -536,7 +536,8 @@ def run_training_and_test(
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
-        model = Transformer_Encoder(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
+        model = Transformer_Encoder(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
+                                    64)
     elif model_name.lower() == "transformer_seq2seq":
         model = Transformer_Seq2Seq(
             in_features=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
