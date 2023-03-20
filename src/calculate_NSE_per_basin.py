@@ -48,9 +48,11 @@ def plot_NSE_CDF_graphs_my_code():
     d = create_dict_basin_id_to_NSE_my_code(f"{input_file_name}")
     run_numbers = set([run_number for _, run_number in d.keys()])
     model_names = set([model_name for model_name, _ in d.keys()])
+    plot_title = f"NSE CDF of process ID - " \
+                 f"{input_file_name.replace('slurm-', '').replace('.out', '')}"
     for model_name in model_names:
-        plot_title = f"NSE CDF of process ID - " \
-                     f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
+        # plot_title = f"NSE CDF of process ID - " \
+        #              f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
         for run_number in run_numbers:
             if (model_name, run_number) not in d.keys() or len(d[(model_name, run_number)].items()) == 0:
                 continue
@@ -58,12 +60,12 @@ def plot_NSE_CDF_graphs_my_code():
             for basin_id, basin_nse in d[(model_name, run_number)].items():
                 dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
             plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, model_name=model_name, run_number=run_number)
-        if plot_title != "":
-            plt.title(plot_title)
-        plt.legend()
-        plt.grid()
-        plt.savefig(plot_title)
-        plt.clf()
+    if plot_title != "":
+        plt.title(plot_title)
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_title)
+    plt.clf()
 
 
 def plot_NSE_CDF_graph_frederik_code():
