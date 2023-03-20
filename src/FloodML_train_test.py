@@ -779,7 +779,7 @@ def initialize_seed(seed):
 
 def main():
     # torch.backends.cudnn.enabled = False
-    initialize_seed(123)
+    # initialize_seed(123)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
