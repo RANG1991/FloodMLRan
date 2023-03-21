@@ -1,6 +1,8 @@
+import torch
 from matplotlib import pyplot as plt
 import re
 import numpy as np
+from scipy.special import softmax
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -102,4 +104,17 @@ def main():
 
 
 if __name__ == "__main__":
+    # query = np.array([[0.5, 0.1, 0.2], [0.7, 0.8, 0.2]])
+    # key = np.array([[1.0, 0.2, 0.4], [1.4, 1.6, 0.4]])
+    # value = np.array([[1.5, 0.3, 0.6], [2.1, 2.4, 0.6]])
+    # softmax_out = softmax(np.matmul(query, key.T) / np.sqrt(3), axis=1)
+    # res = np.matmul(softmax_out, value)
+    # for i in range(softmax_out.shape[0]):
+    #     for j in range(softmax_out.shape[1]):
+    #         print("{0:0.2f}".format(softmax_out[i, j]), end=" ")
+    #     print()
+    # for i in range(res.shape[0]):
+    #     for j in range(res.shape[1]):
+    #         print("{0:0.2f}".format(res[i, j]), end=" ")
+    #     print()
     main()
