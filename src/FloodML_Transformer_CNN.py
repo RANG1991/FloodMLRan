@@ -21,7 +21,6 @@ class PositionalEncoding(nn.Module):
 
     def __init__(self, d_hid, sequence_length=270):
         super(PositionalEncoding, self).__init__()
-
         # Not a parameter
         self.register_buffer('pos_table', self._get_sinusoid_encoding_table(sequence_length, d_hid))
 
@@ -41,7 +40,19 @@ class PositionalEncoding(nn.Module):
         return x + self.pos_table[:, :x.size(1)].clone().detach()
 
 
-__author__ = "Yu-Hsiang Huang"
+class Transformer_CNN(nn.Module):
+    def __init__(self, num_features):
+        super(Transformer_CNN, self).__init__()
+        self.vit = VIT()
+        self.fc_1 = nn.Linear(num_features, 512)
+        self.encoder = Encoder(n_layers=6, n_head=8, d_model=512, d_inner=512)
+        self.fc_2 = nn.Linear(512, 1)
+
+    def forward(self, non_spatial_input, spatial_input):
+        spatial_input = self.vit(spatial_input)
+        non_spatial_input = self.fc_1(non_spatial_input)
+        enc_out = self.encoder(non_spatial_input, spatial_input)
+        return self.fc_2(enc_out)[:, -1, :]
 
 
 class EncoderLayer(nn.Module):
@@ -63,9 +74,7 @@ class Encoder(nn.Module):
     """ A encoder model with self attention mechanism. """
 
     def __init__(self, n_layers, n_head, d_model, d_inner, dropout=0.1, sequence_length=270, scale_emb=False):
-
-        super().__init__()
-
+        super(Encoder, self).__init__()
         # the nn.Embedding creates a lookup table that can retrieve a word embedding using an index in the table
         # d_word_vec should be equal to d_model (?) - for example 512
         self.position_enc = PositionalEncoding(d_model, sequence_length=sequence_length)
@@ -76,10 +85,8 @@ class Encoder(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.scale_emb = scale_emb
         self.d_model = d_model
-        self.vit = VIT()
 
     def forward(self, enc_input_non_spatial, enc_input_spatial, src_mask):
-        enc_input_spatial = self.vit(enc_input_spatial)
         if self.scale_emb:
             enc_input_non_spatial *= self.d_model ** 0.5
         enc_input_non_spatial = self.dropout(self.position_enc(enc_input_non_spatial))
@@ -92,8 +99,8 @@ class Encoder(nn.Module):
 
 class VIT(nn.Module):
     def __init__(self):
-        super().__init__()
-        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=47 * 47)
+        super(VIT, self).__init__()
+        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=19 * 19, hidden_size=512)
         self.vit_model = ViTModel(configuration)
 
     def forward(self, spatial_input):

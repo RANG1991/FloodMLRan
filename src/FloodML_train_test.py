@@ -21,6 +21,7 @@ from FloodML_Transformer_Encoder import Transformer_Encoder
 from FloodML_2_LSTM_Conv_LSTM import TWO_LSTM_CONV_LSTM
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
 from FloodML_Transformer_Seq2Seq import Transformer_Seq2Seq
+from FloodML_Transformer_CNN import Transformer_CNN
 from pathlib import Path
 import random
 import torch
@@ -437,8 +438,8 @@ def run_single_parameters_check_with_val_on_years(
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
-        "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer" if \
-            "Transformer" in model_name else "Transformer_HF" if "Transformer_HF" in model_name else "LSTM"
+        "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer_CNN" if \
+            "Transformer_CNN" in model_name else "Transformer_HF" if "Transformer_HF" in model_name else "LSTM"
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,
@@ -574,6 +575,8 @@ def run_training_and_test(
                                                     num_static_real_features=len(
                                                         training_data.list_static_attributes_names))
         model = TimeSeriesTransformerModel(configuration)
+    elif model_name.lower() == "transformer_cnn":
+        model = Transformer_CNN(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -790,7 +793,8 @@ def main():
     parser.add_argument(
         "--model",
         help="which model to use",
-        choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF"],
+        choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF",
+                 "Transformer_CNN"],
         default="LSTM",
     )
     parser.add_argument(

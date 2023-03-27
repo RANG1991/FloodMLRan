@@ -273,7 +273,7 @@ class FloodML_Base_Dataset(Dataset):
                 X_data_spatial[
                 inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
             ).to(torch.float32)
-        elif self.specific_model_type.lower() == "cnn":
+        elif self.specific_model_type.lower() == "cnn" or self.specific_model_type.lower() == "transformer_cnn":
             X_data, X_data_spatial, y_data = \
                 dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
