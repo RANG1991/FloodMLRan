@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import math
 from Transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
+from transformers import ViTConfig, ViTModel
 
 
 def get_pad_mask(seq, pad_idx):
@@ -75,8 +76,10 @@ class Encoder(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.scale_emb = scale_emb
         self.d_model = d_model
+        self.vit = VIT()
 
     def forward(self, enc_input_non_spatial, enc_input_spatial, src_mask):
+        enc_input_spatial = self.vit(enc_input_spatial)
         if self.scale_emb:
             enc_input_non_spatial *= self.d_model ** 0.5
         enc_input_non_spatial = self.dropout(self.position_enc(enc_input_non_spatial))
@@ -85,3 +88,13 @@ class Encoder(nn.Module):
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(enc_input_non_spatial, enc_input_spatial, slf_attn_mask=src_mask)
         return enc_output
+
+
+class VIT(nn.Module):
+    def __init__(self):
+        super().__init__()
+        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=47 * 47)
+        self.vit_model = ViTModel(configuration)
+
+    def forward(self, spatial_input):
+        return self.vit_model(spatial_input)
