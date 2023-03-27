@@ -53,7 +53,9 @@ class Encoder(nn.Module):
             d_model, d_inner, pad_idx, dropout=0.1, n_position=200, scale_emb=False):
 
         super().__init__()
-
+        
+        # the nn.Embedding creates a lookup table that can retrieve a word embedding using an index in the table
+        # d_word_vec should be equal to d_model (?) - for example 512
         self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=pad_idx)
         self.position_enc = PositionalEncoding(d_word_vec, n_position=n_position)
         self.dropout = nn.Dropout(p=dropout)

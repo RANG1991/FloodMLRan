@@ -4,10 +4,10 @@ from torch.nn import functional as F
 import math
 
 
-class FloodML_Conv_LSTM(nn.Module):
+class CONV_LSTM(nn.Module):
 
     def __init__(self, in_channels_cnn, sequence_length, image_width, image_height):
-        super(FloodML_Conv_LSTM, self).__init__()
+        super(CONV_LSTM, self).__init__()
         self.in_channels_cnn = in_channels_cnn
         self.filter_size_conv = 3
         self.layers_list = []

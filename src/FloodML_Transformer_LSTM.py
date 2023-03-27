@@ -16,11 +16,11 @@ def get_subsequent_mask(seq):
     return subsequent_mask
 
 
-class ERA5_Transformer_LSTM(nn.Module):
+class Transformer_LSTM(nn.Module):
 
     def __init__(self, num_in_features_encoder, num_out_features_encoder,
                  num_hidden_lstm, dropout_rate, sequence_length=270):
-        super(ERA5_Transformer_LSTM, self).__init__()
+        super(Transformer_LSTM, self).__init__()
         assert num_out_features_encoder % 8 == 0
         self.encoder = Encoder(in_features_dim=num_in_features_encoder,
                                out_features_dim=num_out_features_encoder,

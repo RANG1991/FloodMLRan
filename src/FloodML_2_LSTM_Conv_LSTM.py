@@ -1,5 +1,5 @@
 import torch
-from FloodML_Conv_LSTM import FloodML_Conv_LSTM
+from FloodML_Conv_LSTM import CONV_LSTM
 
 
 class TWO_LSTM_CONV_LSTM(torch.nn.Module):
@@ -17,8 +17,8 @@ class TWO_LSTM_CONV_LSTM(torch.nn.Module):
             hidden_size=self.hidden_dim,
             batch_first=True
         )
-        self.conv_lstm = FloodML_Conv_LSTM(self.in_cnn_channels, sequence_length_conv_lstm, self.image_width,
-                                           self.image_height)
+        self.conv_lstm = CONV_LSTM(self.in_cnn_channels, sequence_length_conv_lstm, self.image_width,
+                                   self.image_height)
         self.sequence_length_conv_lstm = sequence_length_conv_lstm
         self.linear_states = torch.nn.Linear(self.hidden_dim,
                                              self.in_cnn_channels * self.image_width * self.image_height)
