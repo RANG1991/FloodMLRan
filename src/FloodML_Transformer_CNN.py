@@ -100,7 +100,7 @@ class Encoder(nn.Module):
 class VIT(nn.Module):
     def __init__(self):
         super(VIT, self).__init__()
-        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=19 * 19, hidden_size=512)
+        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=32 * 32, hidden_size=512)
         self.vit_model = ViTModel(configuration)
 
     def forward(self, spatial_input):
