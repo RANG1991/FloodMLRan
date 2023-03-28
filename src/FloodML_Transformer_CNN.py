@@ -49,7 +49,10 @@ class Transformer_CNN(nn.Module):
         self.fc_2 = nn.Linear(512, 1)
 
     def forward(self, non_spatial_input, spatial_input):
-        spatial_input = self.vit(spatial_input)
+        batch_size, seq_length, _ = spatial_input.shape
+        spatial_input = spatial_input.reshape(batch_size * seq_length, 1, 32, 32)
+        spatial_input = self.vit(spatial_input).last_hidden_state[:, 0, :]
+        spatial_input = spatial_input.reshape(batch_size, seq_length, -1)
         non_spatial_input = self.fc_1(non_spatial_input)
         enc_out = self.encoder(non_spatial_input, spatial_input)
         return self.fc_2(enc_out)[:, -1, :]
@@ -86,21 +89,22 @@ class Encoder(nn.Module):
         self.scale_emb = scale_emb
         self.d_model = d_model
 
-    def forward(self, enc_input_non_spatial, enc_input_spatial, src_mask):
+    def forward(self, enc_input_non_spatial, enc_input_spatial):
         if self.scale_emb:
             enc_input_non_spatial *= self.d_model ** 0.5
         enc_input_non_spatial = self.dropout(self.position_enc(enc_input_non_spatial))
         enc_input_non_spatial = self.layer_norm(enc_input_non_spatial)
 
         for enc_layer in self.layer_stack:
-            enc_output, enc_slf_attn = enc_layer(enc_input_non_spatial, enc_input_spatial, slf_attn_mask=src_mask)
+            enc_output, enc_slf_attn = enc_layer(enc_input_non_spatial, enc_input_spatial)
         return enc_output
 
 
 class VIT(nn.Module):
     def __init__(self):
         super(VIT, self).__init__()
-        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=32 * 32, hidden_size=512)
+        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=32, hidden_size=512,
+                                  num_channels=1)
         self.vit_model = ViTModel(configuration)
 
     def forward(self, spatial_input):
