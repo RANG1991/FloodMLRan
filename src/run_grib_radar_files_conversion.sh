@@ -12,6 +12,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 
 source $virtual_env
 
-find . -name '*.Z' -type f -exec wgrib -text {} +
-
-
+find . -name '*.Z' -type f -exec /sci/labs/efratmorin/ranga/local/wgrib/wgrib -text {} +
