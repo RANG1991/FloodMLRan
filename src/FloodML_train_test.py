@@ -576,7 +576,9 @@ def run_training_and_test(
                                                         training_data.list_static_attributes_names))
         model = TimeSeriesTransformerModel(configuration)
     elif model_name.lower() == "transformer_cnn":
-        model = Transformer_CNN(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
+        model = Transformer_CNN(
+            num_features=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
+            sequence_length_spatial=sequence_length_spatial, d_model=512)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
@@ -666,7 +668,7 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    learning_rates = np.linspace(5 * (10 ** -3), 5 * (10 ** -3), num=1).tolist()
+    learning_rates = np.linspace((10 ** -2), (10 ** -2), num=1).tolist()
     dropout_rates = [0.4]
     sequence_lengths = [270]
     if model_name.lower() == "transformer":

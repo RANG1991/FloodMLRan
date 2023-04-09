@@ -41,17 +41,17 @@ class PositionalEncoding(nn.Module):
 
 
 class Transformer_CNN(nn.Module):
-    def __init__(self, num_features):
+    def __init__(self, num_features, sequence_length_spatial, d_model):
         super(Transformer_CNN, self).__init__()
-        self.vit = VIT()
-        self.fc_1 = nn.Linear(num_features, 512)
-        self.encoder = Encoder(n_layers=6, n_head=8, d_model=512, d_inner=512)
-        self.fc_2 = nn.Linear(512, 1)
+        self.vit = VIT(d_model=d_model)
+        self.fc_1 = nn.Linear(num_features, d_model)
+        self.encoder = Encoder(n_layers=6, n_head=8, d_model=d_model, d_inner=d_model)
+        self.fc_2 = nn.Linear(d_model, 1)
 
     def forward(self, non_spatial_input, spatial_input):
         batch_size, seq_length, _ = spatial_input.shape
         spatial_input = spatial_input.reshape(batch_size * seq_length, 1, 32, 32)
-        spatial_input = self.vit(spatial_input).last_hidden_state[:, 0, :]
+        spatial_input = self.vit(spatial_input).pooler_output
         spatial_input = spatial_input.reshape(batch_size, seq_length, -1)
         non_spatial_input = self.fc_1(non_spatial_input)
         enc_out = self.encoder(non_spatial_input, spatial_input)
@@ -94,16 +94,15 @@ class Encoder(nn.Module):
             enc_input_non_spatial *= self.d_model ** 0.5
         enc_input_non_spatial = self.dropout(self.position_enc(enc_input_non_spatial))
         enc_input_non_spatial = self.layer_norm(enc_input_non_spatial)
-
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(enc_input_non_spatial, enc_input_spatial)
         return enc_output
 
 
 class VIT(nn.Module):
-    def __init__(self):
+    def __init__(self, d_model):
         super(VIT, self).__init__()
-        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=32, hidden_size=512,
+        configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=32, hidden_size=d_model,
                                   num_channels=1)
         self.vit_model = ViTModel(configuration)
 
