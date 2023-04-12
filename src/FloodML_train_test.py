@@ -434,7 +434,10 @@ def run_single_parameters_check_with_val_on_years(
         sequence_length_spatial,
         print_tqdm_to_console,
         limit_size_above_1000,
-        use_all_static_attr
+        use_all_static_attr,
+        save_checkpoint,
+        load_checkpoint,
+        checkpoint_path
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
@@ -476,8 +479,10 @@ def run_single_parameters_check_with_val_on_years(
                               profile_code,
                               sequence_length_spatial,
                               print_tqdm_to_console,
-                              specific_model_type
-                              )
+                              specific_model_type,
+                              save_checkpoint=save_checkpoint,
+                              load_checkpoint=load_checkpoint,
+                              checkpoint_path=checkpoint_path)
     if len(nse_list_last_epoch) > 0:
         print(
             f"parameters are: dropout={dropout_rate} sequence_length={sequence_length} "
@@ -532,7 +537,10 @@ def run_training_and_test(
         profile_code,
         sequence_length_spatial,
         print_tqdm_to_console,
-        specific_model_type
+        specific_model_type,
+        load_checkpoint,
+        save_checkpoint,
+        checkpoint_path
 ):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
@@ -604,11 +612,27 @@ def run_training_and_test(
     best_median_nse = None
     list_training_loss_single_pass = []
     nse_list_last_pass = []
-    for i in range(num_epochs):
+    starting_epoch = 0
+    if load_checkpoint:
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        starting_epoch = checkpoint['epoch']
+    for i in range(starting_epoch, num_epochs):
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device="cuda",
                                              print_tqdm_to_console=print_tqdm_to_console,
                                              specific_model_type=specific_model_type)
+        if save_checkpoint:
+            model_name = model.__class__.__name__
+            curr_datetime = datetime.now()
+            curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+            torch.save({
+                'epoch': (i + 1),
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': loss_on_training_epoch,
+            }, f"../checkpoints/{model_name}_{curr_datetime_str}.pt")
         if model_name.lower() == "cnn_lstm":
             print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
             model.cnn_lstm.number_of_images_counter = 0
@@ -652,7 +676,10 @@ def choose_hyper_parameters_validation(
         sequence_length_spatial,
         print_tqdm_to_console,
         limit_size_above_1000,
-        use_all_static_attr
+        use_all_static_attr,
+        save_checkpoint,
+        load_checkpoint,
+        checkpoint_path,
 ):
     train_stations_list = []
     val_stations_list = []
@@ -726,8 +753,10 @@ def choose_hyper_parameters_validation(
             sequence_length_spatial=sequence_length_spatial,
             print_tqdm_to_console=print_tqdm_to_console,
             limit_size_above_1000=limit_size_above_1000,
-            use_all_static_attr=use_all_static_attr
-        )
+            use_all_static_attr=use_all_static_attr,
+            save_checkpoint=save_checkpoint,
+            load_checkpoint=load_checkpoint,
+            checkpoint_path=checkpoint_path)
         if len(nse_list_single_pass) == 0:
             median_nse = -1
         else:
@@ -822,12 +851,20 @@ def main():
     parser.add_argument("--print_tqdm_to_console", action="store_true")
     parser.add_argument("--limit_size_above_1000", action="store_true")
     parser.add_argument("--use_all_static_attr", action="store_true")
+    parser.add_argument("--save_checkpoint", action="store_true")
+    parser.add_argument("--load_checkpoint", action="store_true")
+    parser.add_argument("--checkpoint_path", help="the checkpoint path to load the checkpoint from", default="",
+                        type=str)
     parser.set_defaults(profile_code=False)
     parser.set_defaults(create_new_files=False)
     parser.set_defaults(print_tqdm_to_console=False)
     parser.set_defaults(limit_size_above_1000=False)
     parser.set_defaults(use_all_static_attr=False)
+    parser.set_defaults(save_checkpoint=False)
+    parser.set_defaults(load_checkpoint=False)
     command_args = parser.parse_args()
+    if command_args.load_checkpoint and not command_args.checkpoint_path:
+        raise Exception(f"load_checkpoint is True but no checkpoint_path supplied")
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
             CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
@@ -849,7 +886,10 @@ def main():
             sequence_length_spatial=command_args.sequence_length_spatial,
             print_tqdm_to_console=command_args.print_tqdm_to_console,
             limit_size_above_1000=command_args.limit_size_above_1000,
-            use_all_static_attr=command_args.use_all_static_attr
+            use_all_static_attr=command_args.use_all_static_attr,
+            save_checkpoint=command_args.save_checkpoint,
+            load_checkpoint=command_args.load_checkpoint,
+            checkpoint_path=command_args.checkpoint_path,
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
@@ -872,7 +912,10 @@ def main():
             sequence_length_spatial=command_args.sequence_length_spatial,
             print_tqdm_to_console=command_args.print_tqdm_to_console,
             limit_size_above_1000=command_args.limit_size_above_1000,
-            use_all_static_attr=command_args.use_all_static_attr
+            use_all_static_attr=command_args.use_all_static_attr,
+            save_checkpoint=command_args.save_checkpoint,
+            load_checkpoint=command_args.load_checkpoint,
+            checkpoint_path=command_args.checkpoint_path,
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
