@@ -437,7 +437,8 @@ def run_single_parameters_check_with_val_on_years(
         use_all_static_attr,
         save_checkpoint,
         load_checkpoint,
-        checkpoint_path
+        checkpoint_path,
+        batch_size
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
@@ -482,7 +483,9 @@ def run_single_parameters_check_with_val_on_years(
                               specific_model_type,
                               save_checkpoint=save_checkpoint,
                               load_checkpoint=load_checkpoint,
-                              checkpoint_path=checkpoint_path)
+                              checkpoint_path=checkpoint_path,
+                              batch_size=batch_size
+                              )
     if len(nse_list_last_epoch) > 0:
         print(
             f"parameters are: dropout={dropout_rate} sequence_length={sequence_length} "
@@ -540,8 +543,8 @@ def run_training_and_test(
         specific_model_type,
         load_checkpoint,
         save_checkpoint,
-        checkpoint_path
-):
+        checkpoint_path,
+        batch_size):
     print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with model: {model_name}")
     if model_name.lower() == "transformer":
@@ -599,8 +602,9 @@ def run_training_and_test(
     # config.learning_rate = learning_rate
     # config.wandb = True
     # wandb.watch(model)
-    train_dataloader = DataLoader(training_data, batch_size=256, num_workers=num_workers_data_loader, shuffle=True)
-    test_dataloader = DataLoader(test_data, batch_size=256, num_workers=num_workers_data_loader)
+    train_dataloader = DataLoader(training_data, batch_size=batch_size, num_workers=num_workers_data_loader,
+                                  shuffle=True)
+    test_dataloader = DataLoader(test_data, batch_size=batch_size, num_workers=num_workers_data_loader)
     if profile_code:
         p = profile(
             activities=[ProfilerActivity.CUDA],
@@ -680,6 +684,7 @@ def choose_hyper_parameters_validation(
         save_checkpoint,
         load_checkpoint,
         checkpoint_path,
+        batch_size
 ):
     train_stations_list = []
     val_stations_list = []
@@ -756,7 +761,9 @@ def choose_hyper_parameters_validation(
             use_all_static_attr=use_all_static_attr,
             save_checkpoint=save_checkpoint,
             load_checkpoint=load_checkpoint,
-            checkpoint_path=checkpoint_path)
+            checkpoint_path=checkpoint_path,
+            batch_size=batch_size
+        )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
         else:
@@ -855,6 +862,7 @@ def main():
     parser.add_argument("--load_checkpoint", action="store_true")
     parser.add_argument("--checkpoint_path", help="the checkpoint path to load the checkpoint from", default="",
                         type=str)
+    parser.add_argument("--batch_size", default=256, type=int)
     parser.set_defaults(profile_code=False)
     parser.set_defaults(create_new_files=False)
     parser.set_defaults(print_tqdm_to_console=False)
@@ -890,6 +898,7 @@ def main():
             save_checkpoint=command_args.save_checkpoint,
             load_checkpoint=command_args.load_checkpoint,
             checkpoint_path=command_args.checkpoint_path,
+            batch_size=command_args.batch_size
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
@@ -916,6 +925,7 @@ def main():
             save_checkpoint=command_args.save_checkpoint,
             load_checkpoint=command_args.load_checkpoint,
             checkpoint_path=command_args.checkpoint_path,
+            batch_size=command_args.batch_size
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
