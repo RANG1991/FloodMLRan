@@ -587,9 +587,11 @@ def run_training_and_test(
                                                         training_data.list_static_attributes_names))
         model = TimeSeriesTransformerModel(configuration)
     elif model_name.lower() == "transformer_cnn":
-        model = Transformer_CNN(
-            num_features=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
-            sequence_length_spatial=sequence_length_spatial, d_model=512)
+        model = Transformer_CNN(sequence_length_spatial=sequence_length_spatial,
+                                num_dynamic_attr=len(dynamic_attributes_names),
+                                num_static_attr=len(training_data.list_static_attributes_names),
+                                embedding_size=10,
+                                d_model=512)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
     print(f"running with optimizer: {optim_name}")
