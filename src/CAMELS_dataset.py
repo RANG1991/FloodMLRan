@@ -263,7 +263,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         del X_data_non_spatial
                         del y_data
                         continue
-                    self.max_dim = 47
                     X_data_spatial_list = []
                     for i in range(X_data_spatial.shape[0]):
                         X_data_spatial_list.append(

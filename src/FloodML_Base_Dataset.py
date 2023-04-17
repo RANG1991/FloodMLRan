@@ -120,7 +120,7 @@ class FloodML_Base_Dataset(Dataset):
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max_width
         self.max_height = max_height
-        self.max_dim = 32
+        self.max_dim = max([self.max_height, self.max_width, 32])
         (dict_station_id_to_data,
          x_means,
          x_stds,
@@ -156,7 +156,7 @@ class FloodML_Base_Dataset(Dataset):
         x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
-        if self.create_new_files or len(dict_station_id_to_data) > 0:
+        if self.create_new_files:
             for key in dict_station_id_to_data.keys():
                 current_x_data = dict_station_id_to_data[key]["x_data"]
                 current_y_data = dict_station_id_to_data[key]["y_data"]

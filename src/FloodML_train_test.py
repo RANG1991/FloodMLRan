@@ -30,6 +30,7 @@ from torch.utils.data.distributed import DistributedSampler
 import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
 from transformers import TimeSeriesTransformerConfig, TimeSeriesTransformerModel
+import glob
 
 # wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
 #
@@ -591,6 +592,7 @@ def run_training_and_test(
                                 num_dynamic_attr=len(dynamic_attributes_names),
                                 num_static_attr=len(training_data.list_static_attributes_names),
                                 embedding_size=10,
+                                image_size=training_data.max_dim,
                                 d_model=512)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
@@ -828,7 +830,7 @@ def main():
         "--dataset",
         help="which dataset to train and test / validate on",
         choices=["CAMELS", "CARAVAN"],
-        default="ERA5",
+        default="CAMELS",
     )
     parser.add_argument(
         "--model",
@@ -873,8 +875,10 @@ def main():
     parser.set_defaults(save_checkpoint=False)
     parser.set_defaults(load_checkpoint=False)
     command_args = parser.parse_args()
-    if command_args.load_checkpoint and not command_args.checkpoint_path:
-        raise Exception(f"load_checkpoint is True but no checkpoint_path supplied")
+    if command_args.load_checkpoint and command_args.checkpoint_path == "":
+        list_of_files = glob.glob('../checkpoints/*')
+        latest_file = max(list_of_files, key=os.path.getctime)
+        command_args.checkpoint_path = latest_file
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
             CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
