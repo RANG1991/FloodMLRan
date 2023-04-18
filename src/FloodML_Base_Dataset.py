@@ -108,8 +108,8 @@ class FloodML_Base_Dataset(Dataset):
         (self.df_attr,
          self.list_stations_static
          ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
-        # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
-        self.all_station_ids = [station_id for station_id in self.list_stations_static if station_id not in
+        all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
+        self.all_station_ids = [station_id for station_id in all_station_ids if station_id not in
                                 STATIONS_WITH_ERRORS]
         (max_width,
          max_height,
@@ -120,7 +120,7 @@ class FloodML_Base_Dataset(Dataset):
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max_width
         self.max_height = max_height
-        self.max_dim = max([self.max_height, self.max_width, 32])
+        self.max_dim = max([self.max_height, self.max_width, 47])
         (dict_station_id_to_data,
          x_means,
          x_stds,

@@ -31,6 +31,8 @@ import psutil
 from torch.profiler import profile, record_function, ProfilerActivity
 from transformers import TimeSeriesTransformerConfig, TimeSeriesTransformerModel
 import glob
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.multiprocessing as mp
 
 # wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
 #
@@ -445,6 +447,7 @@ def run_single_parameters_check_with_val_on_years(
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
         "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer_CNN" if \
             "Transformer_CNN" in model_name else "Transformer_HF" if "Transformer_HF" in model_name else "LSTM"
+    print(f"running with model: {model_name}")
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,
@@ -464,29 +467,44 @@ def run_single_parameters_check_with_val_on_years(
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
-    nse_list_last_epoch, training_loss_list_single_pass = \
-        run_training_and_test(learning_rate,
-                              sequence_length,
-                              num_hidden_units,
-                              num_epochs,
-                              training_data,
-                              test_data,
-                              dropout_rate,
-                              static_attributes_names,
-                              dynamic_attributes_names,
-                              model_name,
-                              1,
-                              optim_name,
-                              num_workers_data_loader,
-                              profile_code,
-                              sequence_length_spatial,
-                              print_tqdm_to_console,
-                              specific_model_type,
-                              save_checkpoint=save_checkpoint,
-                              load_checkpoint=load_checkpoint,
-                              checkpoint_path=checkpoint_path,
-                              batch_size=batch_size
-                              )
+    ctx = mp.get_context('spawn')
+    training_loss_single_pass_queue = ctx.Queue(1000)
+    nse_last_pass_queue = ctx.Queue(1000)
+    preds_obs_dicts_ranks_queue = ctx.Queue(1000)
+    mp.spawn(run_training_and_test,
+             args=(num_processes_ddp,
+                   (learning_rate * num_processes_ddp),
+                   sequence_length,
+                   num_hidden_units,
+                   num_epochs,
+                   training_data,
+                   test_data,
+                   dropout_rate,
+                   static_attributes_names,
+                   dynamic_attributes_names,
+                   model_name,
+                   1,
+                   optim_name,
+                   num_workers_data_loader,
+                   profile_code,
+                   sequence_length_spatial,
+                   print_tqdm_to_console,
+                   specific_model_type,
+                   save_checkpoint,
+                   load_checkpoint,
+                   checkpoint_path,
+                   batch_size,
+                   training_loss_single_pass_queue,
+                   nse_last_pass_queue,
+                   preds_obs_dicts_ranks_queue),
+             nprocs=num_processes_ddp,
+             join=True)
+    training_loss_list_single_pass = []
+    nse_list_last_epoch = []
+    while not training_loss_single_pass_queue.empty():
+        training_loss_list_single_pass.append(training_loss_single_pass_queue.get())
+    while not nse_last_pass_queue.empty():
+        nse_list_last_epoch.append(nse_last_pass_queue.get())
     if len(nse_list_last_epoch) > 0:
         print(
             f"parameters are: dropout={dropout_rate} sequence_length={sequence_length} "
@@ -524,30 +542,13 @@ class DistributedSamplerNoDuplicate(DistributedSampler):
             self.total_size = len(self.dataset)
 
 
-def run_training_and_test(
-        learning_rate,
-        sequence_length,
-        num_hidden_units,
-        num_epochs,
-        training_data,
-        test_data,
-        dropout,
-        static_attributes_names,
-        dynamic_attributes_names,
-        model_name,
-        calc_nse_interval,
-        optim_name,
-        num_workers_data_loader,
-        profile_code,
-        sequence_length_spatial,
-        print_tqdm_to_console,
-        specific_model_type,
-        load_checkpoint,
-        save_checkpoint,
-        checkpoint_path,
-        batch_size):
-    print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
-    print(f"running with model: {model_name}")
+def prepare_model(sequence_length,
+                  num_hidden_units,
+                  training_data,
+                  dropout,
+                  dynamic_attributes_names,
+                  model_name,
+                  sequence_length_spatial):
     if model_name.lower() == "transformer":
         model = Transformer_Encoder(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
                                     32)
@@ -596,20 +597,94 @@ def run_training_and_test(
                                 d_model=512)
     else:
         raise Exception(f"model with name {model_name} is not recognized")
+    return model
+
+
+def run_training_and_test(
+        rank,
+        world_size,
+        learning_rate,
+        sequence_length,
+        num_hidden_units,
+        num_epochs,
+        training_data,
+        test_data,
+        dropout,
+        static_attributes_names,
+        dynamic_attributes_names,
+        model_name,
+        calc_nse_interval,
+        optim_name,
+        num_workers_data_loader,
+        profile_code,
+        sequence_length_spatial,
+        print_tqdm_to_console,
+        specific_model_type,
+        load_checkpoint,
+        save_checkpoint,
+        checkpoint_path,
+        batch_size,
+        training_loss_single_pass_queue,
+        nse_last_pass_queue,
+        preds_obs_dicts_ranks_queue):
+    print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
     print(f"running with optimizer: {optim_name}")
-    model = model.to(device="cuda")
+    model = prepare_model(sequence_length=sequence_length,
+                          sequence_length_spatial=sequence_length_spatial,
+                          num_hidden_units=num_hidden_units,
+                          dropout=dropout,
+                          dynamic_attributes_names=dynamic_attributes_names,
+                          model_name=model_name,
+                          training_data=training_data)
     if optim_name.lower() == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    starting_epoch = 0
+    best_median_nse = None
+    if load_checkpoint:
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        starting_epoch = checkpoint['epoch']
+    if world_size > 1:
+        torch.cuda.set_device(rank)
+        model = model.to(device="cuda")
+        setup(rank, world_size)
+        model = DDP(model, device_ids=[rank], find_unused_parameters=True)
+    else:
+        model = model.to(device="cuda")
     # config = wandb.config
     # config.learning_rate = learning_rate
     # config.wandb = True
     # wandb.watch(model)
-    train_dataloader = DataLoader(training_data, batch_size=batch_size, num_workers=num_workers_data_loader,
-                                  shuffle=True)
-    test_dataloader = DataLoader(test_data, batch_size=batch_size, num_workers=num_workers_data_loader)
-    if profile_code:
+    if world_size > 1:
+        distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=True)
+        distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
+        train_dataloader = DataLoader(training_data,
+                                      batch_size=batch_size,
+                                      sampler=distributed_sampler_train,
+                                      pin_memory=True,
+                                      num_workers=num_workers_data_loader,
+                                      worker_init_fn=seed_worker)
+        test_dataloader = DataLoader(test_data,
+                                     batch_size=batch_size,
+                                     sampler=distributed_sampler_test,
+                                     pin_memory=True,
+                                     num_workers=num_workers_data_loader,
+                                     worker_init_fn=seed_worker)
+    else:
+        train_dataloader = DataLoader(training_data,
+                                      batch_size=batch_size,
+                                      num_workers=num_workers_data_loader,
+                                      shuffle=True,
+                                      worker_init_fn=seed_worker)
+        test_dataloader = DataLoader(test_data,
+                                     batch_size=batch_size,
+                                     num_workers=num_workers_data_loader,
+                                     shuffle=False,
+                                     worker_init_fn=seed_worker)
+    if rank == 0 and profile_code:
         p = profile(
             activities=[ProfilerActivity.CUDA],
             schedule=torch.profiler.schedule(
@@ -617,47 +692,53 @@ def run_training_and_test(
                 warmup=1,
                 active=2), on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"))
         p.start()
-    best_median_nse = None
-    list_training_loss_single_pass = []
-    nse_list_last_pass = []
-    starting_epoch = 0
-    if load_checkpoint:
-        checkpoint = torch.load(checkpoint_path)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        starting_epoch = checkpoint['epoch']
     for i in range(starting_epoch, num_epochs):
+        if world_size > 1:
+            train_dataloader.sampler.set_epoch(i)
         loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                              epoch=(i + 1), device="cuda",
                                              print_tqdm_to_console=print_tqdm_to_console,
                                              specific_model_type=specific_model_type)
-        if save_checkpoint:
-            model_name = model.__class__.__name__
-            curr_datetime = datetime.now()
-            curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-            torch.save({
-                'epoch': (i + 1),
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss': loss_on_training_epoch,
-            }, f"../checkpoints/{model_name}_{curr_datetime_str}.pt")
-        if model_name.lower() == "cnn_lstm":
-            print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
-            model.cnn_lstm.number_of_images_counter = 0
-        if profile_code:
-            p.step()
-        list_training_loss_single_pass.append(((i + 1), loss_on_training_epoch))
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             preds_obs_dict_per_basin = eval_model(model, test_dataloader, device="cuda", epoch=(i + 1),
                                                   print_tqdm_to_console=print_tqdm_to_console,
                                                   specific_model_type=specific_model_type)
+            preds_obs_dicts_ranks_queue.put(preds_obs_dict_per_basin.copy())
+        if world_size > 1:
+            dist.barrier()
+        if rank == 0:
+            if save_checkpoint:
+                model_name = model.__class__.__name__
+                curr_datetime = datetime.now()
+                curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+                torch.save({
+                    'epoch': (i + 1),
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'loss': loss_on_training_epoch,
+                }, f"../checkpoints/{model_name}_{curr_datetime_str}.pt")
+            if model_name.lower() == "cnn_lstm":
+                print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
+                model.cnn_lstm.number_of_images_counter = 0
+            if profile_code:
+                p.step()
+            training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
+            preds_obs_dict_per_basin = {}
+            while not preds_obs_dicts_ranks_queue.empty():
+                dict_preds_obs_single_rank = preds_obs_dicts_ranks_queue.get()
+                for basin_id in dict_preds_obs_single_rank.keys():
+                    preds_obs_dicts_ranks_queue[basin_id] = dict_preds_obs_single_rank[basin_id]
             nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
+            [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
                 best_median_nse = median_nse
             print(f"best NSE so far: {best_median_nse}")
-        if profile_code:
-            p.stop()
-    return nse_list_last_pass, list_training_loss_single_pass
+        if world_size > 1:
+            dist.barrier()
+    if rank == 0 and profile_code:
+        p.stop()
+    if world_size > 1:
+        cleanup()
 
 
 def seed_worker(worker_id):
@@ -692,7 +773,7 @@ def choose_hyper_parameters_validation(
 ):
     train_stations_list = []
     val_stations_list = []
-    if dataset_to_use.lower() == "era5" or dataset_to_use.lower() == "caravan":
+    if dataset_to_use.lower() == "caravan":
         all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
