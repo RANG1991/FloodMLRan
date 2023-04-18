@@ -202,7 +202,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
         nse_list_basins.append(nse)
     # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
-    median_nse_basin = stations_ids[nse_list_basins_idx_sorted[len(stations_ids) // 2]]
+    median_nse_basin = "7066000"
     median_nse = statistics.median(nse_list_basins)
     print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}", flush=True)
     fig, ax = plt.subplots(figsize=(20, 6))
@@ -717,8 +717,8 @@ def run_training_and_test(
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': loss_on_training_epoch,
                 }, f"../checkpoints/{model_name}_{curr_datetime_str}.pt")
-            if model_name.lower() == "cnn_lstm":
-                print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
+                # if model_name.lower() == "cnn_lstm":
+                #     print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
                 model.cnn_lstm.number_of_images_counter = 0
             if profile_code:
                 p.step()
@@ -727,7 +727,7 @@ def run_training_and_test(
             while not preds_obs_dicts_ranks_queue.empty():
                 dict_preds_obs_single_rank = preds_obs_dicts_ranks_queue.get()
                 for basin_id in dict_preds_obs_single_rank.keys():
-                    preds_obs_dicts_ranks_queue[basin_id] = dict_preds_obs_single_rank[basin_id]
+                    preds_obs_dict_per_basin[basin_id] = dict_preds_obs_single_rank[basin_id]
             nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
@@ -785,7 +785,7 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    learning_rates = np.linspace(5 * (10 ** -5), 5 * (10 ** -5), num=1).tolist()
+    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4]
     sequence_lengths = [270]
     if model_name.lower() == "transformer":
