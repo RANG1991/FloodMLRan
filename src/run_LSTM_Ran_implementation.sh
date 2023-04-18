@@ -2,10 +2,12 @@
 
 # Change number of tasks, amount of memory and time limit according to your needs
 
-#SBATCH -n 10
+#SBATCH -n 3
 #SBATCH --time=150:0:0
 #SBATCH --mem=160G
-#SBATCH --gres gpu:a100-3-40
+#SBATCH --gres gpu:a30:3
+
+# --gres gpu:a100-3-40
 
 # Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
@@ -19,7 +21,7 @@ source $virtual_env
 for i in 1 2 3
 do
   echo "run number: $i"
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CNN_LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_workers_data_loader 3 --create_new_files --save_checkpoint --batch_size 512
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_workers_data_loader 3 --create_new_files --save_checkpoint --batch_size 512
+  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CNN_LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 3 --create_new_files --save_checkpoint --batch_size 512
+  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 3 --create_new_files --save_checkpoint --batch_size 512
 #  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CONV_LSTM --dataset CARAVAN --optim Adam --num_epochs 15 --sequence_length_spatial 7 --limit_size_above_1000
 done
