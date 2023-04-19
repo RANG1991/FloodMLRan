@@ -47,7 +47,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '10006'
+    os.environ['MASTER_PORT'] = '10005'
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
@@ -202,7 +202,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
         nse_list_basins.append(nse)
     # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
-    median_nse_basin = "7066000"
+    median_nse_basin = "07066000"
     median_nse = statistics.median(nse_list_basins)
     print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}", flush=True)
     fig, ax = plt.subplots(figsize=(20, 6))
