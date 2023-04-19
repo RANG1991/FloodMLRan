@@ -60,7 +60,7 @@ class Transformer_CNN(nn.Module):
         non_spatial_input = torch.cat([x_d, x_s], axis=-1)
         batch_size, seq_length, _ = spatial_input.shape
         spatial_input = spatial_input.reshape(batch_size * seq_length, 1, self.image_size, self.image_size)
-        spatial_input = self.vit(spatial_input).pooler_output
+        spatial_input = self.vit(spatial_input).last_hidden_state[:, 0, :]
         spatial_input = spatial_input.reshape(batch_size, seq_length, -1)
         non_spatial_input = self.fc_1(non_spatial_input)
         enc_out = self.encoder(non_spatial_input, spatial_input)
