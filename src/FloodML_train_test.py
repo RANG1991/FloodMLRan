@@ -152,7 +152,8 @@ def eval_model(model, loader, preds_obs_dicts_ranks_queue, device, epoch, print_
                     preds_obs_dict_per_basin[station_id] = []
                 preds_obs_dict_per_basin[station_id].append(
                     (pred_expected[i].clone().item(), pred_actual[i].item()))
-                preds_obs_dicts_ranks_queue.put((station_id, (pred_expected[i].clone().item(), pred_actual[i].item())))
+                preds_obs_dicts_ranks_queue.put((station_id, dates[i],
+                                                 (pred_expected[i].clone().item(), pred_actual[i].item())))
     return preds_obs_dict_per_basin
 
 
@@ -194,8 +195,9 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
     for stations_id in stations_ids:
-        obs_and_preds = preds_obs_dict_per_basin[stations_id]
-        obs, preds = zip(*obs_and_preds)
+        dates_obs_preds = preds_obs_dict_per_basin[stations_id]
+        dates_obs_preds.sort(key=lambda x: x[0])
+        dates, obs, preds = zip(*dates_obs_preds)
         obs = np.stack(list(obs))
         preds = np.stack(list(preds))
         nse = calc_nse(obs, preds)
@@ -207,8 +209,9 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     median_nse = statistics.median(nse_list_basins)
     print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}", flush=True)
     fig, ax = plt.subplots(figsize=(20, 6))
-    obs_and_preds = preds_obs_dict_per_basin[median_nse_basin]
-    obs, preds = zip(*obs_and_preds)
+    dates_obs_preds = preds_obs_dict_per_basin[median_nse_basin]
+    dates_obs_preds.sort(key=lambda x: x[0])
+    dates, obs, preds = zip(*dates_obs_preds)
     obs = np.stack(list(obs))
     preds = np.stack(list(preds))
     ax.plot(obs.squeeze(), label="observation")
@@ -728,10 +731,12 @@ def run_training_and_test(
             preds_obs_dict_per_basin = {}
             num_obs_preds = 0
             while not preds_obs_dicts_ranks_queue.empty():
-                basin_id, (obs, preds) = preds_obs_dicts_ranks_queue.get()
+                basin_id, date, (obs, preds) = preds_obs_dicts_ranks_queue.get()
                 if basin_id not in preds_obs_dict_per_basin.keys():
                     preds_obs_dict_per_basin[basin_id] = []
-                preds_obs_dict_per_basin[basin_id].append((obs, preds))
+                date = datetime.strptime("/".join([str(date_component) for
+                                                   date_component in date.tolist()]), "%Y/%m/%d")
+                preds_obs_dict_per_basin[basin_id].append((date, obs, preds))
                 num_obs_preds += 1
             assert num_obs_preds == len(test_data), \
                 f"The number of observations and predictions is not equal to the test dataset size. " \
