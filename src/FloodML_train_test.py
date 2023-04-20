@@ -727,7 +727,9 @@ def run_training_and_test(
             while not preds_obs_dicts_ranks_queue.empty():
                 dict_preds_obs_single_rank = preds_obs_dicts_ranks_queue.get()
                 for basin_id in dict_preds_obs_single_rank.keys():
-                    preds_obs_dict_per_basin[basin_id] = dict_preds_obs_single_rank[basin_id]
+                    if basin_id not in preds_obs_dict_per_basin.keys():
+                        preds_obs_dict_per_basin[basin_id] = []
+                    preds_obs_dict_per_basin[basin_id].extend(dict_preds_obs_single_rank[basin_id])
             nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
