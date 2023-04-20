@@ -214,8 +214,10 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
     ax.plot(preds.squeeze(), label="prediction")
     ax.legend()
     ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
+    curr_datetime = datetime.now()
+    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     plt.savefig(
-        f"../data/results/Hydrograph_of_basin_{median_nse_basin}_in_epoch_{num_epoch}.png"
+        f"../data/results/Hydrograph_of_basin_{median_nse_basin}_in_epoch_{num_epoch}_{curr_datetime_str}.png"
     )
     plt.close()
     return nse_list_basins, median_nse
