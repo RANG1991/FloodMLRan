@@ -105,7 +105,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
     return running_loss / (len(loader))
 
 
-def eval_model(model, loader, device, epoch, print_tqdm_to_console,
+def eval_model(model, loader, preds_obs_dicts_ranks_queue, device, epoch, print_tqdm_to_console,
                specific_model_type) -> Tuple[torch.Tensor, torch.Tensor]:
     torch.cuda.empty_cache()
     preds_obs_dict_per_basin = {}
@@ -152,6 +152,7 @@ def eval_model(model, loader, device, epoch, print_tqdm_to_console,
                     preds_obs_dict_per_basin[station_id] = []
                 preds_obs_dict_per_basin[station_id].append(
                     (pred_expected[i].clone().item(), pred_actual[i].item()))
+                preds_obs_dicts_ranks_queue.put((station_id, (pred_expected[i].clone().item(), pred_actual[i].item())))
     return preds_obs_dict_per_basin
 
 
@@ -202,7 +203,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
         nse_list_basins.append(nse)
     # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
-    median_nse_basin = "07066000"
+    median_nse_basin = "01022500"
     median_nse = statistics.median(nse_list_basins)
     print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}", flush=True)
     fig, ax = plt.subplots(figsize=(20, 6))
@@ -470,9 +471,9 @@ def run_single_parameters_check_with_val_on_years(
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
     ctx = mp.get_context('spawn')
-    training_loss_single_pass_queue = ctx.Queue(1000)
-    nse_last_pass_queue = ctx.Queue(1000)
-    preds_obs_dicts_ranks_queue = ctx.Queue(1000)
+    training_loss_single_pass_queue = ctx.Queue()
+    nse_last_pass_queue = ctx.Queue()
+    preds_obs_dicts_ranks_queue = ctx.Queue()
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
                    (learning_rate * num_processes_ddp),
@@ -702,10 +703,9 @@ def run_training_and_test(
                                              print_tqdm_to_console=print_tqdm_to_console,
                                              specific_model_type=specific_model_type)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            preds_obs_dict_per_basin = eval_model(model, test_dataloader, device="cuda", epoch=(i + 1),
-                                                  print_tqdm_to_console=print_tqdm_to_console,
-                                                  specific_model_type=specific_model_type)
-            preds_obs_dicts_ranks_queue.put(preds_obs_dict_per_basin.copy())
+            _ = eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
+                           print_tqdm_to_console=print_tqdm_to_console,
+                           specific_model_type=specific_model_type)
         if world_size > 1:
             dist.barrier()
         if rank == 0:
@@ -726,12 +726,17 @@ def run_training_and_test(
                 p.step()
             training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
             preds_obs_dict_per_basin = {}
+            num_obs_preds = 0
             while not preds_obs_dicts_ranks_queue.empty():
-                dict_preds_obs_single_rank = preds_obs_dicts_ranks_queue.get()
-                for basin_id in dict_preds_obs_single_rank.keys():
-                    if basin_id not in preds_obs_dict_per_basin.keys():
-                        preds_obs_dict_per_basin[basin_id] = []
-                    preds_obs_dict_per_basin[basin_id].extend(dict_preds_obs_single_rank[basin_id])
+                basin_id, (obs, preds) = preds_obs_dicts_ranks_queue.get()
+                if basin_id not in preds_obs_dict_per_basin.keys():
+                    preds_obs_dict_per_basin[basin_id] = []
+                preds_obs_dict_per_basin[basin_id].append((obs, preds))
+                num_obs_preds += 1
+            assert num_obs_preds == len(test_data), \
+                f"The number of observations and predictions is not equal to the test dataset size. " \
+                f"The size of observations and predictions dictionary: {num_obs_preds}. " \
+                f"The size of test dataloader: {len(test_data)}"
             nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
             [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
