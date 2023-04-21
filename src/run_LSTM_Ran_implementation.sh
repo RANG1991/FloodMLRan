@@ -2,7 +2,7 @@
 
 # Change number of tasks, amount of memory and time limit according to your needs
 
-#SBATCH -n 3
+#SBATCH -n 8
 #SBATCH --time=150:0:0
 #SBATCH --mem=160G
 #SBATCH --gres gpu:a30:3

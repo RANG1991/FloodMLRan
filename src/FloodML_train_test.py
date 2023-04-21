@@ -706,7 +706,7 @@ def run_training_and_test(
                                              print_tqdm_to_console=print_tqdm_to_console,
                                              specific_model_type=specific_model_type)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            _ = eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
+            _ = eval_model(model.module, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
                            print_tqdm_to_console=print_tqdm_to_console,
                            specific_model_type=specific_model_type)
         if world_size > 1:
