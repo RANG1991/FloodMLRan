@@ -100,7 +100,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         running_loss += loss.item()
         # print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
-    print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}")
+    print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}", flush=True)
     # wandb.log({"loss": running_loss / (len(loader))})
     return running_loss / (len(loader))
 
@@ -474,9 +474,9 @@ def run_single_parameters_check_with_val_on_years(
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
     ctx = mp.get_context('spawn')
-    training_loss_single_pass_queue = ctx.Queue(1000)
-    nse_last_pass_queue = ctx.Queue(1000)
-    preds_obs_dicts_ranks_queue = ctx.Queue(1000)
+    training_loss_single_pass_queue = ctx.Queue()
+    nse_last_pass_queue = ctx.Queue()
+    preds_obs_dicts_ranks_queue = ctx.Queue()
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
                    (learning_rate * num_processes_ddp),
@@ -515,7 +515,7 @@ def run_single_parameters_check_with_val_on_years(
         print(
             f"parameters are: dropout={dropout_rate} sequence_length={sequence_length} "
             f"num_hidden_units={num_hidden_units} num_epochs={num_epochs}, median NSE is: "
-            f"{statistics.median(nse_list_last_epoch)}"
+            f"{statistics.median(nse_list_last_epoch)}", flush=True
         )
     plt.title(
         f"loss in {num_epochs} epochs for the parameters: "
@@ -746,7 +746,7 @@ def run_training_and_test(
             [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
                 best_median_nse = median_nse
-            print(f"best NSE so far: {best_median_nse}")
+            print(f"best NSE so far: {best_median_nse}", flush=True)
         if world_size > 1:
             dist.barrier()
     if rank == 0 and profile_code:
@@ -900,7 +900,7 @@ def choose_hyper_parameters_validation(
             mode="a",
             header=not os.path.exists(f"../data/results/results_{curr_datetime_str}.csv"),
         )
-        print(f"best parameters: {best_parameters}")
+        print(f"best parameters: {best_parameters}", flush=True)
     return best_parameters
 
 

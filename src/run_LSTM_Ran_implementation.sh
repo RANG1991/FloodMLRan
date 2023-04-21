@@ -21,7 +21,7 @@ source $virtual_env
 for i in 1 2 3
 do
   echo "run number: $i"
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CNN_LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 2 --create_new_files --batch_size 512
-  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 2 --create_new_files --batch_size 512
+  python ./FloodML_train_test.py --model CNN_LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 2 --create_new_files --batch_size 512
+  python ./FloodML_train_test.py --model LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 2 --create_new_files --batch_size 512
 #  NCCL_P2P_DISABLE=1 python ./FloodML_train_test.py --model CONV_LSTM --dataset CARAVAN --optim Adam --num_epochs 15 --sequence_length_spatial 7 --limit_size_above_1000
 done
