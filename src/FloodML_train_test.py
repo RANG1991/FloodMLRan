@@ -47,7 +47,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '10005'
+    os.environ['MASTER_PORT'] = '10006'
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
@@ -474,9 +474,9 @@ def run_single_parameters_check_with_val_on_years(
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
     ctx = mp.get_context('spawn')
-    training_loss_single_pass_queue = ctx.Queue()
-    nse_last_pass_queue = ctx.Queue()
-    preds_obs_dicts_ranks_queue = ctx.Queue()
+    training_loss_single_pass_queue = ctx.Queue(1000)
+    nse_last_pass_queue = ctx.Queue(1000)
+    preds_obs_dicts_ranks_queue = ctx.Queue(1000)
     mp.spawn(run_training_and_test,
              args=(num_processes_ddp,
                    (learning_rate * num_processes_ddp),
