@@ -489,7 +489,7 @@ def run_single_parameters_check_with_val_on_years(
     if not debug:
         mp.spawn(run_training_and_test,
                  args=(num_processes_ddp,
-                       (learning_rate * num_processes_ddp * 2),
+                       learning_rate,
                        sequence_length,
                        num_hidden_units,
                        num_epochs,
@@ -516,7 +516,7 @@ def run_single_parameters_check_with_val_on_years(
                  nprocs=num_processes_ddp,
                  join=True)
     else:
-        run_training_and_test(1,
+        run_training_and_test(0,
                               1,
                               learning_rate,
                               sequence_length,
@@ -737,11 +737,17 @@ def run_training_and_test(
         p.start()
     for i in range(starting_epoch, num_epochs):
         if world_size > 1:
-            train_dataloader.sampler.set_epoch(i)
-        loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
-                                             epoch=(i + 1), device="cuda",
-                                             print_tqdm_to_console=print_tqdm_to_console,
-                                             specific_model_type=specific_model_type)
+            with model.no_sync():
+                train_dataloader.sampler.set_epoch(i)
+                loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
+                                                     epoch=(i + 1), device="cuda",
+                                                     print_tqdm_to_console=print_tqdm_to_console,
+                                                     specific_model_type=specific_model_type)
+        else:
+            loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
+                                                 epoch=(i + 1), device="cuda",
+                                                 print_tqdm_to_console=print_tqdm_to_console,
+                                                 specific_model_type=specific_model_type)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             _ = eval_model(model.module, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
                            print_tqdm_to_console=print_tqdm_to_console,
@@ -838,7 +844,7 @@ def choose_hyper_parameters_validation(
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
     if model_name.lower() == "transformer_cnn":
-        learning_rates = np.linspace((10 ** -6), (10 ** -6), num=1).tolist()
+        learning_rates = np.linspace((10 ** -5), (10 ** -5), num=1).tolist()
     else:
         learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4]
@@ -1001,7 +1007,7 @@ def main():
     parser.add_argument("--use_all_static_attr", action="store_true")
     parser.add_argument("--save_checkpoint", action="store_true")
     parser.add_argument("--load_checkpoint", action="store_true")
-    parser.set_defaults("--debug", action="store_true")
+    parser.add_argument("--debug", action="store_true")
     parser.add_argument("--checkpoint_path", help="the checkpoint path to load the checkpoint from", default="",
                         type=str)
     parser.add_argument("--batch_size", default=256, type=int)
