@@ -33,6 +33,7 @@ from transformers import TimeSeriesTransformerConfig, TimeSeriesTransformerModel
 import glob
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
+import queue
 
 # wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
 #
@@ -482,11 +483,11 @@ def run_single_parameters_check_with_val_on_years(
     )
     training_data.set_sequence_length(sequence_length)
     test_data.set_sequence_length(sequence_length)
-    ctx = mp.get_context('spawn')
-    training_loss_single_pass_queue = ctx.Queue()
-    nse_last_pass_queue = ctx.Queue()
-    preds_obs_dicts_ranks_queue = ctx.Queue()
     if not debug:
+        ctx = mp.get_context('spawn')
+        training_loss_single_pass_queue = ctx.Queue()
+        nse_last_pass_queue = ctx.Queue()
+        preds_obs_dicts_ranks_queue = ctx.Queue()
         mp.spawn(run_training_and_test,
                  args=(num_processes_ddp,
                        learning_rate,
@@ -516,6 +517,9 @@ def run_single_parameters_check_with_val_on_years(
                  nprocs=num_processes_ddp,
                  join=True)
     else:
+        training_loss_single_pass_queue = queue.Queue()
+        nse_last_pass_queue = queue.Queue()
+        preds_obs_dicts_ranks_queue = queue.Queue()
         run_training_and_test(0,
                               1,
                               learning_rate,
@@ -843,8 +847,8 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    if model_name.lower() == "transformer_cnn":
-        learning_rates = np.linspace((10 ** -5), (10 ** -5), num=1).tolist()
+    if "transformer" in model_name.lower():
+        learning_rates = np.linspace(5 * (10 ** -5), 5 * (10 ** -5), num=1).tolist()
     else:
         learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4]
