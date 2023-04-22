@@ -45,9 +45,17 @@ K_VALUE_CROSS_VALIDATION = 2
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 
+def is_port_in_use(port):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+
 def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '10006'
+    os.environ['MASTER_ADDR'] = "localhost"
+    os.environ['MASTER_PORT'] = "10006"
+    if is_port_in_use(int(os.environ['MASTER_PORT'])):
+        os.environ['MASTER_PORT'] = "10005"
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
@@ -447,7 +455,8 @@ def run_single_parameters_check_with_val_on_years(
         save_checkpoint,
         load_checkpoint,
         checkpoint_path,
-        batch_size
+        batch_size,
+        debug
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
@@ -477,38 +486,66 @@ def run_single_parameters_check_with_val_on_years(
     training_loss_single_pass_queue = ctx.Queue()
     nse_last_pass_queue = ctx.Queue()
     preds_obs_dicts_ranks_queue = ctx.Queue()
-    mp.spawn(run_training_and_test,
-             args=(num_processes_ddp,
-                   (learning_rate * num_processes_ddp),
-                   sequence_length,
-                   num_hidden_units,
-                   num_epochs,
-                   training_data,
-                   test_data,
-                   dropout_rate,
-                   static_attributes_names,
-                   dynamic_attributes_names,
-                   model_name,
-                   1,
-                   optim_name,
-                   num_workers_data_loader,
-                   profile_code,
-                   sequence_length_spatial,
-                   print_tqdm_to_console,
-                   specific_model_type,
-                   load_checkpoint,
-                   save_checkpoint,
-                   checkpoint_path,
-                   batch_size,
-                   training_loss_single_pass_queue,
-                   nse_last_pass_queue,
-                   preds_obs_dicts_ranks_queue),
-             nprocs=num_processes_ddp,
-             join=True)
+    if not debug:
+        mp.spawn(run_training_and_test,
+                 args=(num_processes_ddp,
+                       (learning_rate * num_processes_ddp * 2),
+                       sequence_length,
+                       num_hidden_units,
+                       num_epochs,
+                       training_data,
+                       test_data,
+                       dropout_rate,
+                       static_attributes_names,
+                       dynamic_attributes_names,
+                       model_name,
+                       1,
+                       optim_name,
+                       num_workers_data_loader,
+                       profile_code,
+                       sequence_length_spatial,
+                       print_tqdm_to_console,
+                       specific_model_type,
+                       load_checkpoint,
+                       save_checkpoint,
+                       checkpoint_path,
+                       batch_size,
+                       training_loss_single_pass_queue,
+                       nse_last_pass_queue,
+                       preds_obs_dicts_ranks_queue),
+                 nprocs=num_processes_ddp,
+                 join=True)
+    else:
+        run_training_and_test(1,
+                              1,
+                              learning_rate,
+                              sequence_length,
+                              num_hidden_units,
+                              num_epochs,
+                              training_data,
+                              test_data,
+                              dropout_rate,
+                              static_attributes_names,
+                              dynamic_attributes_names,
+                              model_name,
+                              1,
+                              optim_name,
+                              num_workers_data_loader,
+                              profile_code,
+                              sequence_length_spatial,
+                              print_tqdm_to_console,
+                              specific_model_type,
+                              load_checkpoint,
+                              save_checkpoint,
+                              checkpoint_path,
+                              batch_size,
+                              training_loss_single_pass_queue,
+                              nse_last_pass_queue,
+                              preds_obs_dicts_ranks_queue)
     training_loss_list_single_pass = []
     nse_list_last_epoch = []
     while not training_loss_single_pass_queue.empty():
-        training_loss_list_single_pass.append(training_loss_single_pass_queue.get())
+        training_loss_list_single_pass.append(training_loss_single_pass_queue.get()[1])
     while not nse_last_pass_queue.empty():
         nse_list_last_epoch.append(nse_last_pass_queue.get())
     if len(nse_list_last_epoch) > 0:
@@ -783,7 +820,8 @@ def choose_hyper_parameters_validation(
         save_checkpoint,
         load_checkpoint,
         checkpoint_path,
-        batch_size
+        batch_size,
+        debug
 ):
     train_stations_list = []
     val_stations_list = []
@@ -799,7 +837,10 @@ def choose_hyper_parameters_validation(
     #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
+    if model_name.lower() == "transformer_cnn":
+        learning_rates = np.linspace((10 ** -6), (10 ** -6), num=1).tolist()
+    else:
+        learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
     dropout_rates = [0.4]
     sequence_lengths = [270]
     if model_name.lower() == "transformer":
@@ -861,7 +902,8 @@ def choose_hyper_parameters_validation(
             save_checkpoint=save_checkpoint,
             load_checkpoint=load_checkpoint,
             checkpoint_path=checkpoint_path,
-            batch_size=batch_size
+            batch_size=batch_size,
+            debug=debug
         )
         if len(nse_list_single_pass) == 0:
             median_nse = -1
@@ -959,6 +1001,7 @@ def main():
     parser.add_argument("--use_all_static_attr", action="store_true")
     parser.add_argument("--save_checkpoint", action="store_true")
     parser.add_argument("--load_checkpoint", action="store_true")
+    parser.set_defaults("--debug", action="store_true")
     parser.add_argument("--checkpoint_path", help="the checkpoint path to load the checkpoint from", default="",
                         type=str)
     parser.add_argument("--batch_size", default=256, type=int)
@@ -969,6 +1012,7 @@ def main():
     parser.set_defaults(use_all_static_attr=False)
     parser.set_defaults(save_checkpoint=False)
     parser.set_defaults(load_checkpoint=False)
+    parser.set_defaults(debug=False)
     command_args = parser.parse_args()
     if command_args.load_checkpoint and command_args.checkpoint_path == "":
         list_of_files = glob.glob('../checkpoints/*')
@@ -999,7 +1043,8 @@ def main():
             save_checkpoint=command_args.save_checkpoint,
             load_checkpoint=command_args.load_checkpoint,
             checkpoint_path=command_args.checkpoint_path,
-            batch_size=command_args.batch_size
+            batch_size=command_args.batch_size,
+            debug=command_args.debug
         )
     elif command_args.dataset == "CARAVAN":
         choose_hyper_parameters_validation(
@@ -1026,7 +1071,8 @@ def main():
             save_checkpoint=command_args.save_checkpoint,
             load_checkpoint=command_args.load_checkpoint,
             checkpoint_path=command_args.checkpoint_path,
-            batch_size=command_args.batch_size
+            batch_size=command_args.batch_size,
+            debug=command_args.debug
         )
     else:
         raise Exception(f"wrong dataset name: {command_args.dataset}")
