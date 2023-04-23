@@ -64,16 +64,31 @@ def generate_csv_from_output_file(output_file, static_attr_file):
         basins_dict_for_data_frame[basins_id] = list_nse_different_models[:]
     df_nse = pd.DataFrame.from_dict(basins_dict_for_data_frame, orient="index",
                                     columns=["basin_id"] + [f'NSE_{model_name}' for model_name in basins_dict.keys()])
-    df_static_attrib = pd.read_csv(static_attr_file)
+    df_static_attrib = pd.read_csv(static_attr_file, dtype={"gauge_id": str})
     df_static_attrib["gauge_id"] = df_static_attrib["gauge_id"].apply(lambda x: x.replace("us_", ""))
     df_res = df_nse.set_index('basin_id').join(df_static_attrib.set_index('gauge_id'))
     df_res.to_csv(output_file_name + ".csv")
     # generate_box_plots(df_res)
 
 
+def generate_csv_from_CAMELS_static_attr_files(static_data_folder):
+    attributes_path = Path(static_data_folder)
+    txt_files = attributes_path.glob("camels_*.txt")
+    # Read-in attributes into one big dataframe
+    dfs = []
+    for txt_file in txt_files:
+        df_temp = pd.read_csv(txt_file, sep=";", header=0, dtype={"gauge_id": str})
+        df_temp = df_temp.set_index("gauge_id")
+        dfs.append(df_temp)
+    df = pd.concat(dfs, axis=1)
+    df.index = df.index.astype(str)
+    df.to_csv("../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
+
+
 def main():
+    generate_csv_from_CAMELS_static_attr_files("../data/CAMELS_US/camels_attributes_v2.0")
     generate_csv_from_output_file("./slurm-6308333.out",
-                                  "../data/ERA5/Caravan/attributes/us/attributes_hydroatlas_us.csv")
+                                  "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 
 if __name__ == "__main__":
