@@ -488,7 +488,7 @@ def run_single_parameters_check_with_val_on_years(
         preds_obs_dicts_ranks_queue = ctx.Queue()
         mp.spawn(run_training_and_test,
                  args=(num_processes_ddp,
-                       learning_rate,
+                       learning_rate * num_processes_ddp,
                        sequence_length,
                        num_hidden_units,
                        num_epochs,
@@ -707,13 +707,13 @@ def run_training_and_test(
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=True)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
         train_dataloader = DataLoader(training_data,
-                                      batch_size=batch_size,
+                                      batch_size=batch_size // world_size,
                                       sampler=distributed_sampler_train,
                                       pin_memory=True,
                                       num_workers=num_workers_data_loader,
                                       worker_init_fn=seed_worker)
         test_dataloader = DataLoader(test_data,
-                                     batch_size=batch_size,
+                                     batch_size=batch_size // world_size,
                                      sampler=distributed_sampler_test,
                                      pin_memory=True,
                                      num_workers=num_workers_data_loader,
@@ -739,12 +739,11 @@ def run_training_and_test(
         p.start()
     for i in range(starting_epoch, num_epochs):
         if world_size > 1:
-            with model.no_sync():
-                train_dataloader.sampler.set_epoch(i)
-                loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
-                                                     epoch=(i + 1), device="cuda",
-                                                     print_tqdm_to_console=print_tqdm_to_console,
-                                                     specific_model_type=specific_model_type)
+            train_dataloader.sampler.set_epoch(i)
+            loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
+                                                 epoch=(i + 1), device="cuda",
+                                                 print_tqdm_to_console=print_tqdm_to_console,
+                                                 specific_model_type=specific_model_type)
         else:
             loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                                  epoch=(i + 1), device="cuda",
@@ -752,6 +751,7 @@ def run_training_and_test(
                                                  specific_model_type=specific_model_type)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             if world_size > 1:
+                test_dataloader.sampler.set_epoch(i)
                 _ = eval_model(model.module, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
                                print_tqdm_to_console=print_tqdm_to_console,
                                specific_model_type=specific_model_type)
