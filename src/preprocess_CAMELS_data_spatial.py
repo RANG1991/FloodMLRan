@@ -31,7 +31,7 @@ def check_if_discharge_file_exists(station_id, ERA5_discharge_data_folder_name):
 
 def check_if_all_precip_files_exist(station_id, output_folder_name):
     shape_file = output_folder_name + "/shape_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    precip24_file = output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
+    precip24_file = output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc"
     info_file = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
     latlon_file = output_folder_name + "/latlon_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
     list_files = [shape_file, precip24_file, info_file, latlon_file]
@@ -361,4 +361,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main()
+    main(False)
