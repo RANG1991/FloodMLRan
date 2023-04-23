@@ -54,9 +54,7 @@ def is_port_in_use(port):
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = "localhost"
-    os.environ['MASTER_PORT'] = "10006"
-    if is_port_in_use(int(os.environ['MASTER_PORT'])):
-        os.environ['MASTER_PORT'] = "10005"
+    os.environ['MASTER_PORT'] = "10005"
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
@@ -753,9 +751,14 @@ def run_training_and_test(
                                                  print_tqdm_to_console=print_tqdm_to_console,
                                                  specific_model_type=specific_model_type)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
-            _ = eval_model(model.module, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
-                           print_tqdm_to_console=print_tqdm_to_console,
-                           specific_model_type=specific_model_type)
+            if world_size > 1:
+                _ = eval_model(model.module, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
+                               print_tqdm_to_console=print_tqdm_to_console,
+                               specific_model_type=specific_model_type)
+            else:
+                _ = eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
+                               print_tqdm_to_console=print_tqdm_to_console,
+                               specific_model_type=specific_model_type)
         if world_size > 1:
             dist.barrier()
         if rank == 0:
