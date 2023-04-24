@@ -34,6 +34,7 @@ import glob
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 import queue
+import json
 
 # wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
 #
@@ -976,6 +977,12 @@ def main():
     # torch.backends.cudnn.enabled = False
     # initialize_seed(123)
     parser = argparse.ArgumentParser()
+    # parser.add_argument('--json_config_file_name',
+    #                     help='file name of the configuration (in json file format)')
+    # args = parser.parse_args()
+    # with open(args.json_config_file_name, 'rt') as f:
+    #     t_args = argparse.Namespace()
+    #     t_args.__dict__.update(json.load(f))
     parser.add_argument(
         "--dataset",
         help="which dataset to train and test / validate on",
@@ -1027,6 +1034,9 @@ def main():
     parser.set_defaults(load_checkpoint=False)
     parser.set_defaults(debug=False)
     command_args = parser.parse_args()
+    json_command_args = json.dumps(vars(command_args), indent=4)
+    print("running with arguments:")
+    print(json_command_args)
     if command_args.load_checkpoint and command_args.checkpoint_path == "":
         list_of_files = glob.glob('../checkpoints/*')
         latest_file = max(list_of_files, key=os.path.getctime)

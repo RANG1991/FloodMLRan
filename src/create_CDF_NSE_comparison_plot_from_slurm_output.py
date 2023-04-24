@@ -4,6 +4,7 @@ import re
 import numpy as np
 from scipy.special import softmax
 from pathlib import Path
+import json
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -105,6 +106,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # d = {"dataset": "CAMELS", "optim": "Adam", "num_epochs": 10, "sequence_length_spatial": 14, "num_processes_ddp": 3,
+    #      "limit_size_above_1000": "True", "num_workers_data_loader": 2, "batch_size": 1024}
+    # with open("config_files_json/config_run_above_1000_basins.json", "w") as f:
+    #     json.dump(d, f, indent=4)
     # query = np.array([[0.5, 0.1, 0.2], [0.7, 0.8, 0.2]])
     # key = np.array([[1.0, 0.2, 0.4], [1.4, 1.6, 0.4]])
     # value = np.array([[1.5, 0.3, 0.6], [2.1, 2.4, 0.6]])
