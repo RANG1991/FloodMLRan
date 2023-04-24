@@ -4,6 +4,7 @@
   "num_epochs": 10,
   "sequence_length_spatial": 14,
   "num_processes_ddp": 3,
+  "limit_size_above_1000": "True",
   "num_workers_data_loader": 2,
   "batch_size": 1024,
   "save_checkpoint": "True"

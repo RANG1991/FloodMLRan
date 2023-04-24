@@ -55,7 +55,7 @@ def is_port_in_use(port):
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = "localhost"
-    os.environ['MASTER_PORT'] = "10006"
+    os.environ['MASTER_PORT'] = "10005"
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
@@ -199,7 +199,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     return float(nse_val)
 
 
-def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_for_nse_calc=10):
+def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, num_basins_for_nse_calc=10):
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
     for stations_id in stations_ids:
@@ -213,23 +213,30 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, num_basins_f
         nse_list_basins.append(nse)
     # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
-    median_nse_basin = "07066000"
+    basin_id_with_median_nse = stations_ids[nse_list_basins_idx_sorted[len(nse_list_basins_idx_sorted) // 2]]
+    basin_id_to_plot = "07066000"
     median_nse = statistics.median(nse_list_basins)
-    print(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}", flush=True)
+    print(f"Basin {basin_id_with_median_nse} - NSE: {median_nse:.3f}", flush=True)
     fig, ax = plt.subplots(figsize=(20, 6))
-    dates_obs_preds = preds_obs_dict_per_basin[median_nse_basin]
+    if basin_id_to_plot not in preds_obs_dict_per_basin.keys():
+        print(f"the basin with ID: {basin_id_to_plot} is not in the validation set (probably due to smaller number of "
+              f"basins). Using instead the basin with the median NSE, with ID: {basin_id_with_median_nse}")
+        basin_id_to_plot = basin_id_with_median_nse
+    dates_obs_preds = preds_obs_dict_per_basin[basin_id_to_plot]
     dates_obs_preds.sort(key=lambda x: x[0])
     dates, obs, preds = zip(*dates_obs_preds)
     obs = np.stack(list(obs))
     preds = np.stack(list(preds))
+    nse_basin_to_plot = calc_nse(obs, preds)
     ax.plot(obs.squeeze(), label="observation")
     ax.plot(preds.squeeze(), label="prediction")
     ax.legend()
-    ax.set_title(f"Basin {median_nse_basin} - NSE: {median_nse:.3f}")
+    ax.set_title(f"Basin {basin_id_to_plot} - NSE: {nse_basin_to_plot:.3f}")
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     plt.savefig(
-        f"../data/results/Hydrograph_of_basin_{median_nse_basin}_in_epoch_{num_epoch}_{curr_datetime_str}.png"
+        f"../data/results/Hydrograph_of_basin_{basin_id_to_plot}_in_epoch_{num_epoch}_of_model{model_name}"
+        f"_{curr_datetime_str}.png"
     )
     plt.close()
     return nse_list_basins, median_nse
@@ -763,8 +770,11 @@ def run_training_and_test(
         if world_size > 1:
             dist.barrier()
         if rank == 0:
-            if save_checkpoint:
+            if world_size > 1:
+                model_name = model.module.__class__.__name__
+            else:
                 model_name = model.__class__.__name__
+            if save_checkpoint:
                 curr_datetime = datetime.now()
                 curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
                 torch.save({
@@ -793,7 +803,7 @@ def run_training_and_test(
                 f"The number of observations and predictions is not equal to the test dataset size. " \
                 f"The size of observations and predictions dictionary: {num_obs_preds}. " \
                 f"The size of test dataloader: {len(test_data)}"
-            nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1))
+            nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1), model_name)
             [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
                 best_median_nse = median_nse
