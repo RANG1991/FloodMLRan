@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import re
 import numpy as np
 from scipy.special import softmax
+from pathlib import Path
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -46,12 +47,12 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_name = "slurm-6516086.out"
+    input_file_name = Path("../slurm-6521939.out").resolve()
     d = create_dict_basin_id_to_NSE_my_code(f"{input_file_name}")
     run_numbers = set([run_number for _, run_number in d.keys()])
     model_names = set([model_name for model_name, _ in d.keys()])
     plot_title = f"NSE CDF of process ID - " \
-                 f"{input_file_name.replace('slurm-', '').replace('.out', '')}"
+                 f"{input_file_name.name.replace('slurm-', '').replace('.out', '')}"
     for model_name in model_names:
         # plot_title = f"NSE CDF of process ID - " \
         #              f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
