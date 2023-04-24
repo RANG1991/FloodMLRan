@@ -127,7 +127,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_station_ids
-
                 and (not os.path.exists(
                     f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
@@ -139,7 +138,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                              create_new_files])))
 
     def read_single_station_file_spatial(self, station_id):
-        station_data_file_spatial = (Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial__{station_id}.nc")
+        station_data_file_spatial = (Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc")
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
         df_dis_data = self.read_discharge_data(station_id)
@@ -252,7 +251,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
                 if (specific_model_type.lower() == "conv" or
                         specific_model_type.lower() == "cnn"):
-                    if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial__{station_id}.nc"):
+                    if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial_{station_id}.nc"):
                         continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)

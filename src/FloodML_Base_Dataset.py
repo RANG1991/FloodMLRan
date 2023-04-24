@@ -109,8 +109,8 @@ class FloodML_Base_Dataset(Dataset):
          self.list_stations_static
          ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
         # all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
-        all_station_ids = sorted(self.list_stations_static)[:]
-        self.all_station_ids = [station_id for station_id in all_station_ids if station_id not in
+        all_stations_ids = sorted(self.list_stations_static)[:]
+        self.all_station_ids = [station_id for station_id in all_stations_ids if station_id not in
                                 STATIONS_WITH_ERRORS]
         (max_width,
          max_height,
