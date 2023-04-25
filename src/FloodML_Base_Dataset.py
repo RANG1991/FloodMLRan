@@ -61,7 +61,7 @@ class FloodML_Base_Dataset(Dataset):
                  stage,
                  all_stations_ids,
                  sequence_length_spatial,
-                 specific_model_type="",
+                 model_name="",
                  static_attributes_names=[],
                  sequence_length=270,
                  x_means=None,
@@ -76,7 +76,7 @@ class FloodML_Base_Dataset(Dataset):
         self.use_all_static_attr = use_all_static_attr
         self.folder_with_basins_pickles = f"{main_folder}/pickled_basins_data"
         self.list_stations_static = []
-        self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
+        self.suffix_pickle_file = "_spatial" if "cnn" in model_name.lower() or "conv" in model_name.lower() else ""
         self.x_mean_dict = self.read_pickle_if_exists(
             f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}")
         self.x_std_dict = self.read_pickle_if_exists(
@@ -102,7 +102,7 @@ class FloodML_Base_Dataset(Dataset):
         self.test_start_date = test_start_date
         self.test_end_date = test_end_date
         self.stage = stage
-        self.specific_model_type = specific_model_type
+        self.model_name = model_name
         self.sequence_length_spatial = sequence_length_spatial
         self.create_new_files = create_new_files
         (self.df_attr,
@@ -130,7 +130,7 @@ class FloodML_Base_Dataset(Dataset):
          x_spatial_mean,
          x_spatial_std
          ) = self.read_all_dynamic_attributes(all_stations_ids=self.all_station_ids,
-                                              specific_model_type=self.specific_model_type,
+                                              model_name=self.model_name,
                                               max_width=self.max_width, max_height=self.max_height,
                                               create_new_files=self.create_new_files)
         self.save_pickle_if_not_exists(
@@ -179,8 +179,8 @@ class FloodML_Base_Dataset(Dataset):
 
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
-                if (self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() ==
-                        "transformer_seq2seq" or self.specific_model_type.lower() == "transformer_lstm"):
+                if (self.model_name.lower() == "lstm" or self.model_name.lower() ==
+                        "transformer_seq2seq" or self.model_name.lower() == "transformer_lstm"):
                     dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data,
                                        "list_dates": current_list_dates}
                 else:
@@ -259,12 +259,12 @@ class FloodML_Base_Dataset(Dataset):
             dict_curr_basin = pickle.load(f)
         X_data_tensor_spatial = torch.tensor([])
         list_dates = dict_curr_basin["list_dates"]
-        if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "transformer_lstm":
+        if self.model_name.lower() == "lstm" or self.model_name.lower() == "transformer_lstm":
             X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
                 X_data[inner_ind: inner_ind + self.sequence_length]
             ).to(torch.float32)
-        elif self.specific_model_type.lower() == "conv":
+        elif self.model_name.lower() == "conv_lstm":
             X_data, X_data_spatial, y_data = \
                 dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
@@ -274,7 +274,7 @@ class FloodML_Base_Dataset(Dataset):
                 X_data_spatial[
                 inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
             ).to(torch.float32)
-        elif self.specific_model_type.lower() == "cnn" or self.specific_model_type.lower() == "transformer_cnn":
+        elif self.model_name.lower() == "cnn_lstm" or self.model_name.lower() == "transformer_cnn":
             X_data, X_data_spatial, y_data = \
                 dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
@@ -284,7 +284,7 @@ class FloodML_Base_Dataset(Dataset):
                 X_data_spatial[
                 inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
             ).to(torch.float32)
-        elif self.specific_model_type.lower() == "transformer_seq2seq":
+        elif self.model_name.lower() == "transformer_seq2seq":
             X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
                 X_data[inner_ind: inner_ind + self.sequence_length]
@@ -297,7 +297,7 @@ class FloodML_Base_Dataset(Dataset):
             ).to(torch.float32)
             X_data_tensor_spatial = torch.tensor(X_data_spatial[inner_ind: inner_ind + self.sequence_length]).to(
                 torch.float32)
-        if self.specific_model_type.lower() == "transformer_seq2seq":
+        if self.model_name.lower() == "transformer_seq2seq":
             y_data_tensor = torch.tensor(
                 y_data[inner_ind + 1: inner_ind + self.sequence_length + 1]
             ).to(torch.float32).squeeze()
@@ -375,8 +375,7 @@ class FloodML_Base_Dataset(Dataset):
         print(f"max height is: {max_height}")
         return int(max_width), int(max_height), basin_id_with_maximum_width, basin_id_with_maximum_height
 
-    def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
-                                    create_new_files):
+    def read_all_dynamic_attributes(self, all_stations_ids, model_name, max_width, max_height, create_new_files):
         raise NotImplementedError
 
     def read_all_static_attributes(self, limit_size_above_1000=False):

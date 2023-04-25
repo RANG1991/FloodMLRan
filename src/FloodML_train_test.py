@@ -71,7 +71,7 @@ def aggregate_gradients(model, world_size):
 
 
 def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_to_console,
-                specific_model_type):
+                model_name):
     # set model to train mode (important for dropout)
     torch.cuda.empty_cache()
     model.train()
@@ -87,11 +87,11 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         optimizer.zero_grad()
         if xs_spatial.nelement() > 0:
             y_hat = model(xs_non_spatial, xs_spatial.to(device))
-        elif specific_model_type.lower() == "transformer_seq2seq":
+        elif model_name.lower() == "transformer_seq2seq":
             ys_prefix_random = torch.cat([torch.zeros(size=(ys.shape[0], 1), device="cuda"), ys[:, :-1]], axis=-1)
             y_hat = model(xs_non_spatial, ys_prefix_random)[:, -1, :]
             ys = ys[:, -1]
-        elif specific_model_type.lower() == "transformer_hf":
+        elif model_name.lower() == "transformer_hf":
             dates_repeated = dates.unsqueeze(1).repeat(1, xs_non_spatial.shape[1], 1)
             y_hat = model(past_values=xs_non_spatial[:, :, :len(loader.dataset.list_dynamic_attributes_names)],
                           past_time_features=dates_repeated,
@@ -114,7 +114,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
 
 
 def eval_model(model, loader, preds_obs_dicts_ranks_queue, device, epoch, print_tqdm_to_console,
-               specific_model_type) -> Tuple[torch.Tensor, torch.Tensor]:
+               model_name) -> Tuple[torch.Tensor, torch.Tensor]:
     torch.cuda.empty_cache()
     preds_obs_dict_per_basin = {}
     # set model to eval mode (important for dropout)
@@ -133,14 +133,14 @@ def eval_model(model, loader, preds_obs_dicts_ranks_queue, device, epoch, print_
             # get model predictions
             if xs_spatial.nelement() > 0:
                 y_hat = model(xs_non_spatial, xs_spatial.to(device)).squeeze()
-            elif specific_model_type.lower() == "transformer_seq2seq":
+            elif model_name.lower() == "transformer_seq2seq":
                 y_hat_prev = torch.zeros(size=(ys.shape[0], 1), device="cuda")
                 for _ in range(xs_non_spatial.shape[1]):
                     y_hat = model(xs_non_spatial, y_hat_prev)[:, -1, :]
                     y_hat_prev = y_hat
                 y_hat = y_hat.squeeze()
                 ys = ys[:, -1]
-            elif specific_model_type.lower() == "transformer_hf":
+            elif model_name.lower() == "transformer_hf":
                 dates_repeated = dates.unsqueeze(1).repeat(1, xs_non_spatial.shape[1], 1)
                 y_hat = model(past_values=xs_non_spatial[:, :, :len(loader.dataset.list_dynamic_attributes_names)],
                               past_time_features=dates_repeated,
@@ -299,7 +299,7 @@ def prepare_datasets(
         static_data_folder,
         discharge_data_folder,
         dataset_to_use,
-        specific_model_type,
+        model_name,
         sequence_length_spatial,
         create_box_plots=False,
         create_new_files=False,
@@ -322,7 +322,7 @@ def prepare_datasets(
             test_start_date="01/10/1988",
             test_end_date="30/09/1997",
             stage="train",
-            specific_model_type=specific_model_type,
+            model_name=model_name,
             all_stations_ids=all_station_ids_train,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
@@ -348,7 +348,7 @@ def prepare_datasets(
             all_stations_ids=all_station_ids_test,
             sequence_length=sequence_length,
             discharge_str=discharge_str,
-            specific_model_type=specific_model_type,
+            model_name=model_name,
             use_Caravan_dataset=use_Caravan_dataset,
             y_std=training_data.y_std,
             y_mean=training_data.y_mean,
@@ -374,7 +374,7 @@ def prepare_datasets(
             test_start_date="01/10/1988",
             test_end_date="30/09/1997",
             stage="train",
-            specific_model_type=specific_model_type,
+            model_name=model_name,
             sequence_length_spatial=sequence_length_spatial,
             create_new_files=create_new_files,
             all_stations_ids=all_station_ids_train,
@@ -397,7 +397,7 @@ def prepare_datasets(
             test_start_date="01/10/1988",
             test_end_date="30/09/1997",
             stage="validation",
-            specific_model_type=specific_model_type,
+            model_name=model_name,
             sequence_length_spatial=sequence_length_spatial,
             create_new_files=create_new_files,
             all_stations_ids=all_station_ids_test,
@@ -466,9 +466,6 @@ def run_single_parameters_check_with_val_on_years(
         debug
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
-    specific_model_type = "CONV" if "CONV" in model_name else "CNN" if "CNN" in model_name else \
-        "Transformer_Seq2Seq" if "Transformer_Seq2Seq" in model_name else "Transformer_CNN" if \
-            "Transformer_CNN" in model_name else "Transformer_HF" if "Transformer_HF" in model_name else "LSTM"
     print(f"running with model: {model_name}")
     training_data, test_data = prepare_datasets(
         sequence_length,
@@ -482,7 +479,7 @@ def run_single_parameters_check_with_val_on_years(
         discharge_data_folder,
         dataset_to_use,
         sequence_length_spatial=sequence_length_spatial,
-        specific_model_type=specific_model_type,
+        model_name=model_name,
         create_new_files=create_new_files,
         limit_size_above_1000=limit_size_above_1000,
         use_all_static_attr=use_all_static_attr
@@ -505,14 +502,13 @@ def run_single_parameters_check_with_val_on_years(
                        dropout_rate,
                        static_attributes_names,
                        dynamic_attributes_names,
-                       model_name,
                        1,
                        optim_name,
                        num_workers_data_loader,
                        profile_code,
                        sequence_length_spatial,
                        print_tqdm_to_console,
-                       specific_model_type,
+                       model_name,
                        load_checkpoint,
                        save_checkpoint,
                        checkpoint_path,
@@ -537,14 +533,13 @@ def run_single_parameters_check_with_val_on_years(
                               dropout_rate,
                               static_attributes_names,
                               dynamic_attributes_names,
-                              model_name,
                               1,
                               optim_name,
                               num_workers_data_loader,
                               profile_code,
                               sequence_length_spatial,
                               print_tqdm_to_console,
-                              specific_model_type,
+                              model_name,
                               load_checkpoint,
                               save_checkpoint,
                               checkpoint_path,
@@ -665,14 +660,13 @@ def run_training_and_test(
         dropout,
         static_attributes_names,
         dynamic_attributes_names,
-        model_name,
         calc_nse_interval,
         optim_name,
         num_workers_data_loader,
         profile_code,
         sequence_length_spatial,
         print_tqdm_to_console,
-        specific_model_type,
+        model_name,
         load_checkpoint,
         save_checkpoint,
         checkpoint_path,
@@ -751,22 +745,22 @@ def run_training_and_test(
             loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                                  epoch=(i + 1), device="cuda",
                                                  print_tqdm_to_console=print_tqdm_to_console,
-                                                 specific_model_type=specific_model_type)
+                                                 model_name=model_name)
         else:
             loss_on_training_epoch = train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                                  epoch=(i + 1), device="cuda",
                                                  print_tqdm_to_console=print_tqdm_to_console,
-                                                 specific_model_type=specific_model_type)
+                                                 model_name=model_name)
         if (i % calc_nse_interval) == (calc_nse_interval - 1):
             if world_size > 1:
                 test_dataloader.sampler.set_epoch(i)
                 _ = eval_model(model.module, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
                                print_tqdm_to_console=print_tqdm_to_console,
-                               specific_model_type=specific_model_type)
+                               model_name=model_name)
             else:
                 _ = eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
                                print_tqdm_to_console=print_tqdm_to_console,
-                               specific_model_type=specific_model_type)
+                               model_name=model_name)
         if world_size > 1:
             dist.barrier()
         if rank == 0:

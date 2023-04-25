@@ -112,7 +112,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             stage,
             all_stations_ids,
             sequence_length_spatial,
-            specific_model_type="",
+            model_name="",
             static_attributes_names=[],
             sequence_length=270,
             x_means=None,
@@ -142,7 +142,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             stage,
             all_stations_ids,
             sequence_length_spatial,
-            specific_model_type,
+            model_name,
             static_attributes_names,
             sequence_length,
             x_means,
@@ -218,8 +218,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         df_attr = pd.concat(list_static_df)
         return df_attr, self.list_stations_static
 
-    def read_all_dynamic_attributes(self, all_stations_ids, specific_model_type, max_width, max_height,
-                                    create_new_files):
+    def read_all_dynamic_attributes(self, all_stations_ids, model_name, max_width, max_height, create_new_files):
         if os.path.exists(
                 f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
             obj_text = codecs.open(
@@ -229,16 +228,20 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
-            cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
-            cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
+            if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
+                    or model_name.lower() == "cnn_transformer":
+                cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
+                cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
             cumm_s_y = float(json_obj["cumm_s_y"])
             count_of_samples = int(json_obj["count_of_samples"])
         else:
             cumm_m_x = 0
             cumm_s_x = 0
-            cumm_m_x_spatial = -1
-            cumm_s_x_spatial = -1
+            if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
+                    or model_name.lower() == "cnn_transformer":
+                cumm_m_x_spatial = -1
+                cumm_s_x_spatial = -1
             cumm_m_y = 0
             cumm_s_y = 0
             count_of_samples = 0
@@ -248,8 +251,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         for station_id in pbar:
             print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
             if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
-                if (specific_model_type.lower() == "conv" or
-                        specific_model_type.lower() == "cnn"):
+                if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
+                        or model_name.lower() == "cnn_transformer":
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)
                     if any([X_data_spatial.shape[1] == 0, X_data_spatial.shape[2] == 0]) or len(
@@ -296,8 +299,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                 cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0).item()
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
 
-                if (specific_model_type.lower() == "conv" or
-                        specific_model_type.lower() == "cnn"):
+                if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
+                        or model_name.lower() == "cnn_transformer":
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
@@ -320,7 +323,12 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
-        std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
+        if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
+                or model_name.lower() == "cnn_transformer":
+            std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
+        else:
+            std_x_spatial = None
+            cumm_m_x_spatial = None
         with codecs.open(
                 f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'w',
@@ -332,7 +340,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                 "cumm_s_y": cumm_s_y,
                 "count_of_samples": count_of_samples
             }
-            if specific_model_type.lower() == "conv" or specific_model_type.lower() == "cnn":
+            if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
+                    or model_name.lower() == "cnn_transformer":
                 json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
                 json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
