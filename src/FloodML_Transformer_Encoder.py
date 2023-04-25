@@ -10,7 +10,9 @@ class Transformer_Encoder(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(d_model=intermediate_dim, nhead=4)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
         self.fc_2 = nn.Linear(intermediate_dim, 1)
-        self.exponential_decay = torch.exp(torch.tensor([(sequence_length - i) / 25 for i in range(sequence_length)]))
+        exponential_decay = torch.exp(torch.tensor([-1 * (sequence_length - i) / 25 for i in range(sequence_length)]))
+        exponential_decay = exponential_decay.unsqueeze(0).unsqueeze(-1).repeat(1, 1, intermediate_dim)
+        self.register_buffer('exponential_decay', exponential_decay)
 
     def forward(self, x):
         out_fc_1 = self.fc_1(x)
