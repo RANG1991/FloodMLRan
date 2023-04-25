@@ -997,7 +997,7 @@ def main():
         "--model",
         help="which model to use",
         choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF",
-                 "Transformer_CNN"],
+                 "CNN_Transformer"],
         default="LSTM",
     )
     parser.add_argument(
