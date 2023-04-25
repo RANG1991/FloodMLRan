@@ -202,14 +202,15 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
 def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, num_basins_for_nse_calc=10):
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
-    for stations_id in stations_ids:
-        dates_obs_preds = preds_obs_dict_per_basin[stations_id]
+    for station_id in stations_ids:
+        print(f"calculating NSE of basin with id: {station_id}", flush=True)
+        dates_obs_preds = preds_obs_dict_per_basin[station_id]
         dates_obs_preds.sort(key=lambda x: x[0])
         dates, obs, preds = zip(*dates_obs_preds)
         obs = np.stack(list(obs))
         preds = np.stack(list(preds))
         nse = calc_nse(obs, preds)
-        print(f"station with id: {stations_id} has nse of: {nse}", flush=True)
+        print(f"station with id: {station_id} has nse of: {nse}", flush=True)
         nse_list_basins.append(nse)
     # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
@@ -768,6 +769,7 @@ def run_training_and_test(
                 _ = eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda", epoch=(i + 1),
                                print_tqdm_to_console=print_tqdm_to_console,
                                model_name=model_name)
+        print("finished evaluating the model", flush=True)
         if world_size > 1:
             dist.barrier()
         if rank == 0:
@@ -783,15 +785,16 @@ def run_training_and_test(
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': loss_on_training_epoch,
-                }, f"../checkpoints/{model_name}_{curr_datetime_str}.pt")
+                }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}.pt")
                 # if model_name.lower() == "cnn_lstm":
                 #     print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
-                model.cnn_lstm.number_of_images_counter = 0
+                # model.cnn_lstm.number_of_images_counter = 0
             if profile_code:
                 p.step()
             training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
             preds_obs_dict_per_basin = {}
             num_obs_preds = 0
+            print("start converting the observations and predictions queue to dictionary", flush=True)
             while not preds_obs_dicts_ranks_queue.empty():
                 basin_id, date, (obs, preds) = preds_obs_dicts_ranks_queue.get()
                 if basin_id not in preds_obs_dict_per_basin.keys():
@@ -800,11 +803,14 @@ def run_training_and_test(
                                                    date_component in date.tolist()]), "%Y/%m/%d")
                 preds_obs_dict_per_basin[basin_id].append((date, obs, preds))
                 num_obs_preds += 1
+            print("finished converting the observations and predictions queue to dictionary", flush=True)
             assert num_obs_preds == len(test_data), \
                 f"The number of observations and predictions is not equal to the test dataset size. " \
                 f"The size of observations and predictions dictionary: {num_obs_preds}. " \
                 f"The size of test dataloader: {len(test_data)}"
+            print("start calculating the NSE per basin", flush=True)
             nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1), model_name)
+            print("finished calculating the NSE per basin", flush=True)
             [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
                 best_median_nse = median_nse
@@ -1053,8 +1059,10 @@ def main():
     print("running with arguments:")
     print(json_command_args)
     if command_args.load_checkpoint and command_args.checkpoint_path == "":
-        list_of_files = glob.glob('../checkpoints/*')
-        latest_file = max(list_of_files, key=os.path.getctime)
+        list_of_files = glob.glob(f'../checkpoints/{command_args.model}_epoch_number_*.pt')
+        latest_file = max(list_of_files, key=lambda file_name:
+        int(file_name.name.replace(f"{command_args.model}_epoch_number_").replace(".pt")))
+        print(f"loading checkpoint from file: {latest_file}")
         command_args.checkpoint_path = latest_file
     if command_args.dataset == "CAMELS":
         choose_hyper_parameters_validation(
