@@ -183,7 +183,7 @@ class FloodML_Base_Dataset(Dataset):
 
                 if (self.model_name.lower() == "lstm" or self.model_name.lower() ==
                         "transformer_seq2seq" or self.model_name.lower() == "transformer_lstm" or
-                        self.model_name.lower() == "transformer"):
+                        self.model_name.lower() == "transformer_encoder"):
                     dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data,
                                        "list_dates": current_list_dates}
                 else:
@@ -263,7 +263,7 @@ class FloodML_Base_Dataset(Dataset):
         X_data_tensor_spatial = torch.tensor([])
         list_dates = dict_curr_basin["list_dates"]
         if self.model_name.lower() == "lstm" or self.model_name.lower() == "transformer_lstm" or \
-                self.model_name.lower() == "transformer":
+                self.model_name.lower() == "transformer_encoder":
             X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
                 X_data[inner_ind: inner_ind + self.sequence_length]

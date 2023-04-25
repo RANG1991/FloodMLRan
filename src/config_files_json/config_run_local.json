@@ -9,5 +9,5 @@
   "save_checkpoint": true,
   "debug": false,
   "print_tqdm_to_console": true,
-  "load_checkpoint": true
+  "load_checkpoint": false
 }

@@ -54,8 +54,6 @@ def is_port_in_use(port):
 
 
 def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = "localhost"
-    os.environ['MASTER_PORT'] = "10005"
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
@@ -499,6 +497,11 @@ def run_single_parameters_check_with_val_on_years(
         training_loss_single_pass_queue = ctx.Queue()
         nse_last_pass_queue = ctx.Queue()
         preds_obs_dicts_ranks_queue = ctx.Queue()
+        os.environ['MASTER_ADDR'] = "localhost"
+        if is_port_in_use(10005):
+            os.environ['MASTER_PORT'] = "10006"
+        else:
+            os.environ['MASTER_PORT'] = "10005"
         mp.spawn(run_training_and_test,
                  args=(num_processes_ddp,
                        learning_rate * num_processes_ddp,
@@ -605,7 +608,7 @@ def prepare_model(sequence_length,
                   dynamic_attributes_names,
                   model_name,
                   sequence_length_spatial):
-    if model_name.lower() == "transformer":
+    if model_name.lower() == "transformer_encoder":
         model = Transformer_Encoder(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
                                     sequence_length, 32)
     elif model_name.lower() == "transformer_seq2seq":
@@ -998,7 +1001,7 @@ def main():
     parser.add_argument(
         "--model",
         help="which model to use",
-        choices=["LSTM", "Transformer", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF",
+        choices=["LSTM", "Transformer_Encoder", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF",
                  "CNN_Transformer"],
         default="LSTM",
     )
@@ -1061,7 +1064,7 @@ def main():
     if command_args.load_checkpoint and command_args.checkpoint_path == "":
         list_of_files = glob.glob(f'../checkpoints/{command_args.model}_epoch_number_*.pt')
         latest_file = max(list_of_files, key=lambda file_name:
-        int(file_name.name.replace(f"{command_args.model}_epoch_number_").replace(".pt")))
+        int(Path(file_name).name.replace(f"{command_args.model}_epoch_number_", "").replace(".pt", "")))
         print(f"loading checkpoint from file: {latest_file}")
         command_args.checkpoint_path = latest_file
     if command_args.dataset == "CAMELS":
