@@ -180,7 +180,8 @@ class FloodML_Base_Dataset(Dataset):
                 current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
 
                 if (self.model_name.lower() == "lstm" or self.model_name.lower() ==
-                        "transformer_seq2seq" or self.model_name.lower() == "transformer_lstm"):
+                        "transformer_seq2seq" or self.model_name.lower() == "transformer_lstm" or
+                        self.model_name.lower() == "transformer"):
                     dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data,
                                        "list_dates": current_list_dates}
                 else:

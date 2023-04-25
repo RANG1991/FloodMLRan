@@ -1,18 +1,5 @@
 #!/bin/bash
 
-# shellcheck disable=SC2006
-TEMP=`getopt --long json_config_file_name: -- "$@"`
-eval set -- "$TEMP"
-
-# extract options and their arguments into variables.
-while true ; do
-    case "$1" in
-        --json_config_file_name)
-            json_config_file_name=$2 ; shift 2 ;;
-        *) echo "Internal error!" ; exit 1 ;;
-    esac
-done
-
 #SBATCH -n 8
 #SBATCH --time=150:0:0
 #SBATCH --mem=160G

@@ -55,7 +55,7 @@ def is_port_in_use(port):
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = "localhost"
-    os.environ['MASTER_PORT'] = "10005"
+    os.environ['MASTER_PORT'] = "10006"
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
@@ -599,7 +599,7 @@ def prepare_model(sequence_length,
                   sequence_length_spatial):
     if model_name.lower() == "transformer":
         model = Transformer_Encoder(len(dynamic_attributes_names) + len(training_data.list_static_attributes_names),
-                                    32)
+                                    sequence_length, 32)
     elif model_name.lower() == "transformer_seq2seq":
         model = Transformer_Seq2Seq(
             in_features=len(dynamic_attributes_names) + len(training_data.list_static_attributes_names))
