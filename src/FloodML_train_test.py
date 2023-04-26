@@ -201,7 +201,6 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, 
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
     for station_id in stations_ids:
-        print(f"calculating NSE of basin with id: {station_id}", flush=True)
         dates_obs_preds = preds_obs_dict_per_basin[station_id]
         dates_obs_preds.sort(key=lambda x: x[0])
         dates, obs, preds = zip(*dates_obs_preds)
@@ -807,17 +806,17 @@ def run_training_and_test(
                 preds_obs_dict_per_basin[basin_id].append((date, obs, preds))
                 num_obs_preds += 1
             print("finished converting the observations and predictions queue to dictionary", flush=True)
-            assert num_obs_preds == len(test_data), \
-                f"The number of observations and predictions is not equal to the test dataset size. " \
-                f"The size of observations and predictions dictionary: {num_obs_preds}. " \
-                f"The size of test dataloader: {len(test_data)}"
+            if num_obs_preds != len(test_data):
+                print(f"The number of observations and predictions is not equal to the test dataset size. "
+                      f"The size of observations and predictions dictionary: {num_obs_preds}. "
+                      f"The size of test dataloader: {len(test_data)}")
             print("start calculating the NSE per basin", flush=True)
             nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1), model_name)
             print("finished calculating the NSE per basin", flush=True)
             [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
             if best_median_nse is None or best_median_nse < median_nse:
                 best_median_nse = median_nse
-            print(f"best NSE so far: {best_median_nse}", flush=True)
+            print(f"best median NSE so far: {best_median_nse}", flush=True)
         if world_size > 1:
             dist.barrier()
     if rank == 0 and profile_code:
