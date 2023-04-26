@@ -35,10 +35,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 import queue
 import json
-
-# wandb.login(key="ed527efc0923927fda63686bf828192a102daa48")
-#
-# wandb.init(project="FloodML", entity="r999")
+import wandb
 
 matplotlib.use("AGG")
 
@@ -107,7 +104,7 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         # print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
     print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}", flush=True)
-    # wandb.log({"loss": running_loss / (len(loader))})
+    wandb.log({"training loss": running_loss / (len(loader))})
     return running_loss / (len(loader))
 
 
@@ -215,6 +212,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, 
     basin_id_to_plot = "07066000"
     median_nse = statistics.median(nse_list_basins)
     print(f"Basin {basin_id_with_median_nse} - NSE: {median_nse:.3f}", flush=True)
+    wandb.log({'validation accuracy': median_nse})
     fig, ax = plt.subplots(figsize=(20, 6))
     if basin_id_to_plot not in preds_obs_dict_per_basin.keys():
         print(f"the basin with ID: {basin_id_to_plot} is not in the validation set (probably due to smaller number of "
@@ -439,10 +437,6 @@ def prepare_datasets(
 def run_single_parameters_check_with_val_on_years(
         train_stations_list,
         val_stations_list,
-        sequence_length,
-        learning_rate,
-        num_hidden_units,
-        dropout_rate,
         static_attributes_names,
         dynamic_attributes_names,
         discharge_str,
@@ -471,6 +465,12 @@ def run_single_parameters_check_with_val_on_years(
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     print(f"running with model: {model_name}")
+    wandb.login(key="33b79b39a58f3310adc85fb29e28268e6f074dee")
+    wandb.init(project="FloodML", entity="r777")
+    learning_rate = wandb.config.learning_rate
+    sequence_length = wandb.config.sequence_length
+    num_hidden_units = wandb.config.num_hidden_units
+    dropout_rate = wandb.config.dropout_rate
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,
@@ -711,10 +711,7 @@ def run_training_and_test(
         model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     else:
         model = model.to(device="cuda")
-    # config = wandb.config
-    # config.learning_rate = learning_rate
-    # config.wandb = True
-    # wandb.watch(model)
+    wandb.watch(model)
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=True)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
@@ -856,128 +853,40 @@ def choose_hyper_parameters_validation(
         batch_size,
         debug
 ):
-    train_stations_list = []
-    val_stations_list = []
     if dataset_to_use.lower() == "caravan":
         all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
     else:
         all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
-    # all_stations_list_sorted = all_stations_list_sorted[:num_basins] if num_basins else all_stations_list_sorted
-    # for i in range(len(all_stations_list_sorted)):
-    #     if i % 5 != 0:
-    #         train_stations_list.append(all_stations_list_sorted[i])
-    #     else:
-    #         val_stations_list.append(all_stations_list_sorted[i])
     train_stations_list = all_stations_list_sorted[:]
     val_stations_list = all_stations_list_sorted[:]
-    if "transformer" in model_name.lower():
-        learning_rates = np.linspace(5 * (10 ** -5), 5 * (10 ** -5), num=1).tolist()
-    else:
-        learning_rates = np.linspace(5 * (10 ** -4), 5 * (10 ** -4), num=1).tolist()
-    dropout_rates = [0.4]
-    sequence_lengths = [270]
-    if model_name.lower() == "transformer":
-        num_hidden_units = [1]
-    else:
-        num_hidden_units = [256]
-    dict_results = {
-        "dropout rate": [],
-        "sequence length": [],
-        # "num epochs": [],
-        "num hidden units": [],
-        "median NSE": [],
-    }
-    best_median_nse = -1
-    list_nse_lists_basins = []
-    list_plots_titles = []
-    all_parameters = list(
-        itertools.product(
-            learning_rates,
-            dropout_rates,
-            sequence_lengths,
-            num_hidden_units,
-        )
-    )
-    curr_datetime = datetime.now()
-    curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    for (
-            learning_rate_param,
-            dropout_rate_param,
-            sequence_length_param,
-            num_hidden_units_param,
-    ) in all_parameters:
-        nse_list_single_pass = run_single_parameters_check_with_val_on_years(
-            train_stations_list,
-            val_stations_list,
-            sequence_length_param,
-            learning_rate_param,
-            num_hidden_units_param,
-            dropout_rate_param,
-            static_attributes_names,
-            dynamic_attributes_names,
-            discharge_str,
-            dynamic_data_folder_train,
-            static_data_folder,
-            discharge_data_folder,
-            num_epochs=num_epochs,
-            model_name=model_name,
-            dataset_to_use=dataset_to_use,
-            optim_name=optim_name,
-            shared_model=shared_model,
-            num_workers_data_loader=num_workers_data_loader,
-            profile_code=profile_code,
-            num_processes_ddp=num_processes_ddp,
-            create_new_files=create_new_files,
-            sequence_length_spatial=sequence_length_spatial,
-            print_tqdm_to_console=print_tqdm_to_console,
-            limit_size_above_1000=limit_size_above_1000,
-            use_all_static_attr=use_all_static_attr,
-            save_checkpoint=save_checkpoint,
-            load_checkpoint=load_checkpoint,
-            checkpoint_path=checkpoint_path,
-            batch_size=batch_size,
-            debug=debug,
-            num_basins=num_basins
-        )
-        if len(nse_list_single_pass) == 0:
-            median_nse = -1
-        else:
-            median_nse = statistics.median(nse_list_single_pass)
-        if len(nse_list_single_pass) > 0:
-            list_plots_titles.append(
-                f"{dropout_rate_param};"
-                f"{sequence_length_param};"
-                f"{num_hidden_units_param};"
-                f"{num_epochs}"
-            )
-            list_nse_lists_basins.append(nse_list_single_pass)
-        if median_nse > best_median_nse or best_median_nse == -1:
-            best_median_nse = median_nse
-            best_parameters = (
-                dropout_rate_param,
-                sequence_length_param,
-                num_hidden_units_param,
-                num_epochs,
-            )
-        dict_results["dropout rate"] = [dropout_rate_param]
-        dict_results["sequence length"] = [sequence_length_param]
-        dict_results["num hidden units"] = [num_hidden_units_param]
-        # dict_results["num epochs"].append(num_epochs_param)
-        dict_results["median NSE"] = [median_nse]
-        plot_NSE_CDF(list_nse_lists_basins[-1], list_plots_titles[-1])
-        plt.grid()
-        plt.savefig(
-            "../data/results/parameters_comparison" + f"_{list_plots_titles[-1]}" + ".png"
-        )
-        plt.close()
-        df_results = pd.DataFrame(data=dict_results)
-        df_results.to_csv(
-            f"../data/results/results_{curr_datetime_str}.csv",
-            mode="a",
-            header=not os.path.exists(f"../data/results/results_{curr_datetime_str}.csv"),
-        )
-        print(f"best parameters: {best_parameters}", flush=True)
-    return best_parameters
+    run_single_parameters_check_with_val_on_years(
+        train_stations_list,
+        val_stations_list,
+        static_attributes_names,
+        dynamic_attributes_names,
+        discharge_str,
+        dynamic_data_folder_train,
+        static_data_folder,
+        discharge_data_folder,
+        num_epochs=num_epochs,
+        model_name=model_name,
+        dataset_to_use=dataset_to_use,
+        optim_name=optim_name,
+        shared_model=shared_model,
+        num_workers_data_loader=num_workers_data_loader,
+        profile_code=profile_code,
+        num_processes_ddp=num_processes_ddp,
+        create_new_files=create_new_files,
+        sequence_length_spatial=sequence_length_spatial,
+        print_tqdm_to_console=print_tqdm_to_console,
+        limit_size_above_1000=limit_size_above_1000,
+        use_all_static_attr=use_all_static_attr,
+        save_checkpoint=save_checkpoint,
+        load_checkpoint=load_checkpoint,
+        checkpoint_path=checkpoint_path,
+        batch_size=batch_size,
+        debug=debug,
+        num_basins=num_basins)
 
 
 def trace_handler(p):
@@ -1127,4 +1036,21 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sweep_configuration = {
+        'method': 'random',
+        'name': 'FloodML',
+        'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
+        'parameters':
+            {
+                'learning_rate': {'min': 10 ** -5, 'max': 10 ** -4},
+                'sequence_length': {'min': 30, 'max': 365},
+                'num_hidden_units': {'min': 32, 'max': 256},
+                'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]}
+            }
+    }
+
+    sweep_id = wandb.sweep(
+        sweep=sweep_configuration,
+        project='FloodML'
+    )
+    wandb.agent(sweep_id, function=main, count=4)

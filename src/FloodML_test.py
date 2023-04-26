@@ -25,14 +25,13 @@ def test_FloodML():
         test_start_date="01/10/1989",
         test_end_date="30/09/1999",
         stage="train",
-        model_name.lower() = "CONV",
-    all_stations_ids = all_station_ids,
-    sequence_length = 270,
-    discharge_str = ERA5_dataset.DISCHARGE_STR_CARAVAN,
-    use_Caravan_dataset = True,
-    create_new_files = True,
-    sequence_length_spatial = 7,
-    limit_size_above_1000 = True)
+        all_stations_ids=all_station_ids,
+        sequence_length=270,
+        discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
+        use_Caravan_dataset=True,
+        create_new_files=True,
+        sequence_length_spatial=7,
+        limit_size_above_1000=True)
     test_data = ERA5_dataset.Dataset_ERA5(
         dynamic_data_folder=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
         static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
@@ -48,15 +47,14 @@ def test_FloodML():
         all_stations_ids=all_station_ids,
         sequence_length=270,
         discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
-        model_name.lower() = "CONV",
-    use_Caravan_dataset = True,
-    y_std = training_data.y_std,
-    y_mean = training_data.y_mean,
-    x_means = training_data.x_means,
-    x_stds = training_data.x_stds,
-    create_new_files = True,
-    sequence_length_spatial = 7,
-    limit_size_above_1000 = True)
+        use_Caravan_dataset=True,
+        y_std=training_data.y_std,
+        y_mean=training_data.y_mean,
+        x_means=training_data.x_means,
+        x_stds=training_data.x_stds,
+        create_new_files=True,
+        sequence_length_spatial=7,
+        limit_size_above_1000=True)
     nse_queue_single_pass = Queue()
     training_loss_queue_single_pass = Queue()
     queue_preds_dicts_ranks = Queue()
@@ -80,8 +78,7 @@ def test_FloodML():
                                              num_workers_data_loader=0,
                                              profile_code=False,
                                              sequence_length_spatial=7,
-                                             print_tqdm_to_console=False,
-                                             model_name.lower() = "CONV")
+                                             print_tqdm_to_console=False)
     # nse_saved_list = []
     # while not nse_queue_single_pass.empty():
     #     nse_saved_list.append(nse_queue_single_pass.get())

@@ -48,7 +48,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_name = Path("../slurm-6530864.out").resolve()
+    input_file_name = Path("slurm-6530864.out").resolve()
     d = create_dict_basin_id_to_NSE_my_code(f"{input_file_name}")
     run_numbers = set([run_number for _, run_number in d.keys()])
     model_names = set([model_name for model_name, _ in d.keys()])
@@ -106,7 +106,8 @@ def main():
 
 
 if __name__ == "__main__":
-    # d = {"dataset": "CAMELS", "optim": "Adam", "num_epochs": 10, "sequence_length_spatial": 14, "num_processes_ddp": 3,
+    # d = {"dataset": "CAMELS", "optim": "Adam", "num_epochs": 10,
+    # "sequence_length_spatial": 14, "num_processes_ddp": 3,
     #      "limit_size_above_1000": "True", "num_workers_data_loader": 2, "batch_size": 1024}
     # with open("config_files_json/config_run_above_1000_basins.json", "w") as f:
     #     json.dump(d, f, indent=4)

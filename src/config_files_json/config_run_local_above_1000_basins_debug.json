@@ -7,7 +7,7 @@
   "num_workers_data_loader": 2,
   "batch_size": 256,
   "save_checkpoint": true,
-  "debug": false,
+  "debug": true,
   "print_tqdm_to_console": true,
   "load_checkpoint": false,
   "limit_size_above_1000": true
