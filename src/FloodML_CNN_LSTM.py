@@ -94,7 +94,9 @@ class CNN(nn.Module):
 
 class CNN_LSTM(nn.Module):
 
-    def __init__(self, lat, lon,
+    def __init__(self,
+                 image_width,
+                 image_height,
                  hidden_size: int,
                  num_channels: int,
                  dropout_rate: float = 0.0,
@@ -107,8 +109,8 @@ class CNN_LSTM(nn.Module):
        :param dropout_rate: Dropout rate of the last fully connected layer. Default 0.0
         """
         super(CNN_LSTM, self).__init__()
-        self.lat = lat
-        self.lon = lon
+        self.image_width = image_width
+        self.image_height = image_height
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
@@ -130,7 +132,7 @@ class CNN_LSTM(nn.Module):
         return: Tensor containing the network predictions
         """
         batch_size, time_steps, _ = x_non_spatial.size()
-        c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.lat, self.lon)
+        c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.image_width, self.image_height)
         # c_in = torch.zeros_like(c_in)
         self.number_of_images_counter += (batch_size * time_steps)
         # CNN part

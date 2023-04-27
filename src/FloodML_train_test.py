@@ -471,6 +471,7 @@ def run_single_parameters_check_with_val_on_years(
     sequence_length = wandb.config.sequence_length
     num_hidden_units = wandb.config.num_hidden_units
     dropout_rate = wandb.config.dropout_rate
+    sequence_length_spatial = wandb.config.sequence_length_spatial
     training_data, test_data = prepare_datasets(
         sequence_length,
         train_stations_list,
@@ -1045,7 +1046,8 @@ if __name__ == "__main__":
                 'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
                 'sequence_length': {'min': 30, 'max': 365},
                 'num_hidden_units': {'min': 32, 'max': 256},
-                'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]}
+                'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
+                'sequence_length_spatial': {'min': 4, 'max': 14}
             }
     }
 

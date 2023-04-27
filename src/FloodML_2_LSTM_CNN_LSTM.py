@@ -22,8 +22,8 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
             hidden_size=self.hidden_dim,
             batch_first=True
         )
-        self.cnn_lstm = CNN_LSTM(lat=self.image_width,
-                                 lon=self.image_height,
+        self.cnn_lstm = CNN_LSTM(image_width=self.image_width,
+                                 image_height=self.image_height,
                                  hidden_size=self.hidden_dim,
                                  num_channels=self.in_cnn_channels,
                                  dropout_rate=dropout,
