@@ -821,8 +821,7 @@ def parse_command_line_arguments():
         t_args = argparse.Namespace()
         t_args.__dict__.update(json.load(f))
         command_args = parser.parse_args(namespace=t_args)
-    json_command_args = json.dumps(vars(command_args), indent=4)
-    return json_command_args
+    return command_args
 
 
 def main(run_sweeps=True):
