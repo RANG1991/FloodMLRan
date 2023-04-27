@@ -21,5 +21,5 @@ source $virtual_env
 #for i in 1 2 3
 #do
 #  echo "run number: $i"
-python ./FloodML_train_test.py --model LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 2 --batch_size 1024
+python ./FloodML_runner.py --model LSTM --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 14 --num_processes_ddp 3 --limit_size_above_1000 --num_workers_data_loader 2 --batch_size 1024
 #done

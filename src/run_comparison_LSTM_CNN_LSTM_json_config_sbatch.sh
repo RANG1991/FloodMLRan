@@ -19,6 +19,6 @@ source $virtual_env
 for i in 1 2 3
 do
   echo "run number: $i"
-  python ./FloodML_train_test.py --model LSTM --json_config_file_name "$json_config_file_name"
-  python ./FloodML_train_test.py --model CNN_LSTM --json_config_file_name "$json_config_file_name"
+  python ./FloodML_runner.py --model LSTM --json_config_file_name "$json_config_file_name"
+  python ./FloodML_runner.py --model CNN_LSTM --json_config_file_name "$json_config_file_name"
 done

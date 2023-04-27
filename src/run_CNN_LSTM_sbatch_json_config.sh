@@ -16,4 +16,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 source $virtual_env
 # module load cuda/11.2
 
-python ./FloodML_train_test.py --model CNN_LSTM --json_config_file_name "$json_config_file_name"
+python ./FloodML_runner.py --model CNN_LSTM --json_config_file_name "$json_config_file_name"

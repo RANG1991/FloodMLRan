@@ -19,5 +19,5 @@ source $virtual_env
 #for i in 1 2 3
 #do
 #  echo "run number: $i"
-python ./FloodML_train_test.py --model Transformer_Encoder --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 7 --num_workers_data_loader 3 --use_all_static_attr --create_new_files --save_checkpoint
+python ./FloodML_runner.py --model Transformer_Encoder --dataset CAMELS --optim Adam --num_epochs 10 --sequence_length_spatial 7 --num_workers_data_loader 3 --use_all_static_attr --create_new_files --save_checkpoint
 #done
