@@ -1037,22 +1037,26 @@ def main():
 
 
 if __name__ == "__main__":
-    sweep_configuration = {
-        'method': 'random',
-        'name': 'FloodML',
-        'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
-        'parameters':
-            {
-                'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
-                'sequence_length': {'min': 30, 'max': 365},
-                'num_hidden_units': {'min': 32, 'max': 256},
-                'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
-                'sequence_length_spatial': {'min': 4, 'max': 14}
-            }
-    }
+    run_wandb_sweep = False
+    if run_wandb_sweep:
+        sweep_configuration = {
+            'method': 'random',
+            'name': 'FloodML',
+            'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
+            'parameters':
+                {
+                    'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
+                    'sequence_length': {'min': 30, 'max': 365},
+                    'num_hidden_units': {'min': 32, 'max': 256},
+                    'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
+                    'sequence_length_spatial': {'min': 4, 'max': 14}
+                }
+        }
 
-    sweep_id = wandb.sweep(
-        sweep=sweep_configuration,
-        project='FloodML'
-    )
-    wandb.agent(sweep_id, function=main, count=6)
+        sweep_id = wandb.sweep(
+            sweep=sweep_configuration,
+            project='FloodML'
+        )
+        wandb.agent(sweep_id, function=main, count=6)
+    else:
+        main()
