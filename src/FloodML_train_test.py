@@ -711,7 +711,7 @@ def run_training_and_test(
         model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     else:
         model = model.to(device="cuda")
-    if world_size <= 1:
+    if world_size <= 1 and rank == 0:
         wandb.watch(model)
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=True)
