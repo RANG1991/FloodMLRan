@@ -464,8 +464,6 @@ def run_single_parameters_check_with_val_on_years(
 ):
     print(f"number of workers using for data loader is: {num_workers_data_loader}")
     print(f"running with model: {model_name}")
-    wandb.login(key="33b79b39a58f3310adc85fb29e28268e6f074dee")
-    wandb.init(project="FloodML", entity="r777")
     learning_rate = wandb.config.learning_rate
     sequence_length = wandb.config.sequence_length
     num_hidden_units = wandb.config.num_hidden_units
@@ -711,7 +709,9 @@ def run_training_and_test(
         model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     else:
         model = model.to(device="cuda")
-    if rank == 0 or world_size <= 1:
+    if world_size <= 1:
+        wandb.login(key="33b79b39a58f3310adc85fb29e28268e6f074dee")
+        wandb.init(project="FloodML", entity="r777")
         wandb.watch(model)
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=True)
