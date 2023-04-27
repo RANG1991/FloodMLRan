@@ -930,4 +930,5 @@ if __name__ == "__main__":
         sweep=sweep_configuration,
         project='FloodML'
     )
-    wandb.agent(sweep_id, function=main, count=6)
+    main(False)
+    # wandb.agent(sweep_id, function=main, count=6)
