@@ -10,5 +10,9 @@
   "debug": true,
   "print_tqdm_to_console": true,
   "load_checkpoint": false,
-  "num_basins": 10
+  "num_basins": 10,
+  "learning_rate": 1e-6,
+  "sequence_length": 270,
+  "num_hidden_units": 256,
+  "dropout_rate": 0.4
 }

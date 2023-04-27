@@ -12,7 +12,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
-import itertools
 from datetime import datetime
 import statistics
 import argparse
@@ -28,7 +27,7 @@ import torch
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 import psutil
-from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import profile, ProfilerActivity
 from transformers import TimeSeriesTransformerConfig, TimeSeriesTransformerModel
 import glob
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -114,6 +113,7 @@ class FloodML_Runner:
             all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
         self.train_stations_list = all_stations_list_sorted[:]
         self.val_stations_list = all_stations_list_sorted[:]
+        print(f"running with variables: {json.dumps(vars(self), indent=4)}")
 
     def train_epoch(self, model, optimizer, loader, loss_func, epoch, device):
         # set model to train mode (important for dropout)
@@ -326,7 +326,7 @@ class FloodML_Runner:
                 use_all_static_attr=self.use_all_static_attr,
                 num_basins=self.num_basins
             )
-        elif dataset_name == "CAMELS":
+        elif self.dataset_name == "CAMELS":
             training_data = CAMELS_dataset.Dataset_CAMELS(
                 main_folder=CAMELS_dataset.MAIN_FOLDER,
                 dynamic_data_folder=self.dynamic_data_folder,

@@ -10,5 +10,9 @@
   "debug": true,
   "print_tqdm_to_console": true,
   "load_checkpoint": false,
-  "limit_size_above_1000": true
+  "limit_size_above_1000": true,
+  "learning_rate": 1e-6,
+  "sequence_length": 270,
+  "num_hidden_units": 256,
+  "dropout_rate": 0.4
 }
