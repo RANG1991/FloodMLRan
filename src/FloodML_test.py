@@ -1,4 +1,4 @@
-import FloodML_train_test
+import FloodML_runner
 import ERA5_dataset
 import torch
 import random
