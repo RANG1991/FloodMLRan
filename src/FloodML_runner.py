@@ -839,14 +839,14 @@ def main(run_sweeps=True):
         json_command_args["dropout_rate"] = wandb.config.dropout_rate
         json_command_args["sequence_length_spatial"] = wandb.config.sequence_length_spatial
     if json_command_args["load_checkpoint"] and json_command_args["checkpoint_path"] == "":
-        list_of_files = glob.glob(f'../checkpoints/{json_command_args.model}_epoch_number_*.pt')
+        list_of_files = glob.glob(f'../checkpoints/{json_command_args["model"]}_epoch_number_*.pt')
         latest_file = max(list_of_files, key=lambda file_name:
-        int(Path(file_name).name.replace(f"{json_command_args.model}_epoch_number_", "").replace(".pt", "")))
+        int(Path(file_name).name.replace(f"{json_command_args['model']}_epoch_number_", "").replace(".pt", "")))
         print(f"loading checkpoint from file: {latest_file}")
-        json_command_args.checkpoint_path = latest_file
-    if json_command_args.dataset == "CAMELS":
+        json_command_args["checkpoint_path"] = latest_file
+    if json_command_args["dataset"] == "CAMELS":
         runner = FloodML_Runner(
-            model_name=json_command_args.model,
+            model_name=json_command_args["model"],
             dataset_name="CAMELS",
             learning_rate=json_command_args["learning_rate"],
             sequence_length=json_command_args["sequence_length"],
@@ -875,9 +875,9 @@ def main(run_sweeps=True):
             batch_size=json_command_args["batch_size"],
             debug=json_command_args["debug"]
         )
-    elif json_command_args.dataset == "CARAVAN":
+    elif json_command_args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
-            model_name=json_command_args.model,
+            model_name=json_command_args["model"],
             dataset_name="CARAVAN",
             learning_rate=json_command_args["learning_rate"],
             sequence_length=json_command_args["sequence_length"],
@@ -907,7 +907,7 @@ def main(run_sweeps=True):
             debug=json_command_args["debug"]
         )
     else:
-        raise Exception(f"wrong dataset name: {json_command_args.dataset}")
+        raise Exception(f"wrong dataset name: {json_command_args['dataset']}")
     runner.start_run_wrapper()
 
 
