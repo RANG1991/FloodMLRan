@@ -104,7 +104,6 @@ def train_epoch(model, optimizer, loader, loss_func, epoch, device, print_tqdm_t
         # print(f"Loss: {loss.item():.4f}")
         pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
     print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}", flush=True)
-    wandb.log({"training loss": running_loss / (len(loader))})
     return running_loss / (len(loader))
 
 
@@ -712,7 +711,8 @@ def run_training_and_test(
         model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     else:
         model = model.to(device="cuda")
-    wandb.watch(model)
+    if rank == 0 or world_size <= 1:
+        wandb.watch(model)
     if world_size > 1:
         distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=True)
         distributed_sampler_test = DistributedSamplerNoDuplicate(test_data, shuffle=False)
@@ -786,11 +786,9 @@ def run_training_and_test(
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': loss_on_training_epoch,
                 }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}.pt")
-                # if model_name.lower() == "cnn_lstm":
-                #     print(f"the number of 'images' is: {model.cnn_lstm.number_of_images_counter}")
-                # model.cnn_lstm.number_of_images_counter = 0
             if profile_code:
                 p.step()
+            wandb.log({"training loss": loss_on_training_epoch})
             training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
             preds_obs_dict_per_basin = {}
             num_obs_preds = 0
@@ -1037,26 +1035,22 @@ def main():
 
 
 if __name__ == "__main__":
-    run_wandb_sweep = False
-    if run_wandb_sweep:
-        sweep_configuration = {
-            'method': 'random',
-            'name': 'FloodML',
-            'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
-            'parameters':
-                {
-                    'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
-                    'sequence_length': {'min': 30, 'max': 365},
-                    'num_hidden_units': {'min': 32, 'max': 256},
-                    'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
-                    'sequence_length_spatial': {'min': 4, 'max': 14}
-                }
-        }
+    sweep_configuration = {
+        'method': 'random',
+        'name': 'FloodML',
+        'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
+        'parameters':
+            {
+                'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
+                'sequence_length': {'min': 30, 'max': 365},
+                'num_hidden_units': {'min': 32, 'max': 256},
+                'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
+                'sequence_length_spatial': {'min': 4, 'max': 14}
+            }
+    }
 
-        sweep_id = wandb.sweep(
-            sweep=sweep_configuration,
-            project='FloodML'
-        )
-        wandb.agent(sweep_id, function=main, count=6)
-    else:
-        main()
+    sweep_id = wandb.sweep(
+        sweep=sweep_configuration,
+        project='FloodML'
+    )
+    wandb.agent(sweep_id, function=main, count=6)
