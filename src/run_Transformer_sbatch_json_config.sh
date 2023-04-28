@@ -19,5 +19,5 @@ source $virtual_env
 #for i in 1 2 3
 #do
 #  echo "run number: $i"
-python ./FloodML_runner.py --model Transformer_Encoder --json_config_file_name "$json_config_file_name"
+python ./FloodML_runner.py --yaml_config_file_name "$yaml_config_file_name"
 #done
