@@ -48,8 +48,12 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_name = Path("slurm-6530864.out").resolve()
-    d = create_dict_basin_id_to_NSE_my_code(f"{input_file_name}")
+    input_file_names = []
+    input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
+    dict_all_files = {}
+    for input_file_path in input_file_paths:
+        d = create_dict_basin_id_to_NSE_my_code(f"{input_file_name}")
+        dict_all_files.update(d)
     run_numbers = set([run_number for _, run_number in d.keys()])
     model_names = set([model_name for model_name, _ in d.keys()])
     plot_title = f"NSE CDF of process ID - " \
