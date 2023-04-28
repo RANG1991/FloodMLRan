@@ -148,10 +148,10 @@ def parse_single_basin_precipitation(
         CAMELS_precip_data_folder,
         output_folder_name,
 ):
-    all_files_exist = check_if_all_precip_files_exist(station_id, output_folder_name)
-    if all_files_exist:
-        print("all precipitation file of the basin: {} exists".format(station_id))
-        return
+    # all_files_exist = check_if_all_precip_files_exist(station_id, output_folder_name)
+    # if all_files_exist:
+    #     print("all precipitation file of the basin: {} exists".format(station_id))
+    #     return
     bounds = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
     min_lon = np.squeeze(np.floor(bounds["minx"].values * 10) / 10)
@@ -159,6 +159,11 @@ def parse_single_basin_precipitation(
     max_lon = np.squeeze(np.ceil(bounds["maxx"].values * 10) / 10)
     max_lat = np.squeeze(np.ceil(bounds["maxy"].values * 10) / 10)
 
+    # if min_lon < 0:
+    #     min_lon += 360
+    #
+    # if max_lon < 0:
+    #     max_lon += 360
     # fn = discharge_folder_name + "/timezone_" + station_id + ".txt"
     # with open(fn, "r") as f:
     #     lines = f.readlines()
@@ -213,7 +218,7 @@ def parse_single_basin_precipitation(
             started_reading_data = True
         tp = np.asarray(
             dataset["pr"][
-            :, ind_lat_min: ind_lat_max + 1, ind_lon_min: ind_lon_max + 1
+            :, ind_lat_max: ind_lat_min + 1, ind_lon_min: ind_lon_max + 1
             ]
         )
         # multiply the precipitation by 1000 to get millimeter instead of meter
@@ -247,7 +252,7 @@ def parse_single_basin_precipitation(
     datetimes = [time + datetime.timedelta(hours=offset) for time in datetimes]
 
     lonb = lon[ind_lon_min:ind_lon_max + 1]
-    latb = lat[ind_lat_min:ind_lat_max + 1]
+    latb = lat[ind_lat_max:ind_lat_min + 1]
     lslon = [lonb[i] for i in range(0, len(lonb)) for j in range(0, len(latb))]
     lslat = [latb[j] for i in range(0, len(lonb)) for j in range(0, len(latb))]
     lat_lon_lst = []
@@ -356,7 +361,7 @@ def main(use_multiprocessing=True):
                 station_id = future_to_station_id[future]
                 print(f"finished with station id: {station_id}")
     else:
-        for station_id in station_ids_list:
+        for station_id in ["01073000"]:
             run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder, output_folder_name)
 
 
