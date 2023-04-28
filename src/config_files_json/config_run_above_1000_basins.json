@@ -8,7 +8,7 @@
   "num_workers_data_loader": 2,
   "batch_size": 1024,
   "save_checkpoint": true,
-  "learning_rate": 1e-6,
+  "learning_rate": 1e-5,
   "sequence_length": 270,
   "num_hidden_units": 256,
   "dropout_rate": 0.4

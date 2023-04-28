@@ -115,7 +115,7 @@ class FloodML_Runner:
         self.train_stations_list = all_stations_list_sorted[:]
         self.val_stations_list = all_stations_list_sorted[:]
         self.run_sweeps = run_sweeps
-        # print(f"running with variables: {json.dumps(vars(self), indent=4)}")
+        print(f"running with parameters: {json.dumps(vars(self), indent=4)}")
 
     def train_epoch(self, model, optimizer, loader, loss_func, epoch, device):
         # set model to train mode (important for dropout)
