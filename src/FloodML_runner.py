@@ -33,8 +33,10 @@ import glob
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 import queue
-import yaml
+from ruamel.yaml import YAML
 import wandb
+from collections import OrderedDict
+import json
 
 matplotlib.use("AGG")
 
@@ -765,8 +767,17 @@ def read_arguments_from_yaml():
     parser.add_argument('--yaml_config_file_name',
                         help='file name of the configuration (in yaml file format)')
     command_args = parser.parse_args()
-    with open(command_args.yaml_config_file_name, 'rb') as f:
-        args = yaml.safe_load(f.read())
+    yaml_path = Path(command_args.yaml_config_file_name).resolve()
+    if yaml_path.exists():
+        with yaml_path.open('r') as fp_read:
+            yaml = YAML(typ="safe")
+            args = yaml.load(fp_read)
+        with yaml_path.open('w') as fp_write:
+            yaml = YAML()
+            yaml.indent()
+            yaml.dump(dict(OrderedDict(sorted(args.items()))), fp_write)
+    else:
+        raise FileNotFoundError(yaml_path)
     return args
 
 

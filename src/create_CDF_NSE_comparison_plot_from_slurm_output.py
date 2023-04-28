@@ -109,7 +109,7 @@ if __name__ == "__main__":
     # d = {"dataset": "CAMELS", "optim": "Adam", "num_epochs": 10,
     # "sequence_length_spatial": 14, "num_processes_ddp": 3,
     #      "limit_size_above_1000": "True", "num_workers_data_loader": 2, "batch_size": 1024}
-    # with open("config_files_json/config_run_above_1000_basins.json", "w") as f:
+    # with open("config_files_yml/config_run_above_1000_basins.json", "w") as f:
     #     json.dump(d, f, indent=4)
     # query = np.array([[0.5, 0.1, 0.2], [0.7, 0.8, 0.2]])
     # key = np.array([[1.0, 0.2, 0.4], [1.4, 1.6, 0.4]])
