@@ -893,4 +893,5 @@ if __name__ == "__main__":
         wandb.agent(sweep_id, function=main, count=6)
         wandb.finish()
     else:
+        print("run number: 1")
         main()

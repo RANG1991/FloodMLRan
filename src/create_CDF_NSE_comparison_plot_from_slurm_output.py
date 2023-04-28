@@ -22,12 +22,12 @@ def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
 def create_dict_basin_id_to_NSE_my_code(logs_filename):
     dicts_models_dict = {}
     model_name = "empty_model_name"
-    run_number = 1
+    run_number = 0
     with open(logs_filename, "r", encoding="utf-8") as f:
         for row in f:
-            match_run_number_string = re.search("run number: (.*?)\n", row)
+            match_run_number_string = re.search("(run number: |wandb: Agent Starting Run: )", row)
             if match_run_number_string:
-                new_run_number = match_run_number_string.group(1)
+                new_run_number = run_number + 1
                 if new_run_number != run_number:
                     print(f"moving to new run number: {new_run_number}")
                     dicts_models_dict[(model_name, new_run_number)] = {}
@@ -48,24 +48,26 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = []
+    input_file_names = ["../slurm-6554444.out", "../slurm-6554446.out", "../slurm-6554450.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
-        d = create_dict_basin_id_to_NSE_my_code(f"{input_file_name}")
+        d = create_dict_basin_id_to_NSE_my_code(f"{input_file_path}")
         dict_all_files.update(d)
-    run_numbers = set([run_number for _, run_number in d.keys()])
-    model_names = set([model_name for model_name, _ in d.keys()])
-    plot_title = f"NSE CDF of process ID - " \
-                 f"{input_file_name.name.replace('slurm-', '').replace('.out', '')}"
+    run_numbers = set([run_number for _, run_number in dict_all_files.keys()])
+    model_names = set([model_name for model_name, _ in dict_all_files.keys()])
+    input_files_names_formatted = "_".join(
+        [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
+    plot_title = f"NSE CDF of slurm files: {input_files_names_formatted}"
     for model_name in model_names:
         # plot_title = f"NSE CDF of process ID - " \
         #              f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
         for run_number in run_numbers:
-            if (model_name, run_number) not in d.keys() or len(d[(model_name, run_number)].items()) == 0:
+            if (model_name, run_number) not in dict_all_files.keys() or \
+                    len(dict_all_files[(model_name, run_number)].items()) == 0:
                 continue
             dict_basins_id_to_mean_nse_loss = {}
-            for basin_id, basin_nse in d[(model_name, run_number)].items():
+            for basin_id, basin_nse in dict_all_files[(model_name, run_number)].items():
                 dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
             plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, model_name=model_name, run_number=run_number)
     if plot_title != "":
