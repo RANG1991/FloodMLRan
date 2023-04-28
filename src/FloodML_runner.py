@@ -769,7 +769,7 @@ def parse_command_line_arguments():
     )
     parser.add_argument('--json_config_file_name',
                         help='file name of the configuration (in json file format)')
-    args = parser.parse_args()
+    command_args = parser.parse_args()
     parser.add_argument(
         "--dataset",
         help="which dataset to train and test / validate on",
@@ -817,11 +817,11 @@ def parse_command_line_arguments():
     parser.set_defaults(save_checkpoint=False)
     parser.set_defaults(load_checkpoint=False)
     parser.set_defaults(debug=False)
-    with open(args.json_config_file_name, 'rt') as f:
+    with open(command_args.json_config_file_name, 'rt') as f:
         t_args = argparse.Namespace()
         t_args.__dict__.update(json.load(f))
         command_args = parser.parse_args(namespace=t_args)
-    command_args = vars(command_args)
+    command_args = dict(vars(command_args))
     return command_args
 
 
