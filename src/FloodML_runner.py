@@ -786,26 +786,7 @@ def main():
     # initialize_seed(123)
     args = read_arguments_from_yaml()
     if args["run_sweeps"]:
-        print("running with sweeps")
-        wandb.login(key="33b79b39a58f3310adc85fb29e28268e6f074dee")
-        sweep_configuration = {
-            'method': 'random',
-            'name': 'FloodML',
-            'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
-            'parameters':
-                {
-                    'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
-                    'sequence_length': {'min': 30, 'max': 365},
-                    'num_hidden_units': {'min': 32, 'max': 256},
-                    'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
-                    'sequence_length_spatial': {'min': 4, 'max': 14}
-                }
-        }
-        sweep_id = wandb.sweep(
-            sweep=sweep_configuration,
-            project='FloodML'
-        )
-        # wandb.init(project="FloodML", entity="r777")
+        wandb.init(project="FloodML", entity="r777")
         args["learning_rate"] = wandb.config.learning_rate
         args["sequence_length"] = wandb.config.sequence_length
         args["num_hidden_units"] = wandb.config.num_hidden_units
@@ -883,11 +864,33 @@ def main():
         )
     else:
         raise Exception(f"wrong dataset name: {args['dataset']}")
-    if args["run_sweeps"]:
-        wandb.agent(sweep_id, function=runner.start_run_wrapper, count=6)
-    else:
-        runner.start_run_wrapper()
+    runner.start_run_wrapper()
 
 
 if __name__ == "__main__":
-    main()
+    args = read_arguments_from_yaml()
+    if args["run_sweeps"]:
+        print("running with sweeps")
+        wandb.login(key="33b79b39a58f3310adc85fb29e28268e6f074dee")
+        # wandb.init(project="FloodML", entity="r777")
+        sweep_configuration = {
+            'method': 'random',
+            'name': 'FloodML',
+            'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
+            'parameters':
+                {
+                    'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
+                    'sequence_length': {'min': 30, 'max': 365},
+                    'num_hidden_units': {'min': 32, 'max': 256},
+                    'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
+                    'sequence_length_spatial': {'min': 4, 'max': 14}
+                }
+        }
+        sweep_id = wandb.sweep(
+            sweep=sweep_configuration,
+            project='FloodML'
+        )
+        wandb.agent(sweep_id, function=main, count=6)
+        wandb.finish()
+    else:
+        main()
