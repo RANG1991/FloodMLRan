@@ -33,7 +33,7 @@ import glob
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 import queue
-import json
+import yaml
 import wandb
 
 matplotlib.use("AGG")
@@ -760,179 +760,123 @@ def aggregate_gradients(model, world_size):
             param.grad.data /= world_size
 
 
-def parse_command_line_arguments():
+def read_arguments_from_yaml():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model",
-        help="which model to use",
-        choices=["LSTM", "Transformer_Encoder", "CNN_LSTM", "CONV_LSTM", "Transformer_Seq2Seq", "Transformer_HF",
-                 "CNN_Transformer"],
-        default="LSTM",
-    )
-    parser.add_argument('--json_config_file_name',
-                        help='file name of the configuration (in json file format)')
+    parser.add_argument('--yaml_config_file_name',
+                        help='file name of the configuration (in yaml file format)')
     command_args = parser.parse_args()
-    parser.add_argument(
-        "--dataset",
-        help="which dataset to train and test / validate on",
-        choices=["CAMELS", "CARAVAN"],
-        default="CAMELS",
-    )
-    parser.add_argument(
-        "--optim",
-        help="which optimizer to use",
-        choices=["SGD", "Adam"],
-        default="SGD",
-    )
-    parser.add_argument("--learning_rate", type=float, default=1e-6)
-    parser.add_argument("--sequence_length", type=int, default=128)
-    parser.add_argument("--num_hidden_units", type=int, default=256)
-    parser.add_argument("--dropout_rate", type=int, default=0.4)
-    parser.add_argument("--shared_model",
-                        help="whether to run in shared model scenario - when the "
-                             "training and validation stations are not the same",
-                        choices=["True", "False"], default="False")
-    parser.add_argument("--num_epochs", help="number of epochs for training", default=30, type=int)
-    parser.add_argument("--num_workers_data_loader", help="number of workers for data loader", default=0, type=int)
-    parser.add_argument("--num_basins", help="number of basins to include "
-                                             "in training and test / validation", default=None, type=int)
-    parser.add_argument('--profile_code', action='store_true')
-    parser.add_argument("--num_processes_ddp", help="number of processes to run distributed data"
-                                                    " parallelism", default=1, type=int)
-    parser.add_argument("--sequence_length_spatial", help="the sequence length to take of spatial features",
-                        default=7, type=int)
-    parser.add_argument("--create_new_files", action="store_true")
-    parser.add_argument("--limit_size_above_1000", action="store_true")
-    parser.add_argument("--use_all_static_attr", action="store_true")
-    parser.add_argument("--save_checkpoint", action="store_true")
-    parser.add_argument("--load_checkpoint", action="store_true")
-    parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--checkpoint_path", help="the checkpoint path to load the checkpoint from", default="",
-                        type=str)
-    parser.add_argument("--batch_size", default=256, type=int)
-    parser.add_argument("--print_tqdm_to_console", action="store_true")
-    parser.set_defaults(print_tqdm_to_console=False)
-    parser.set_defaults(profile_code=False)
-    parser.set_defaults(create_new_files=False)
-    parser.set_defaults(limit_size_above_1000=False)
-    parser.set_defaults(use_all_static_attr=False)
-    parser.set_defaults(save_checkpoint=False)
-    parser.set_defaults(load_checkpoint=False)
-    parser.set_defaults(debug=False)
-    with open(command_args.json_config_file_name, 'rt') as f:
-        t_args = argparse.Namespace()
-        t_args.__dict__.update(json.load(f))
-        command_args = parser.parse_args(namespace=t_args)
-    command_args = dict(vars(command_args))
-    return command_args
+    with open(command_args.yaml_config_file_name, 'rb') as f:
+        args = yaml.safe_load(f.read())
+    return args
 
 
-def main(run_sweeps=True):
+def main():
     # torch.backends.cudnn.enabled = False
     # initialize_seed(123)
-    json_command_args = parse_command_line_arguments()
-    if run_sweeps:
+    args = read_arguments_from_yaml()
+    if args["run_sweeps"]:
         print("running with sweeps")
         wandb.login(key="33b79b39a58f3310adc85fb29e28268e6f074dee")
-        wandb.init(project="FloodML", entity="r777")
-        json_command_args["learning_rate"] = wandb.config.learning_rate
-        json_command_args["sequence_length"] = wandb.config.sequence_length
-        json_command_args["num_hidden_units"] = wandb.config.num_hidden_units
-        json_command_args["dropout_rate"] = wandb.config.dropout_rate
-        json_command_args["sequence_length_spatial"] = wandb.config.sequence_length_spatial
-    if json_command_args["load_checkpoint"] and json_command_args["checkpoint_path"] == "":
-        list_of_files = glob.glob(f'../checkpoints/{json_command_args["model"]}_epoch_number_*.pt')
+        sweep_configuration = {
+            'method': 'random',
+            'name': 'FloodML',
+            'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
+            'parameters':
+                {
+                    'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
+                    'sequence_length': {'min': 30, 'max': 365},
+                    'num_hidden_units': {'min': 32, 'max': 256},
+                    'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
+                    'sequence_length_spatial': {'min': 4, 'max': 14}
+                }
+        }
+        sweep_id = wandb.sweep(
+            sweep=sweep_configuration,
+            project='FloodML'
+        )
+        # wandb.init(project="FloodML", entity="r777")
+        args["learning_rate"] = wandb.config.learning_rate
+        args["sequence_length"] = wandb.config.sequence_length
+        args["num_hidden_units"] = wandb.config.num_hidden_units
+        args["dropout_rate"] = wandb.config.dropout_rate
+        args["sequence_length_spatial"] = wandb.config.sequence_length_spatial
+    if args["load_checkpoint"] and args["checkpoint_path"] == "":
+        list_of_files = glob.glob(f'../checkpoints/{args["model"]}_epoch_number_*.pt')
         latest_file = max(list_of_files, key=lambda file_name:
-        int(Path(file_name).name.replace(f"{json_command_args['model']}_epoch_number_", "").replace(".pt", "")))
+        int(Path(file_name).name.replace(f"{args['model']}_epoch_number_", "").replace(".pt", "")))
         print(f"loading checkpoint from file: {latest_file}")
-        json_command_args["checkpoint_path"] = latest_file
-    if json_command_args["dataset"] == "CAMELS":
+        args["checkpoint_path"] = latest_file
+    if args["dataset"] == "CAMELS":
         runner = FloodML_Runner(
-            model_name=json_command_args["model"],
+            model_name=args["model"],
             dataset_name="CAMELS",
-            learning_rate=json_command_args["learning_rate"],
-            sequence_length=json_command_args["sequence_length"],
-            num_hidden_units=json_command_args["num_hidden_units"],
-            dropout_rate=json_command_args["dropout_rate"],
+            learning_rate=args["learning_rate"],
+            sequence_length=args["sequence_length"],
+            num_hidden_units=args["num_hidden_units"],
+            dropout_rate=args["dropout_rate"],
             dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
             static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
             discharge_str=CAMELS_dataset.DISCHARGE_STR,
             dynamic_data_folder_train=CAMELS_dataset.DYNAMIC_DATA_FOLDER,
             static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
-            optim_name=json_command_args["optim"],
-            num_epochs=json_command_args["num_epochs"],
-            num_workers_data_loader=json_command_args["num_workers_data_loader"],
-            num_basins=json_command_args["num_basins"],
-            profile_code=json_command_args["profile_code"],
-            num_processes_ddp=json_command_args["num_processes_ddp"],
-            create_new_files=json_command_args["create_new_files"],
-            sequence_length_spatial=json_command_args["sequence_length_spatial"],
-            print_tqdm_to_console=json_command_args["print_tqdm_to_console"],
-            limit_size_above_1000=json_command_args["limit_size_above_1000"],
-            use_all_static_attr=json_command_args["use_all_static_attr"],
-            save_checkpoint=json_command_args["save_checkpoint"],
-            load_checkpoint=json_command_args["load_checkpoint"],
-            checkpoint_path=json_command_args["checkpoint_path"],
-            batch_size=json_command_args["batch_size"],
-            debug=json_command_args["debug"],
-            run_sweeps=run_sweeps
+            optim_name=args["optim"],
+            num_epochs=args["num_epochs"],
+            num_workers_data_loader=args["num_workers_data_loader"],
+            num_basins=args["num_basins"],
+            profile_code=args["profile_code"],
+            num_processes_ddp=args["num_processes_ddp"],
+            create_new_files=args["create_new_files"],
+            sequence_length_spatial=args["sequence_length_spatial"],
+            print_tqdm_to_console=args["print_tqdm_to_console"],
+            limit_size_above_1000=args["limit_size_above_1000"],
+            use_all_static_attr=args["use_all_static_attr"],
+            save_checkpoint=args["save_checkpoint"],
+            load_checkpoint=args["load_checkpoint"],
+            checkpoint_path=args["checkpoint_path"],
+            batch_size=args["batch_size"],
+            debug=args["debug"],
+            run_sweeps=args["run_sweeps"]
         )
-    elif json_command_args["dataset"] == "CARAVAN":
+    elif args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
-            model_name=json_command_args["model"],
+            model_name=args["model"],
             dataset_name="CARAVAN",
-            learning_rate=json_command_args["learning_rate"],
-            sequence_length=json_command_args["sequence_length"],
-            num_hidden_units=json_command_args["num_hidden_units"],
-            dropout_rate=json_command_args["dropout_rate"],
+            learning_rate=args["learning_rate"],
+            sequence_length=args["sequence_length"],
+            num_hidden_units=args["num_hidden_units"],
+            dropout_rate=args["dropout_rate"],
             static_attributes_names=ERA5_dataset.STATIC_ATTRIBUTES_NAMES,
             dynamic_attributes_names=ERA5_dataset.DYNAMIC_ATTRIBUTES_NAMES_CARAVAN,
             discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
             dynamic_data_folder_train=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
             static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
-            optim_name=json_command_args["optim"],
-            num_epochs=json_command_args["num_epochs"],
-            num_workers_data_loader=json_command_args["num_workers_data_loader"],
-            num_basins=json_command_args["num_basins"],
-            profile_code=json_command_args["profile_code"],
-            num_processes_ddp=json_command_args["num_processes_ddp"],
-            create_new_files=json_command_args["create_new_files"],
-            sequence_length_spatial=json_command_args["sequence_length_spatial"],
-            print_tqdm_to_console=json_command_args["print_tqdm_to_console"],
-            limit_size_above_1000=json_command_args["limit_size_above_1000"],
-            use_all_static_attr=json_command_args["use_all_static_attr"],
-            save_checkpoint=json_command_args["save_checkpoint"],
-            load_checkpoint=json_command_args["load_checkpoint"],
-            checkpoint_path=json_command_args["checkpoint_path"],
-            batch_size=json_command_args["batch_size"],
-            debug=json_command_args["debug"],
-            run_sweeps=run_sweeps
+            optim_name=args["optim"],
+            num_epochs=args["num_epochs"],
+            num_workers_data_loader=args["num_workers_data_loader"],
+            num_basins=args["num_basins"],
+            profile_code=args["profile_code"],
+            num_processes_ddp=args["num_processes_ddp"],
+            create_new_files=args["create_new_files"],
+            sequence_length_spatial=args["sequence_length_spatial"],
+            print_tqdm_to_console=args["print_tqdm_to_console"],
+            limit_size_above_1000=args["limit_size_above_1000"],
+            use_all_static_attr=args["use_all_static_attr"],
+            save_checkpoint=args["save_checkpoint"],
+            load_checkpoint=args["load_checkpoint"],
+            checkpoint_path=args["checkpoint_path"],
+            batch_size=args["batch_size"],
+            debug=args["debug"],
+            run_sweeps=args["run_sweeps"]
         )
     else:
-        raise Exception(f"wrong dataset name: {json_command_args['dataset']}")
-    runner.start_run_wrapper()
+        raise Exception(f"wrong dataset name: {args['dataset']}")
+    if args["run_sweeps"]:
+        wandb.agent(sweep_id, function=runner.start_run_wrapper, count=6)
+    else:
+        runner.start_run_wrapper()
 
 
 if __name__ == "__main__":
-    sweep_configuration = {
-        'method': 'random',
-        'name': 'FloodML',
-        'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
-        'parameters':
-            {
-                'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
-                'sequence_length': {'min': 30, 'max': 365},
-                'num_hidden_units': {'min': 32, 'max': 256},
-                'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
-                'sequence_length_spatial': {'min': 4, 'max': 14}
-            }
-    }
-
-    sweep_id = wandb.sweep(
-        sweep=sweep_configuration,
-        project='FloodML'
-    )
-    main(False)
-    # wandb.agent(sweep_id, function=main, count=6)
+    main()

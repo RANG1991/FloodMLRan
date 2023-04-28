@@ -126,7 +126,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             num_basins=None
     ):
         self.countries_abbreviations_stations_dict = {}
-        self.countries_abbreviations = ["au", "br", "ca", "cl", "gb", "lamah", "us"]
+        self.countries_abbreviations = ["us"]
         self.use_Caravan_dataset = use_Caravan_dataset
         super().__init__(
             main_folder,
