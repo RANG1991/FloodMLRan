@@ -1,11 +1,11 @@
 batch_size: 256
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
-debug: true
+debug: false
 dropout_rate: 0.4
 learning_rate: 1e-05
-limit_size_above_1000: false
+limit_size_above_1000: true
 load_checkpoint: false
 model: Transformer_Encoder
 num_basins:
@@ -16,7 +16,7 @@ num_workers_data_loader: 2
 optim: Adam
 print_tqdm_to_console: true
 profile_code: false
-run_sweeps: true
+run_sweeps: false
 save_checkpoint: true
 sequence_length: 270
 sequence_length_spatial: 14
