@@ -75,7 +75,8 @@ class FloodML_Runner:
                  checkpoint_path="",
                  batch_size=256,
                  print_tqdm_to_console=True,
-                 create_box_plots=False):
+                 create_box_plots=False,
+                 run_sweeps=False):
         self.static_attributes_names = static_attributes_names
         self.dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
@@ -86,23 +87,23 @@ class FloodML_Runner:
         self.model_name = model_name
         self.mode = mode
         self.optim_name = optim_name
-        self.learning_rate = learning_rate,
-        self.sequence_length = sequence_length,
-        self.num_hidden_units = num_hidden_units,
-        self.num_epochs = num_epochs,
-        self.num_workers_data_loader = num_workers_data_loader,
-        self.num_basins = num_basins,
-        self.profile_code = profile_code,
-        self.num_processes_ddp = num_processes_ddp,
-        self.sequence_length_spatial = sequence_length_spatial,
-        self.create_new_files = create_new_files,
-        self.limit_size_above_1000 = limit_size_above_1000,
-        self.use_all_static_attr = use_all_static_attr,
-        self.save_checkpoint = save_checkpoint,
-        self.load_checkpoint = load_checkpoint,
-        self.debug = debug,
-        self.checkpoint_path = checkpoint_path,
-        self.batch_size = batch_size,
+        self.learning_rate = learning_rate
+        self.sequence_length = sequence_length
+        self.num_hidden_units = num_hidden_units
+        self.num_epochs = num_epochs
+        self.num_workers_data_loader = num_workers_data_loader
+        self.num_basins = num_basins
+        self.profile_code = profile_code
+        self.num_processes_ddp = num_processes_ddp
+        self.sequence_length_spatial = sequence_length_spatial
+        self.create_new_files = create_new_files
+        self.limit_size_above_1000 = limit_size_above_1000
+        self.use_all_static_attr = use_all_static_attr
+        self.save_checkpoint = save_checkpoint
+        self.load_checkpoint = load_checkpoint
+        self.debug = debug
+        self.checkpoint_path = checkpoint_path
+        self.batch_size = batch_size
         self.print_tqdm_to_console = print_tqdm_to_console
         self.dropout_rate = dropout_rate
         self.create_box_plots = create_box_plots
@@ -113,7 +114,8 @@ class FloodML_Runner:
             all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
         self.train_stations_list = all_stations_list_sorted[:]
         self.val_stations_list = all_stations_list_sorted[:]
-        print(f"running with variables: {json.dumps(vars(self), indent=4)}")
+        self.run_sweeps = run_sweeps
+        # print(f"running with variables: {json.dumps(vars(self), indent=4)}")
 
     def train_epoch(self, model, optimizer, loader, loss_func, epoch, device):
         # set model to train mode (important for dropout)
@@ -478,7 +480,7 @@ class FloodML_Runner:
             model = DDP(model, device_ids=[rank], find_unused_parameters=True)
         else:
             model = model.to(device="cuda")
-        if world_size <= 1 and rank == 0:
+        if world_size <= 1 and rank == 0 and self.run_sweeps:
             wandb.watch(model)
         if world_size > 1:
             distributed_sampler_train = DistributedSamplerNoDuplicate(training_data, shuffle=True)
@@ -852,8 +854,8 @@ def main(run_sweeps=True):
             sequence_length=json_command_args["sequence_length"],
             num_hidden_units=json_command_args["num_hidden_units"],
             dropout_rate=json_command_args["dropout_rate"],
-            dynamic_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
-            static_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
+            dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
+            static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
             discharge_str=CAMELS_dataset.DISCHARGE_STR,
             dynamic_data_folder_train=CAMELS_dataset.DYNAMIC_DATA_FOLDER,
             static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
@@ -873,7 +875,8 @@ def main(run_sweeps=True):
             load_checkpoint=json_command_args["load_checkpoint"],
             checkpoint_path=json_command_args["checkpoint_path"],
             batch_size=json_command_args["batch_size"],
-            debug=json_command_args["debug"]
+            debug=json_command_args["debug"],
+            run_sweeps=run_sweeps
         )
     elif json_command_args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
@@ -904,7 +907,8 @@ def main(run_sweeps=True):
             load_checkpoint=json_command_args["load_checkpoint"],
             checkpoint_path=json_command_args["checkpoint_path"],
             batch_size=json_command_args["batch_size"],
-            debug=json_command_args["debug"]
+            debug=json_command_args["debug"],
+            run_sweeps=run_sweeps
         )
     else:
         raise Exception(f"wrong dataset name: {json_command_args['dataset']}")
