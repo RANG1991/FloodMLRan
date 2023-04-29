@@ -421,7 +421,7 @@ class FloodML_Runner:
         if self.model_name.lower() == "transformer_encoder":
             model = Transformer_Encoder(
                 len(self.dynamic_attributes_names) + len(training_data.list_static_attributes_names),
-                self.sequence_length, 32)
+                self.sequence_length, 32, self.dropout_rate)
         elif self.model_name.lower() == "transformer_seq2seq":
             model = Transformer_Seq2Seq(
                 in_features=len(self.dynamic_attributes_names) + len(training_data.list_static_attributes_names))
@@ -557,15 +557,18 @@ class FloodML_Runner:
                 if self.save_checkpoint:
                     curr_datetime = datetime.now()
                     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
+                    suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(self.num_basins,
+                                                                                  self.limit_size_above_1000)
                     torch.save({
                         'epoch': (i + 1),
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss_on_training_epoch,
-                    }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}.pt")
+                    }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}_{suffix_checkpoint_file_name}.pt")
                 if self.profile_code:
                     p.step()
-                wandb.log({"training loss": loss_on_training_epoch})
+                if self.run_sweeps:
+                    wandb.log({"training loss": loss_on_training_epoch})
                 training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
                 preds_obs_dict_per_basin = {}
                 num_obs_preds = 0
@@ -585,7 +588,7 @@ class FloodML_Runner:
                           f"The size of test dataloader: {len(test_data)}")
                 print("start calculating the NSE per basin", flush=True)
                 nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1),
-                                                                            model_name)
+                                                                            model_name, self.run_sweeps)
                 print("finished calculating the NSE per basin", flush=True)
                 [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
                 if best_median_nse is None or best_median_nse < median_nse:
@@ -633,7 +636,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     return float(nse_val)
 
 
-def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, num_basins_for_nse_calc=10):
+def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, run_sweeps, num_basins_for_nse_calc=10):
     stations_ids = list(preds_obs_dict_per_basin.keys())
     nse_list_basins = []
     for station_id in stations_ids:
@@ -651,7 +654,8 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, 
     basin_id_to_plot = "07066000"
     median_nse = statistics.median(nse_list_basins)
     print(f"Basin {basin_id_with_median_nse} - NSE: {median_nse:.3f}", flush=True)
-    wandb.log({'validation accuracy': median_nse})
+    if run_sweeps:
+        wandb.log({'validation accuracy': median_nse})
     fig, ax = plt.subplots(figsize=(20, 6))
     if basin_id_to_plot not in preds_obs_dict_per_basin.keys():
         print(
@@ -671,7 +675,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, 
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
     plt.savefig(
-        f"../data/results/Hydrograph_of_basin_{basin_id_to_plot}_in_epoch_{num_epoch}_of_model{model_name}"
+        f"../data/results/Hydrograph_of_basin_{basin_id_to_plot}_in_epoch_{num_epoch}_of_model_{model_name}"
         f"_{curr_datetime_str}.png"
     )
     plt.close()
