@@ -123,7 +123,7 @@ class FloodML_Runner:
         self.create_box_plots = create_box_plots
         self.calc_nse_interval = 1
         if dataset_name.lower() == "caravan":
-            all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
+            all_stations_list_sorted = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
         else:
             all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
         self.train_stations_list = all_stations_list_sorted[:]

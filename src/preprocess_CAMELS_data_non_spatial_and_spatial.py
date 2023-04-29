@@ -357,7 +357,7 @@ def main(use_multiprocessing=True):
     output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_all_data/"
     basins_data = gpd.read_file(boundaries_file_name)
     # station_ids_list = basins_data["hru_id"].tolist()
-    station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
+    station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())[:10]
     if use_multiprocessing:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_station_id = {
