@@ -15,4 +15,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 source $virtual_env
 # module load cuda/11.2
 
-python ./preprocess_CAMELS_data_spatial.py
+python ./preprocess_CAMELS_data_non_spatial_and_spatial.py
