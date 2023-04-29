@@ -773,7 +773,7 @@ def read_arguments_from_yaml():
             yaml = YAML(typ="safe")
             args = yaml.load(fp_read)
         with yaml_path.open('w') as fp_write:
-            yaml = YAML()
+            yaml = YAML(typ="safe")
             yaml.indent()
             yaml.dump(dict(OrderedDict(sorted(args.items()))), fp_write)
     else:
@@ -792,7 +792,7 @@ def main():
         args["num_hidden_units"] = wandb.config.num_hidden_units
         args["dropout_rate"] = wandb.config.dropout_rate
         args["sequence_length_spatial"] = wandb.config.sequence_length_spatial
-    if args["load_checkpoint"] and args["checkpoint_path"] == "":
+    if args["load_checkpoint"] and not args["checkpoint_path"]:
         list_of_files = glob.glob(f'../checkpoints/{args["model"]}_epoch_number_*.pt')
         latest_file = max(list_of_files, key=lambda file_name:
         int(Path(file_name).name.replace(f"{args['model']}_epoch_number_", "").replace(".pt", "")))
