@@ -244,7 +244,7 @@ class FloodML_Runner:
                      args=(self.num_processes_ddp,
                            training_loss_single_pass_queue,
                            nse_last_pass_queue,
-                           preds_obs_dicts_ranks_queue),
+                           preds_obs_dicts_ranks_queue, training_data, test_data),
                      nprocs=self.num_processes_ddp,
                      join=True)
         else:
