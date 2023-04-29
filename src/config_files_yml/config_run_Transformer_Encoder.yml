@@ -1,6 +1,6 @@
 batch_size: 256
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
 debug: true
 dropout_rate: 0.4
@@ -8,7 +8,7 @@ learning_rate: 1e-05
 limit_size_above_1000: true
 load_checkpoint: false
 model: Transformer_Encoder
-num_basins: 10
+num_basins:
 num_epochs: 10
 num_hidden_units: 256
 num_processes_ddp: 3

@@ -37,6 +37,7 @@ from ruamel.yaml import YAML
 import wandb
 from collections import OrderedDict
 import json
+import math
 
 matplotlib.use("AGG")
 
@@ -122,6 +123,8 @@ class FloodML_Runner:
         self.dropout_rate = dropout_rate
         self.create_box_plots = create_box_plots
         self.calc_nse_interval = 1
+        self.min_lr = 0
+        self.lr_decay_rate = 0.9
         if dataset_name.lower() == "caravan":
             all_stations_list_sorted = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
         else:
@@ -478,8 +481,10 @@ class FloodML_Runner:
         model = self.prepare_model(training_data=training_data)
         if self.optim_name.lower() == "sgd":
             optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate, momentum=0.9)
+        elif self.optim_name.lower() == "Adam":
+            optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=0.05)
         else:
-            optimizer = torch.optim.Adam(model.parameters(), lr=self.learning_rate, weight_decay=0.001)
+            raise Exception(f"No such optimizer with name: {self.optim_name}")
         starting_epoch = 0
         best_median_nse = None
         if self.load_checkpoint:
@@ -533,11 +538,9 @@ class FloodML_Runner:
         for i in range(starting_epoch, self.num_epochs):
             if world_size > 1:
                 train_dataloader.sampler.set_epoch(i)
-                loss_on_training_epoch = self.train_epoch(model, optimizer, train_dataloader, calc_nse_star,
-                                                          epoch=(i + 1), device="cuda")
-            else:
-                loss_on_training_epoch = self.train_epoch(model, optimizer, train_dataloader, calc_nse_star,
-                                                          epoch=(i + 1), device="cuda")
+            step_lr_schedule(optimizer, i, self.learning_rate, self.min_lr, self.lr_decay_rate)
+            loss_on_training_epoch = self.train_epoch(model, optimizer, train_dataloader, calc_nse_star,
+                                                      epoch=(i + 1), device="cuda")
             if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):
                 if world_size > 1:
                     test_dataloader.sampler.set_epoch(i)
@@ -802,6 +805,27 @@ def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000):
         return f"{str(num_basins)} basins"
     if limit_size_above_1000:
         return "size_above_1000"
+
+
+def cosine_lr_schedule(optimizer, epoch, max_epoch, init_lr, min_lr):
+    """Decay the learning rate"""
+    lr = (init_lr - min_lr) * 0.5 * (1. + math.cos(math.pi * epoch / max_epoch)) + min_lr
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
+def step_lr_schedule(optimizer, epoch, init_lr, min_lr, decay_rate):
+    """Decay the learning rate"""
+    lr = max(min_lr, init_lr * (decay_rate ** epoch))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
+def warmup_lr_schedule(optimizer, step, max_step, init_lr, max_lr):
+    """Warmup the learning rate"""
+    lr = min(max_lr, init_lr + (max_lr - init_lr) * step / max_step)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 
 def main():
