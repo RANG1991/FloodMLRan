@@ -126,20 +126,19 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
 
 
-# def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder_name):
-#     # convert the precipitation times from UTC (Grinch) to current timezone
-#     # create a dataframe from the precipitation data and the timedates
-#     df_precip = pd.DataFrame(data=ls, index=datetimes, columns=["precip"])
-#     # down sample the precipitation data into 1D (1 day) bins and sum the values falling into the same bin
-#     df_precip_one_day = df_precip.resample("1D").sum()
-#     df_precip_one_day = df_precip_one_day.reset_index()
-#     df_precip_one_day = df_precip_one_day.rename(columns={"index": "date"})
-#     df_precip_one_day = df_precip_one_day[["date", "precip"]]
-#     print(df_precip_one_day)
-#     df_precip_one_day.to_csv(
-#         output_folder_name + "/precip24_" +
-#         station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv", float_format="%6.1f")
-#     return df_precip_one_day
+def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder_name):
+    # create a dataframe from the precipitation data and the timedates
+    df_precip = pd.DataFrame(data=ls, index=datetimes, columns=["precip"])
+    # downsample the precipitation data into 1D (1 day) bins and sum the values falling into the same bin
+    df_precip_one_day = df_precip.resample("1D").sum()
+    df_precip_one_day = df_precip_one_day.reset_index()
+    df_precip_one_day = df_precip_one_day.rename(columns={"index": "date"})
+    df_precip_one_day = df_precip_one_day[["date", "precip"]]
+    print(df_precip_one_day)
+    df_precip_one_day.to_csv(
+        output_folder_name + "/precip24_" +
+        station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv", float_format="%6.1f")
+    return df_precip_one_day
 
 
 def parse_single_basin_precipitation(
@@ -192,7 +191,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1988, 2009):
+    for year in range(1987, 2009):
         print(f"parsing year: {year} of basin : {station_id}")
         fn = f"{CAMELS_precip_data_folder}/nldas_met_update.obs.daily.pr.{year}.nc.gz"
         try:
@@ -218,7 +217,7 @@ def parse_single_basin_precipitation(
             started_reading_data = True
         tp = np.asarray(
             dataset["pr"][
-            :, ind_lat_max: ind_lat_min + 1, ind_lon_min: ind_lon_max + 1
+            :, ind_lat_min: ind_lat_max + 1, ind_lon_min: ind_lon_max + 1
             ]
         )
         # multiply the precipitation by 1000 to get millimeter instead of meter
@@ -226,7 +225,7 @@ def parse_single_basin_precipitation(
         # zero out any precipitation that is less than 0
         tp[tp < 0] = 0
         # ti is an array containing the dates as the number of
-        # hours since 1900-01-01 00:00 so this is the starting date
+        # hours since 1940-01-01 00:00 so this is the starting date
         starting_date = datetime.datetime.strptime("1940-01-01 00:00", "%Y-%m-%d %H:%M")
         # convert the time to datetime format
         datetimes = [
@@ -251,8 +250,15 @@ def parse_single_basin_precipitation(
     # starting from 1 - this is because the precipitation data is cumulative
     datetimes = [time + datetime.timedelta(hours=offset) for time in datetimes]
 
+    ls = [[precip_mean_lat_lon[i]] for i in range(0, len(datetimes))]
+    create_and_write_precipitation_mean(
+        datetimes,
+        ls,
+        station_id,
+        output_folder_name)
+
     lonb = lon[ind_lon_min:ind_lon_max + 1]
-    latb = lat[ind_lat_max:ind_lat_min + 1]
+    latb = lat[ind_lat_min:ind_lat_max + 1]
     lslon = [lonb[i] for i in range(0, len(lonb)) for j in range(0, len(latb))]
     lslat = [latb[j] for i in range(0, len(lonb)) for j in range(0, len(latb))]
     lat_lon_lst = []
@@ -348,9 +354,10 @@ def main(use_multiprocessing=True):
     CAMELS_precip_data_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ncfiles_2010/"
     boundaries_file_name = (
             PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
-    output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_spatial/"
+    output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_all_data/"
     basins_data = gpd.read_file(boundaries_file_name)
-    station_ids_list = basins_data["hru_id"].tolist()
+    # station_ids_list = basins_data["hru_id"].tolist()
+    station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
     if use_multiprocessing:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_station_id = {
@@ -361,9 +368,9 @@ def main(use_multiprocessing=True):
                 station_id = future_to_station_id[future]
                 print(f"finished with station id: {station_id}")
     else:
-        for station_id in ["01073000"]:
+        for station_id in station_ids_list:
             run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder, output_folder_name)
 
 
 if __name__ == "__main__":
-    main(False)
+    main()

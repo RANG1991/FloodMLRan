@@ -133,7 +133,6 @@ def create_and_write_precipitation_spatial(
 def create_and_write_precipitation_mean(datetimes, ls,
                                         ERA5_static_data_file_name, station_id,
                                         output_folder_name, country_abbreviation):
-    # convert the precipitation times from UTC (Grinch) to current timezone
     # create a dataframe from the precipitation data and the timedates
     df_percip = pd.DataFrame(data=ls, index=datetimes, columns=["precip"])
     # down sample the precipitation data into 1D (1 day) bins and sum the values falling into the same bin

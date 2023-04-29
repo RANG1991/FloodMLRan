@@ -59,13 +59,13 @@ DYNAMIC_ATTRIBUTES_NAMES = [
 
 DISCHARGE_STR = "qobs"
 
-DYNAMIC_DATA_FOLDER = "../data/CAMELS_US/basin_mean_forcing"
+DYNAMIC_DATA_FOLDER_NON_SPATIAL = "../data/CAMELS_US/basin_mean_forcing"
 
 STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
 
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
 
-DYNAMIC_DATA_FOLDER_SPATIAL = "../data/CAMELS_US/CAMELS_spatial/"
+DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL = "../data/CAMELS_US/CAMELS_all_data/"
 
 MAIN_FOLDER = "../data/CAMELS_US/"
 
@@ -140,7 +140,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                              create_new_files])))
 
     def read_single_station_file_spatial(self, station_id):
-        station_data_file_spatial = (Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc")
+        station_data_file_spatial = (
+                    Path(DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL) / f"precip24_spatial_{station_id}.nc")
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
         df_dis_data = self.read_discharge_data(station_id)
@@ -257,7 +258,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 if (model_name.lower() == "conv_lstm" or
                         model_name.lower() == "cnn_lstm" or
                         model_name.lower() == "cnn_transformer"):
-                    if not os.path.exists(f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial_{station_id}.nc"):
+                    if not os.path.exists(
+                            f"{DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL}/precip24_spatial_{station_id}.nc"):
                         continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)
@@ -390,59 +392,98 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
     def read_single_station_file(self, station_id):
         if station_id not in self.all_station_ids:
             return np.array([]), np.array([]), np.array([])
-        forcing_path = Path(self.dynamic_data_folder)
-        file_path = list(forcing_path.glob(f"**/{station_id}_*_forcing_leap.txt"))
-        file_path = file_path[0]
-        with open(file_path, "r") as fp:
-            # load area from header
-            fp.readline()
-            fp.readline()
-            _ = int(fp.readline())
-            # load the dataframe from the rest of the stream
-            df_forcing = pd.read_csv(fp, sep="\s+")
-            df_forcing["date"] = pd.to_datetime(
-                df_forcing.Year.map(str)
-                + "/"
-                + df_forcing.Mnth.map(str)
-                + "/"
-                + df_forcing.Day.map(str),
-                format="%Y/%m/%d",
-            )
-            df_forcing = df_forcing.drop(columns=["Year", "Mnth", "Day"])
-            df_discharge = self.read_discharge_data(station_id)
-            df_dynamic_data = df_forcing.merge(df_discharge, on="date")
-            df_dynamic_data.columns = map(str.lower, df_dynamic_data.columns)
-            df_dynamic_data, list_dates = self.read_and_filter_dynamic_data(df_dynamic_data)
-            df_dynamic_data = df_dynamic_data.set_index("date")
+        df_forcing = pd.read_csv(Path(DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL) / f"precip24_{station_id}.nc")
+        df_discharge = self.read_discharge_data(station_id)
+        df_dynamic_data = df_forcing.merge(df_discharge, on="date")
+        df_dynamic_data.columns = map(str.lower, df_dynamic_data.columns)
+        df_dynamic_data, list_dates = self.read_and_filter_dynamic_data(df_dynamic_data)
+        df_dynamic_data = df_dynamic_data.set_index("date")
 
-            y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
-            X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
-            if X_data.size == 0 or y_data.size == 0:
-                return np.array([]), np.array([]), np.array([])
-            X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
-            y_data = y_data.reshape(-1, 1)
-            df_only_selected_attrib = self.df_attr[self.list_static_attributes_names]
-            static_attrib_station = (
-                (df_only_selected_attrib[df_only_selected_attrib.index == station_id])
-                .to_numpy()
-                .reshape(1, -1)
-            )
-            static_attrib_station_rep = static_attrib_station.repeat(
-                X_data.shape[0], axis=0
-            )
-            if station_id not in self.x_mean_dict.keys():
-                self.x_mean_dict[station_id] = X_data.mean(axis=0)
-            if station_id not in self.x_std_dict.keys():
-                self.x_std_dict[station_id] = X_data.std(axis=0)
-            X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
-            # print(f"finished with station id (basin): {station_id}")
-            if station_id not in self.y_mean_dict.keys():
-                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-            if station_id not in self.y_std_dict.keys():
-                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
-            # y_data -= (self.y_mean_dict[station_id].numpy())
-            # y_data /= (self.y_std_dict[station_id].numpy())
-            return X_data, y_data, list_dates
+        y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
+        X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
+        if X_data.size == 0 or y_data.size == 0:
+            return np.array([]), np.array([]), np.array([])
+        X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
+        y_data = y_data.reshape(-1, 1)
+        df_only_selected_attrib = self.df_attr[self.list_static_attributes_names]
+        static_attrib_station = (
+            (df_only_selected_attrib[df_only_selected_attrib.index == station_id])
+            .to_numpy()
+            .reshape(1, -1)
+        )
+        static_attrib_station_rep = static_attrib_station.repeat(
+            X_data.shape[0], axis=0
+        )
+        if station_id not in self.x_mean_dict.keys():
+            self.x_mean_dict[station_id] = X_data.mean(axis=0)
+        if station_id not in self.x_std_dict.keys():
+            self.x_std_dict[station_id] = X_data.std(axis=0)
+        X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
+        # print(f"finished with station id (basin): {station_id}")
+        if station_id not in self.y_mean_dict.keys():
+            self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+        if station_id not in self.y_std_dict.keys():
+            self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+        # y_data -= (self.y_mean_dict[station_id].numpy())
+        # y_data /= (self.y_std_dict[station_id].numpy())
+        return X_data, y_data, list_dates
+
+    # def read_single_station_file(self, station_id):
+    #     if station_id not in self.all_station_ids:
+    #         return np.array([]), np.array([]), np.array([])
+    #     forcing_path = Path(self.dynamic_data_folder)
+    #     file_path = list(forcing_path.glob(f"**/{station_id}_*_forcing_leap.txt"))
+    #     file_path = file_path[0]
+    #     with open(file_path, "r") as fp:
+    #         # load area from header
+    #         fp.readline()
+    #         fp.readline()
+    #         _ = int(fp.readline())
+    #         # load the dataframe from the rest of the stream
+    #         df_forcing = pd.read_csv(fp, sep="\s+")
+    #         df_forcing["date"] = pd.to_datetime(
+    #             df_forcing.Year.map(str)
+    #             + "/"
+    #             + df_forcing.Mnth.map(str)
+    #             + "/"
+    #             + df_forcing.Day.map(str),
+    #             format="%Y/%m/%d",
+    #         )
+    #         df_forcing = df_forcing.drop(columns=["Year", "Mnth", "Day"])
+    #         df_discharge = self.read_discharge_data(station_id)
+    #         df_dynamic_data = df_forcing.merge(df_discharge, on="date")
+    #         df_dynamic_data.columns = map(str.lower, df_dynamic_data.columns)
+    #         df_dynamic_data, list_dates = self.read_and_filter_dynamic_data(df_dynamic_data)
+    #         df_dynamic_data = df_dynamic_data.set_index("date")
+    #
+    #         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
+    #         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
+    #         if X_data.size == 0 or y_data.size == 0:
+    #             return np.array([]), np.array([]), np.array([])
+    #         X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
+    #         y_data = y_data.reshape(-1, 1)
+    #         df_only_selected_attrib = self.df_attr[self.list_static_attributes_names]
+    #         static_attrib_station = (
+    #             (df_only_selected_attrib[df_only_selected_attrib.index == station_id])
+    #             .to_numpy()
+    #             .reshape(1, -1)
+    #         )
+    #         static_attrib_station_rep = static_attrib_station.repeat(
+    #             X_data.shape[0], axis=0
+    #         )
+    #         if station_id not in self.x_mean_dict.keys():
+    #             self.x_mean_dict[station_id] = X_data.mean(axis=0)
+    #         if station_id not in self.x_std_dict.keys():
+    #             self.x_std_dict[station_id] = X_data.std(axis=0)
+    #         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
+    #         # print(f"finished with station id (basin): {station_id}")
+    #         if station_id not in self.y_mean_dict.keys():
+    #             self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+    #         if station_id not in self.y_std_dict.keys():
+    #             self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+    #         # y_data -= (self.y_mean_dict[station_id].numpy())
+    #         # y_data /= (self.y_std_dict[station_id].numpy())
+    #         return X_data, y_data, list_dates
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[

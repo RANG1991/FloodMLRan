@@ -57,6 +57,12 @@ class FloodML_Runner:
                  static_data_folder,
                  discharge_data_folder,
                  learning_rate,
+                 train_start_date,
+                 train_end_date,
+                 validation_start_date,
+                 validation_end_date,
+                 test_start_date,
+                 test_end_date,
                  mode="validation",
                  optim_name="Adam",
                  dropout_rate=0.4,
@@ -90,6 +96,12 @@ class FloodML_Runner:
         self.mode = mode
         self.optim_name = optim_name
         self.learning_rate = learning_rate
+        self.train_start_date = train_start_date
+        self.train_end_date = train_end_date
+        self.validation_start_date = validation_start_date
+        self.validation_end_date = validation_end_date
+        self.test_start_date = test_start_date
+        self.test_end_date = test_end_date
         self.sequence_length = sequence_length
         self.num_hidden_units = num_hidden_units
         self.num_epochs = num_epochs
@@ -171,7 +183,7 @@ class FloodML_Runner:
         else:
             pbar = tqdm(loader, file=open('../tqdm_progress.txt', 'a'))
         pbar.set_description(f"Epoch {epoch}")
-        # in inference mode, we don't need to store intermediate steps for backprob
+        # in inference mode, we don't need to store intermediate steps for back-prop
         with torch.no_grad():
             # request mini-batch of data from the loader
             for _, station_id_batch, xs_non_spatial, xs_spatial, ys, dates in pbar:
@@ -284,12 +296,12 @@ class FloodML_Runner:
                 static_data_folder=self.static_data_folder,
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
-                train_start_date="01/10/1997",
-                train_end_date="30/09/2007",
-                validation_start_date="01/10/1988",
-                validation_end_date="30/09/1992",
-                test_start_date="01/10/1992",
-                test_end_date="30/09/1997",
+                train_start_date=self.train_start_date,
+                train_end_date=self.train_end_date,
+                validation_start_date=self.validation_start_date,
+                validation_end_date=self.validation_end_date,
+                test_start_date=self.test_start_date,
+                test_end_date=self.test_end_date,
                 stage="train",
                 model_name=self.model_name,
                 all_stations_ids=self.train_stations_list,
@@ -308,12 +320,12 @@ class FloodML_Runner:
                 static_data_folder=self.static_data_folder,
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
-                train_start_date="01/10/1997",
-                train_end_date="30/09/2007",
-                validation_start_date="01/10/1988",
-                validation_end_date="30/09/1992",
-                test_start_date="01/10/1992",
-                test_end_date="30/09/1997",
+                train_start_date=self.train_start_date,
+                train_end_date=self.train_end_date,
+                validation_start_date=self.validation_start_date,
+                validation_end_date=self.validation_end_date,
+                test_start_date=self.test_start_date,
+                test_end_date=self.test_end_date,
                 stage=self.mode,
                 all_stations_ids=self.val_stations_list,
                 sequence_length=self.sequence_length,
@@ -338,12 +350,12 @@ class FloodML_Runner:
                 discharge_data_folder=self.discharge_data_folder,
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
-                train_start_date="01/10/1997",
-                train_end_date="30/09/2007",
-                validation_start_date="01/10/1988",
-                validation_end_date="30/09/1992",
-                test_start_date="01/10/1992",
-                test_end_date="30/09/1997",
+                train_start_date=self.train_start_date,
+                train_end_date=self.train_end_date,
+                validation_start_date=self.validation_start_date,
+                validation_end_date=self.validation_end_date,
+                test_start_date=self.test_start_date,
+                test_end_date=self.test_end_date,
                 stage="train",
                 model_name=self.model_name,
                 sequence_length_spatial=self.sequence_length_spatial,
@@ -362,12 +374,12 @@ class FloodML_Runner:
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
                 discharge_data_folder=self.discharge_data_folder,
-                train_start_date="01/10/1997",
-                train_end_date="30/09/2007",
-                validation_start_date="01/10/1988",
-                validation_end_date="30/09/1992",
-                test_start_date="01/10/1992",
-                test_end_date="30/09/1997",
+                train_start_date=self.train_start_date,
+                train_end_date=self.train_end_date,
+                validation_start_date=self.validation_start_date,
+                validation_end_date=self.validation_end_date,
+                test_start_date=self.test_start_date,
+                test_end_date=self.test_end_date,
                 stage=self.mode,
                 model_name=self.model_name,
                 sequence_length_spatial=self.sequence_length_spatial,
@@ -781,21 +793,34 @@ def read_arguments_from_yaml():
     return args
 
 
+def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000):
+    if limit_size_above_1000:
+        return "size_above_1000"
+    elif num_basins is not None:
+        return f"{str(num_basins)} basins"
+
+
 def main():
     # torch.backends.cudnn.enabled = False
     # initialize_seed(123)
     args = read_arguments_from_yaml()
     if args["run_sweeps"]:
-        wandb.init(project="FloodML", entity="r777")
+        wandb.init(project=f'FloodML_{args["model"]}', entity="r777")
         args["learning_rate"] = wandb.config.learning_rate
         args["sequence_length"] = wandb.config.sequence_length
         args["num_hidden_units"] = wandb.config.num_hidden_units
         args["dropout_rate"] = wandb.config.dropout_rate
         args["sequence_length_spatial"] = wandb.config.sequence_length_spatial
     if args["load_checkpoint"] and not args["checkpoint_path"]:
-        list_of_files = glob.glob(f'../checkpoints/{args["model"]}_epoch_number_*.pt')
-        latest_file = max(list_of_files, key=lambda file_name:
-        int(Path(file_name).name.replace(f"{args['model']}_epoch_number_", "").replace(".pt", "")))
+        suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"])
+        list_of_files = glob.glob(f'../checkpoints/{args["model"]}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
+        if len(list_of_files) == 0:
+            raise FileNotFoundError('can\'t find checkpoint file name with pattern: '
+                                    f'{args["model"]}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
+        latest_file = \
+            max(list_of_files, key=lambda file_name:
+            int(Path(file_name).name.replace(f"{args['model']}_epoch_number_", "")
+                .replace(f"_{suffix_checkpoint_file_name}.pt", "")))
         print(f"loading checkpoint from file: {latest_file}")
         args["checkpoint_path"] = latest_file
     if args["dataset"] == "CAMELS":
@@ -809,7 +834,7 @@ def main():
             dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
             static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
             discharge_str=CAMELS_dataset.DISCHARGE_STR,
-            dynamic_data_folder_train=CAMELS_dataset.DYNAMIC_DATA_FOLDER,
+            dynamic_data_folder_train=CAMELS_dataset.DYNAMIC_DATA_FOLDER_NON_SPATIAL,
             static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
             optim_name=args["optim"],
@@ -828,7 +853,13 @@ def main():
             checkpoint_path=args["checkpoint_path"],
             batch_size=args["batch_size"],
             debug=args["debug"],
-            run_sweeps=args["run_sweeps"]
+            run_sweeps=args["run_sweeps"],
+            train_start_date=args["train_start_date"],
+            train_end_date=args["train_end_date"],
+            validation_start_date=args["validation_start_date"],
+            validation_end_date=args["validation_end_date"],
+            test_start_date=args["test_start_date"],
+            test_end_date=args["test_end_date"],
         )
     elif args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
@@ -860,7 +891,13 @@ def main():
             checkpoint_path=args["checkpoint_path"],
             batch_size=args["batch_size"],
             debug=args["debug"],
-            run_sweeps=args["run_sweeps"]
+            run_sweeps=args["run_sweeps"],
+            train_start_date=args["train_start_date"],
+            train_end_date=args["train_end_date"],
+            validation_start_date=args["validation_start_date"],
+            validation_end_date=args["validation_end_date"],
+            test_start_date=args["test_start_date"],
+            test_end_date=args["test_end_date"],
         )
     else:
         raise Exception(f"wrong dataset name: {args['dataset']}")
@@ -888,7 +925,7 @@ if __name__ == "__main__":
         }
         sweep_id = wandb.sweep(
             sweep=sweep_configuration,
-            project='FloodML'
+            project=f'FloodML_{args["model"]}'
         )
         wandb.agent(sweep_id, function=main, count=6)
         wandb.finish()
