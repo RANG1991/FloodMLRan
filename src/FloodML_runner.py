@@ -479,7 +479,7 @@ class FloodML_Runner:
         if self.optim_name.lower() == "sgd":
             optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate, momentum=0.9)
         else:
-            optimizer = torch.optim.Adam(model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.learning_rate, weight_decay=0.001)
         starting_epoch = 0
         best_median_nse = None
         if self.load_checkpoint:
