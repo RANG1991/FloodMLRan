@@ -1,4 +1,4 @@
-batch_size: 256
+batch_size: 128
 checkpoint_path:
 create_new_files: false
 dataset: CAMELS
@@ -27,6 +27,6 @@ validation_start_date: "01/10/1988"
 validation_end_date: "30/09/1992"
 test_start_date: "01/10/1992"
 test_end_date: "30/09/1997"
-intermediate_dim_transformer: 64
+intermediate_dim_transformer: 32
 num_heads_transformer: 8
 num_layers_transformer: 6
