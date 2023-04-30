@@ -64,6 +64,9 @@ class FloodML_Runner:
                  validation_end_date,
                  test_start_date,
                  test_end_date,
+                 intermediate_dim_transformer,
+                 num_heads_transformer,
+                 num_layers_transformer,
                  mode="validation",
                  optim_name="Adam",
                  dropout_rate=0.4,
@@ -121,6 +124,9 @@ class FloodML_Runner:
         self.batch_size = batch_size
         self.print_tqdm_to_console = print_tqdm_to_console
         self.dropout_rate = dropout_rate
+        self.intermediate_dim_transformer = intermediate_dim_transformer
+        self.num_heads_transformer = num_heads_transformer
+        self.num_layers_transformer = num_layers_transformer
         self.create_box_plots = create_box_plots
         self.calc_nse_interval = 1
         self.min_lr = 0
@@ -424,7 +430,8 @@ class FloodML_Runner:
         if self.model_name.lower() == "transformer_encoder":
             model = Transformer_Encoder(
                 len(self.dynamic_attributes_names) + len(training_data.list_static_attributes_names),
-                self.sequence_length, 32, self.dropout_rate)
+                self.sequence_length, dropout=self.dropout_rate, intermediate_dim=self.intermediate_dim_transformer,
+                num_layers=self.num_layers_transformer, num_heads=self.num_heads_transformer)
         elif self.model_name.lower() == "transformer_seq2seq":
             model = Transformer_Seq2Seq(
                 in_features=len(self.dynamic_attributes_names) + len(training_data.list_static_attributes_names))
@@ -839,6 +846,9 @@ def main():
         args["num_hidden_units"] = wandb.config.num_hidden_units
         args["dropout_rate"] = wandb.config.dropout_rate
         args["sequence_length_spatial"] = wandb.config.sequence_length_spatial
+        args["intermediate_dim_transformer"] = wandb.config.intermediate_dim_transformer
+        args["num_heads_transformer"] = wandb.config.num_heads_transformer
+        args["num_layers_transformer"] = wandb.config.num_layers_transformer
     if args["load_checkpoint"] and not args["checkpoint_path"]:
         suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"])
         list_of_files = glob.glob(f'../checkpoints/{args["model"]}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
@@ -888,6 +898,9 @@ def main():
             validation_end_date=args["validation_end_date"],
             test_start_date=args["test_start_date"],
             test_end_date=args["test_end_date"],
+            intermediate_dim_transformer=args["intermediate_dim_transformer"],
+            num_heads_transformer=args["num_heads_transformer"],
+            num_layers_transformer=args["num_layers_transformer"]
         )
     elif args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
@@ -926,6 +939,9 @@ def main():
             validation_end_date=args["validation_end_date"],
             test_start_date=args["test_start_date"],
             test_end_date=args["test_end_date"],
+            intermediate_dim_transformer=args["intermediate_dim_transformer"],
+            num_heads_transformer=args["num_heads_transformer"],
+            num_layers_transformer=args["num_layers_transformer"]
         )
     else:
         raise Exception(f"wrong dataset name: {args['dataset']}")
@@ -948,7 +964,10 @@ if __name__ == "__main__":
                     'sequence_length': {'min': 30, 'max': 365},
                     'num_hidden_units': {'min': 32, 'max': 256},
                     'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
-                    'sequence_length_spatial': {'min': 4, 'max': 14}
+                    'sequence_length_spatial': {'min': 4, 'max': 14},
+                    'intermediate_dim_transformer': [32, 64, 128, 256, 512],
+                    'num_heads_transformer': [2, 4, 8],
+                    'num_layers_transformer': [6, 8]
                 }
         }
         sweep_id = wandb.sweep(
