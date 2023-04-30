@@ -48,7 +48,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["../slurm-6554444.out", "../slurm-6554446.out", "../slurm-6554450.out"]
+    input_file_names = ["../slurm-6583728.out", "../slurm-6583727.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
@@ -69,6 +69,8 @@ def plot_NSE_CDF_graphs_my_code():
             dict_basins_id_to_mean_nse_loss = {}
             for basin_id, basin_nse in dict_all_files[(model_name, run_number)].items():
                 dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
+            print(
+                f"number of basins of model with name: {model_name} is: {len(dict_basins_id_to_mean_nse_loss.keys())}")
             plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, model_name=model_name, run_number=run_number)
     if plot_title != "":
         plt.title(plot_title)
@@ -104,6 +106,8 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
     cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
     # plt.xscale("symlog")
     plt.xlim((0, 1))
+    plt.xlabel("NSE")
+    plt.ylabel("CDF")
     plt.plot(base[:-1], cumulative, label=f"model name: {model_name} run number: {run_number}")
 
 
