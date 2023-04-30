@@ -48,7 +48,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["../slurm-6583728.out", "../slurm-6583727.out"]
+    input_file_names = ["../slurm-6583728.out", "../slurm-6583727.out", "../slurm-6584983.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
