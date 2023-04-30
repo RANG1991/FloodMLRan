@@ -135,6 +135,9 @@ class FloodML_Base_Dataset(Dataset):
                                               model_name=self.model_name,
                                               max_width=self.max_width, max_height=self.max_height,
                                               create_new_files=self.create_new_files)
+        print(f"number of stations in current run: {len(dict_station_id_to_data.keys())}")
+        list_stations_current_run = '\n'.join([station_id for station_id in dict_station_id_to_data.keys()])
+        print(f"stations in current run: {list_stations_current_run}")
         self.save_pickle_if_not_exists(
             f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}", self.x_mean_dict,
             force=True)
