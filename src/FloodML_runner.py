@@ -129,8 +129,12 @@ class FloodML_Runner:
         self.num_layers_transformer = num_layers_transformer
         self.create_box_plots = create_box_plots
         self.calc_nse_interval = 1
-        self.min_lr = 0
+        self.weight_decay = 0.05
+        self.init_lr = 3e-4
+        self.min_lr = 1e-6
         self.lr_decay_rate = 0.9
+        self.warmup_steps = 3000
+        self.warmup_lr = 1e-6
         if dataset_name.lower() == "caravan":
             all_stations_list_sorted = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
         else:
@@ -548,7 +552,7 @@ class FloodML_Runner:
         for i in range(starting_epoch, self.num_epochs):
             if world_size > 1:
                 train_dataloader.sampler.set_epoch(i)
-            step_lr_schedule(optimizer, i, self.learning_rate, self.min_lr, self.lr_decay_rate)
+            warmup_lr_schedule(optimizer, i, self.warmup_steps, self.warmup_lr, self.init_lr)
             loss_on_training_epoch = self.train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                                       epoch=(i + 1), device="cuda")
             if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):
