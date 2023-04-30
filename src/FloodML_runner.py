@@ -481,7 +481,7 @@ class FloodML_Runner:
         model = self.prepare_model(training_data=training_data)
         if self.optim_name.lower() == "sgd":
             optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate, momentum=0.9)
-        elif self.optim_name.lower() == "Adam":
+        elif self.optim_name.lower() == "adam":
             optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=0.05)
         else:
             raise Exception(f"No such optimizer with name: {self.optim_name}")
@@ -955,7 +955,7 @@ if __name__ == "__main__":
             sweep=sweep_configuration,
             project=f'FloodML_{args["model"]}'
         )
-        wandb.agent(sweep_id, function=main, count=6)
+        wandb.agent(sweep_id, function=main, count=10)
         wandb.finish()
     else:
         print("run number: 1")
