@@ -552,7 +552,7 @@ class FloodML_Runner:
         for i in range(starting_epoch, self.num_epochs):
             if world_size > 1:
                 train_dataloader.sampler.set_epoch(i)
-            warmup_lr_schedule(optimizer, i, self.warmup_steps, self.warmup_lr, self.init_lr)
+            # warmup_lr_schedule(optimizer, i, self.warmup_steps, self.warmup_lr, self.init_lr)
             loss_on_training_epoch = self.train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                                       epoch=(i + 1), device="cuda")
             if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):

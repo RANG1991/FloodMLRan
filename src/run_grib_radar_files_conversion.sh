@@ -5,7 +5,7 @@
 #SBATCH --mem=50G
 
 # Uncomment and enter path of code
-cd /sci/labs/efratmorin/ranga/FloodMLRan/data/stage4/
+cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
 
 # virtual_env location
 virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate

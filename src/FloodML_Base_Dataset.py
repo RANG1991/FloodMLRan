@@ -204,7 +204,7 @@ class FloodML_Base_Dataset(Dataset):
         self.all_station_ids = list(dict_station_id_to_data_from_file.keys())
         print(f"number of stations in current run: {len(self.all_station_ids)}")
         list_stations_current_run = '\n'.join([station_id for station_id in self.all_station_ids])
-        print(f"stations in current run\n: {list_stations_current_run}")
+        print(f"stations in current run:\n{list_stations_current_run}")
         self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
         del dict_station_id_to_data
 
