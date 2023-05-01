@@ -1,7 +1,5 @@
 import netCDF4
 import gzip
-
-import netCDF4 as nc
 import geopandas as gpd
 from climata.usgs import InstantValueIO
 import pandas as pd
