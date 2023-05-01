@@ -10,7 +10,7 @@ import concurrent.futures
 
 def convert_all_grb_files_to_netCDF(grib_file_path, grib2_res_folder_path, nc_res_folder_path):
     grib_file_path_for_reading_using_xarray = grib2_res_folder_path / (grib_file_path.stem + ".grb2")
-    if grib_file_path.suffix != "grb2":
+    if grib_file_path.suffix != ".grb2":
         if grib_file_path.suffix == ".gz":
             with gzip.open(grib_file_path, 'rb') as f_in:
                 uncompressed_data = f_in.read()

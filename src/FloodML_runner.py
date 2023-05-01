@@ -430,7 +430,7 @@ class FloodML_Runner:
                     dict_boxplots_data,
                     plot_title=f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}",
                 )
-        print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
+        # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
         return training_data, test_data
 
     def prepare_model(self, training_data):
@@ -490,7 +490,7 @@ class FloodML_Runner:
 
     def start_run(self, rank, world_size, training_loss_single_pass_queue, nse_last_pass_queue,
                   preds_obs_dicts_ranks_queue, training_data, test_data):
-        print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
+        # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
         print(f"running with optimizer: {self.optim_name}")
         model = self.prepare_model(training_data=training_data)
         if self.optim_name.lower() == "sgd":
@@ -555,6 +555,7 @@ class FloodML_Runner:
             # warmup_lr_schedule(optimizer, i, self.warmup_steps, self.warmup_lr, self.init_lr)
             loss_on_training_epoch = self.train_epoch(model, optimizer, train_dataloader, calc_nse_star,
                                                       epoch=(i + 1), device="cuda")
+            print("start evaluating the model", flush=True)
             if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):
                 if world_size > 1:
                     test_dataloader.sampler.set_epoch(i)
@@ -665,6 +666,7 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, 
         nse = calc_nse(obs, preds)
         print(f"station with id: {station_id} has nse of: {nse}", flush=True)
         nse_list_basins.append(nse)
+    print(f"the number of stations of NSE calculation: {len(stations_ids)}", flush=True)
     # nse_list_basins = torch.cat(nse_list_basins).cpu().numpy()
     nse_list_basins_idx_sorted = np.argsort(np.array(nse_list_basins))
     basin_id_with_median_nse = stations_ids[nse_list_basins_idx_sorted[len(nse_list_basins_idx_sorted) // 2]]
