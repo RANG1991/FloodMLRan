@@ -5,10 +5,11 @@ dataset: CAMELS
 debug: true
 dropout_rate: 0.4
 learning_rate: 5e-05
-limit_size_above_1000: true
+limit_size_above_1000: false
 load_checkpoint: false
+mode: validation
 model: Transformer_Encoder
-num_basins: 100
+num_basins:
 num_epochs: 10
 num_hidden_units: 256
 num_processes_ddp: 3
@@ -28,5 +29,5 @@ validation_end_date: "30/09/1992"
 test_start_date: "01/10/1992"
 test_end_date: "30/09/1997"
 intermediate_dim_transformer: 32
-num_heads_transformer: 8
+num_heads_transformer: 4
 num_layers_transformer: 6

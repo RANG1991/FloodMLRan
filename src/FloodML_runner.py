@@ -136,7 +136,7 @@ class FloodML_Runner:
         self.warmup_steps = 3000
         self.warmup_lr = 1e-6
         if dataset_name.lower() == "caravan":
-            all_stations_list_sorted = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
+            all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
         else:
             all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
         self.train_stations_list = all_stations_list_sorted[:]
@@ -846,6 +846,8 @@ def main():
     # torch.backends.cudnn.enabled = False
     # initialize_seed(123)
     args = read_arguments_from_yaml()
+    if args["mode"] != "validation" and args["mode"] != "test":
+        raise Exception("mode can only be validation or test")
     if args["run_sweeps"]:
         wandb.init(project=f'FloodML_{args["model"]}', entity="r777")
         args["learning_rate"] = wandb.config.learning_rate
@@ -907,7 +909,8 @@ def main():
             test_end_date=args["test_end_date"],
             intermediate_dim_transformer=args["intermediate_dim_transformer"],
             num_heads_transformer=args["num_heads_transformer"],
-            num_layers_transformer=args["num_layers_transformer"]
+            num_layers_transformer=args["num_layers_transformer"],
+            mode=args["mode"]
         )
     elif args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
@@ -948,7 +951,8 @@ def main():
             test_end_date=args["test_end_date"],
             intermediate_dim_transformer=args["intermediate_dim_transformer"],
             num_heads_transformer=args["num_heads_transformer"],
-            num_layers_transformer=args["num_layers_transformer"]
+            num_layers_transformer=args["num_layers_transformer"],
+            mode=args["mode"]
         )
     else:
         raise Exception(f"wrong dataset name: {args['dataset']}")
