@@ -249,8 +249,10 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         dict_station_id_to_data = {}
         pbar = tqdm(all_stations_ids, file=sys.stdout)
         pbar.set_description(f"processing basins - {self.stage}")
+        num_exist_stations = 0
+        num_not_in_list_stations = 0
         for station_id in pbar:
-            print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
+            # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
             if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
                 if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
                         or model_name.lower() == "cnn_transformer":
@@ -318,9 +320,11 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                     del X_data_spatial
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data,
                                                        "list_dates": list_dates}
-
             else:
-                print(f"station with id: {station_id} has no valid file or the file already exists")
+                if station_id not in self.all_station_ids:
+                    num_not_in_list_stations += 1
+                else:
+                    num_exist_stations += 1
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
@@ -346,6 +350,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                 json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
                 json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
+        print(f"went over {len(all_stations_ids)} station, from which {num_exist_stations} already "
+              f"exists and {num_not_in_list_stations} not in the list")
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial
 
     def read_single_station_file_spatial(self, station_id):

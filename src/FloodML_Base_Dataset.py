@@ -160,10 +160,10 @@ class FloodML_Base_Dataset(Dataset):
         x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
 
         if self.create_new_files:
-            for key in dict_station_id_to_data.keys():
-                current_x_data = dict_station_id_to_data[key]["x_data"]
-                current_y_data = dict_station_id_to_data[key]["y_data"]
-                current_list_dates = dict_station_id_to_data[key]["list_dates"]
+            for station_id in dict_station_id_to_data.keys():
+                current_x_data = dict_station_id_to_data[station_id]["x_data"]
+                current_y_data = dict_station_id_to_data[station_id]["y_data"]
+                current_list_dates = dict_station_id_to_data[station_id]["list_dates"]
 
                 indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
 
@@ -197,13 +197,12 @@ class FloodML_Base_Dataset(Dataset):
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                        "x_data_spatial": current_x_data_spatial,
                                        "list_dates": current_list_dates}
-                with open(f"{self.folder_with_basins_pickles}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
+                with open(f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl",
                           'wb') as f:
                     pickle.dump(dict_curr_basin, f)
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
-        self.all_station_ids = list(dict_station_id_to_data_from_file.keys())
         list_stations_current_run = '\n'.join([station_id for station_id in self.all_station_ids])
-        print(f"stations in current run:\n{list_stations_current_run}")
+        # print(f"stations in current run:\n{list_stations_current_run}")
         print(f"number of stations in current run: {len(self.all_station_ids)}")
         self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
         del dict_station_id_to_data
