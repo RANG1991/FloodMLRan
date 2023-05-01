@@ -136,9 +136,9 @@ class FloodML_Runner:
         self.warmup_steps = 3000
         self.warmup_lr = 1e-6
         if dataset_name.lower() == "caravan":
-            all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
+            all_stations_list_sorted = sorted(open("../data/spatial_basins_list.txt").read().splitlines())
         else:
-            all_stations_list_sorted = sorted(open("../data/531_basin_list.txt").read().splitlines())
+            all_stations_list_sorted = sorted(open("../data/spatial_basins_list.txt").read().splitlines())
         self.train_stations_list = all_stations_list_sorted[:]
         self.val_stations_list = all_stations_list_sorted[:]
         self.run_sweeps = run_sweeps
