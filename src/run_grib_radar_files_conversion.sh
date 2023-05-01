@@ -2,7 +2,7 @@
 
 #SBATCH -n 2
 #SBATCH --time=100:0:0
-#SBATCH --mem=160G
+#SBATCH --mem=50G
 
 # Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/data/stage4/
@@ -12,4 +12,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 
 source $virtual_env
 
-find . -name '*.Z' -type f -exec /sci/labs/efratmorin/ranga/local/wgrib/wgrib {} -text \;
+python ./preprocess_precip_radar.py
