@@ -5,6 +5,7 @@ import numpy as np
 from scipy.special import softmax
 from pathlib import Path
 import json
+import statistics
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -19,8 +20,42 @@ def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
     return dicts_models_dict
 
 
+def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict, calc_average_nse_per_basin=False):
+    run_numbers = set([run_number for _, run_number in models_basins_nse_dict.keys()])
+    model_names = set([model_name for model_name, _ in models_basins_nse_dict.keys()])
+    model_name_and_num_basins_to_best_nse = {}
+    for model_name in model_names:
+        for run_number in run_numbers:
+            if (model_name, run_number) not in models_basins_nse_dict.keys() or \
+                    len(models_basins_nse_dict[(model_name, run_number)].items()) == 0:
+                continue
+            basin_id_to_nse_list_tuples = sorted(list(models_basins_nse_dict[(model_name, run_number)].items()),
+                                                 key=lambda x: x[0])
+            list_basin_ids, list_nse = zip(*basin_id_to_nse_list_tuples)
+            list_nse = np.array(list_nse)
+            median_nse = statistics.median(list_nse)
+            num_basins = len(list_nse)
+            if (model_name, num_basins) not in model_name_and_num_basins_to_best_nse.keys():
+                if calc_average_nse_per_basin:
+                    model_name_and_num_basins_to_best_nse[(model_name, num_basins)] = [list_nse]
+                else:
+                    model_name_and_num_basins_to_best_nse[(model_name, num_basins)] = list_nse
+            else:
+                if calc_average_nse_per_basin:
+                    model_name_and_num_basins_to_best_nse[(model_name, num_basins)].append(list_nse)
+                else:
+                    if median_nse > statistics.median(model_name_and_num_basins_to_best_nse[(model_name, num_basins)]):
+                        model_name_and_num_basins_to_best_nse[(model_name, num_basins)] = list_nse
+    if calc_average_nse_per_basin:
+        for model_name, num_basins in model_name_and_num_basins_to_best_nse.keys():
+            lists_of_nse_of_num_basins = model_name_and_num_basins_to_best_nse[(model_name, num_basins)]
+            model_name_and_num_basins_to_best_nse[(model_name, num_basins)] = np.mean(lists_of_nse_of_num_basins,
+                                                                                      axis=1)
+    return model_name_and_num_basins_to_best_nse
+
+
 def create_dict_basin_id_to_NSE_my_code(logs_filename):
-    dicts_models_dict = {}
+    models_basins_nse_dict = {}
     model_name = "empty_model_name"
     run_number = 0
     with open(logs_filename, "r", encoding="utf-8") as f:
@@ -29,49 +64,44 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
             if match_run_number_string:
                 new_run_number = run_number + 1
                 if new_run_number != run_number:
-                    print(f"moving to new run number: {new_run_number}")
-                    dicts_models_dict[(model_name, new_run_number)] = {}
+                    models_basins_nse_dict[(model_name, new_run_number)] = {}
                     run_number = new_run_number
             match_model_name_string = re.search("running with model: (.*?)\n", row)
             if match_model_name_string:
                 new_model_name = match_model_name_string.group(1)
                 if new_model_name != model_name:
-                    print(f"moving to new model with name: {new_model_name}")
-                    dicts_models_dict[(new_model_name, run_number)] = {}
+                    print(f"model: {model_name} has total of: {run_number} runs")
+                    models_basins_nse_dict[(new_model_name, run_number)] = {}
                     model_name = new_model_name
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
                 basin_nse = float(match_nse_string.group(2))
-                dicts_models_dict[(model_name, run_number)][basin_id] = basin_nse
-    return dicts_models_dict
+                models_basins_nse_dict[(model_name, run_number)][basin_id] = basin_nse
+    return models_basins_nse_dict
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["../slurm-6584894.out", "../slurm-6584893.out"]
+    input_file_names = ["slurm-6584894.out", "slurm-6584893.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
         d = create_dict_basin_id_to_NSE_my_code(f"{input_file_path}")
+        d = calc_best_nse_per_model_and_num_basins(d)
         dict_all_files.update(d)
-    run_numbers = set([run_number for _, run_number in dict_all_files.keys()])
+    all_num_basins = set([num_basins for _, num_basins in dict_all_files.keys()])
     model_names = set([model_name for model_name, _ in dict_all_files.keys()])
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
-    plot_title = f"NSE CDF of slurm files: {input_files_names_formatted}"
+    plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
     for model_name in model_names:
         # plot_title = f"NSE CDF of process ID - " \
         #              f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
-        for run_number in run_numbers:
-            if (model_name, run_number) not in dict_all_files.keys() or \
-                    len(dict_all_files[(model_name, run_number)].items()) == 0:
+        for num_basins in all_num_basins:
+            if (model_name, num_basins) not in dict_all_files.keys():
                 continue
-            dict_basins_id_to_mean_nse_loss = {}
-            for basin_id, basin_nse in dict_all_files[(model_name, run_number)].items():
-                dict_basins_id_to_mean_nse_loss[basin_id] = basin_nse
-            print(
-                f"number of basins of model with name: {model_name} is: {len(dict_basins_id_to_mean_nse_loss.keys())}")
-            plot_CDF_NSE_basins(dict_basins_id_to_mean_nse_loss, model_name=model_name, run_number=run_number)
+            print(f"number of basins of model with name: {model_name} is: {num_basins}")
+            plot_CDF_NSE_basins(dict_all_files[(model_name, num_basins)], model_name=model_name, num_basins=num_basins)
     if plot_title != "":
         plt.title(plot_title)
     plt.legend()
@@ -93,11 +123,7 @@ def plot_NSE_CDF_graph_frederik_code():
     plt.clf()
 
 
-def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
-    nse_losses = []
-    for basin_id, mean_nes_loss in dict_basins_mean_NSE_loss.items():
-        nse_losses.append(mean_nes_loss)
-    nse_losses_np = np.array(nse_losses)
+def plot_CDF_NSE_basins(nse_losses_np, model_name, num_basins):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     # evaluate the histogram
     values, base = np.histogram(nse_losses_np, bins=100000)
@@ -108,7 +134,7 @@ def plot_CDF_NSE_basins(dict_basins_mean_NSE_loss, model_name, run_number):
     plt.xlim((0, 1))
     plt.xlabel("NSE")
     plt.ylabel("CDF")
-    plt.plot(base[:-1], cumulative, label=f"model name: {model_name} run number: {run_number}")
+    plt.plot(base[:-1], cumulative, label=f"model name: {model_name} number of basins: {num_basins}")
 
 
 def main():
