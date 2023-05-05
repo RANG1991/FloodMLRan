@@ -994,5 +994,10 @@ if __name__ == "__main__":
         wandb.agent(sweep_id, function=main, count=10)
         wandb.finish()
     else:
-        print("run number: 1")
-        main()
+        if args["num_runs"] > 1:
+            for i in range(args["num_runs"]):
+                print(f"run number: {i + 1}")
+                main()
+        else:
+            print(f"run number: 1")
+            main()
