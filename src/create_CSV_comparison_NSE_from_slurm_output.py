@@ -3,26 +3,8 @@ import pandas as pd
 from pathlib import Path
 import functools
 from ERA5_dataset import Dataset_ERA5
-
-
-def read_output_file(output_file):
-    dicts_models_dict = {}
-    model_name = "empty_model_name"
-    with open(output_file, "r", encoding="utf-8") as f:
-        for row in f:
-            match_model_name_string = re.search("running with model: (.*?)\n", row)
-            if match_model_name_string:
-                new_model_name = match_model_name_string.group(1)
-                if new_model_name != model_name:
-                    print(f"moving to new model with name: {new_model_name}")
-                    dicts_models_dict[new_model_name] = {}
-                    model_name = new_model_name
-            match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
-            if match_nse_string:
-                basin_id = match_nse_string.group(1)
-                basin_nse = float(match_nse_string.group(2))
-                dicts_models_dict[model_name][basin_id] = basin_nse
-    return dicts_models_dict
+from create_CDF_NSE_comparison_plot_from_slurm_output import calc_best_nse_per_model_and_num_basins, \
+    create_dict_basin_id_to_NSE_my_code
 
 
 def generate_box_plots(df_res):
@@ -51,19 +33,26 @@ def generate_box_plots(df_res):
                                             plot_title=f"box_plot_{column_name}_NSE_comparison")
 
 
-def generate_csv_from_output_file(output_file, static_attr_file):
-    basins_dict = read_output_file(output_file)
-    output_file_name = Path(output_file).stem
-    basins_ids = functools.reduce(lambda basin_ids_1, basin_ids_2: basin_ids_1.intersection(basin_ids_2),
-                                  [set(basins_dict[model_name].keys()) for model_name in basins_dict.keys()])
-    basins_dict_for_data_frame = {}
-    for basins_id in basins_ids:
-        list_nse_different_models = [basins_id]
-        for model_name in basins_dict.keys():
-            list_nse_different_models.append(basins_dict[model_name][basins_id])
-        basins_dict_for_data_frame[basins_id] = list_nse_different_models[:]
-    df_nse = pd.DataFrame.from_dict(basins_dict_for_data_frame, orient="index",
-                                    columns=["basin_id"] + [f'NSE_{model_name}' for model_name in basins_dict.keys()])
+def generate_csv_from_output_file(slurm_output_files, static_attr_file):
+    input_file_paths = [Path(file_name).resolve() for file_name in slurm_output_files]
+    dict_all_files = {}
+    for input_file_path in input_file_paths:
+        d = create_dict_basin_id_to_NSE_my_code(f"{input_file_path}")
+        d = calc_best_nse_per_model_and_num_basins(d)
+        dict_all_files.update(d)
+    input_files_names_formatted = "_".join(
+        [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
+    output_file_name = Path(input_files_names_formatted).stem
+    basins_ids = None
+    for (model_name, basins_tuple) in dict_all_files.keys():
+        if basins_ids is None:
+            basins_ids = basins_tuple
+        elif basins_ids != basins_tuple:
+            raise Exception("not all basins tuples are the same - the CSV will be incorrect")
+    basins_dict_for_data_frame = {"basin_id": basins_ids}
+    for (model_name, basins_tuple) in dict_all_files.keys():
+        basins_dict_for_data_frame[f'NSE_{model_name}_{len(basins_tuple)}'] = dict_all_files[(model_name, basins_tuple)]
+    df_nse = pd.DataFrame(basins_dict_for_data_frame)
     df_static_attrib = pd.read_csv(static_attr_file, dtype={"gauge_id": str})
     df_static_attrib["gauge_id"] = df_static_attrib["gauge_id"].apply(lambda x: x.replace("us_", ""))
     df_res = df_nse.set_index('basin_id').join(df_static_attrib.set_index('gauge_id'))
@@ -87,7 +76,7 @@ def generate_csv_from_CAMELS_static_attr_files(static_data_folder):
 
 def main():
     generate_csv_from_CAMELS_static_attr_files("../data/CAMELS_US/camels_attributes_v2.0")
-    generate_csv_from_output_file("./slurm-6308333.out",
+    generate_csv_from_output_file(["../slurm-6758360.out", "../slurm-6608804.out"],
                                   "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 
