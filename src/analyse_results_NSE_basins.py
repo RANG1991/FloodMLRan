@@ -8,10 +8,10 @@ from matplotlib import pyplot as plt
 
 
 def analyse_results(csv_results_file_with_static_attr):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=1)
+    clf = DecisionTreeClassifier(random_state=0, max_depth=3)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
-    df_results["label"] = np.where(df_results['NSE_CNN_LSTM'] > df_results['NSE_LSTM'], 1, 0)
-    df_results = df_results.drop(columns=['NSE_CNN_LSTM', 'NSE_LSTM'])
+    df_results["label"] = np.where(df_results['NSE_CNN_LSTM_513'] > df_results['NSE_LSTM_513'], 1, 0)
+    df_results = df_results.drop(columns=['NSE_CNN_LSTM_513', 'NSE_LSTM_513'])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna()
     clf.fit(df_results.to_numpy()[:, :-1], df_results["label"])
@@ -22,7 +22,7 @@ def analyse_results(csv_results_file_with_static_attr):
 
 
 def main():
-    analyse_results("slurm-6308333.csv")
+    analyse_results("6758360_6608804.csv")
 
 
 if __name__ == "__main__":
