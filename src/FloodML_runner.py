@@ -821,6 +821,8 @@ def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000):
         return f"{str(num_basins)} basins"
     if limit_size_above_1000:
         return "size_above_1000"
+    if num_basins is None:
+        return "all_basins"
 
 
 def cosine_lr_schedule(optimizer, epoch, max_epoch, init_lr, min_lr):

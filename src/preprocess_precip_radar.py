@@ -12,7 +12,7 @@ def convert_all_grb_files_to_netCDF(grib_file_path, grib2_res_folder_path, nc_re
     if not (grib2_res_folder_path / grib_file_path.parent).exists():
         os.mkdir(grib2_res_folder_path / grib_file_path.parent)
     grib_file_path_for_reading_using_xarray = grib2_res_folder_path / grib_file_path.parent / (
-                grib_file_path.stem + ".grb2")
+            grib_file_path.stem + ".grb2")
     if grib_file_path.suffix != ".grb2":
         if grib_file_path.suffix == ".gz":
             with gzip.open(grib_file_path, 'rb') as f_in:
@@ -26,7 +26,7 @@ def convert_all_grb_files_to_netCDF(grib_file_path, grib2_res_folder_path, nc_re
     else:
         shutil.copy(grib_file_path, grib_file_path_for_reading_using_xarray)
     data = xarray.open_dataset(grib_file_path_for_reading_using_xarray, engine='cfgrib')
-    if not (grib2_res_folder_path / grib_file_path.parent).exists():
+    if not (nc_res_folder_path / grib_file_path.parent).exists():
         os.mkdir(nc_res_folder_path / grib_file_path.parent)
     file_path_net_CDF = nc_res_folder_path / grib_file_path.parent / (grib_file_path.stem + ".nc")
     data.to_netcdf(file_path_net_CDF)
