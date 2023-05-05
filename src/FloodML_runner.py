@@ -493,6 +493,13 @@ class FloodML_Runner:
         # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
         print(f"running with optimizer: {self.optim_name}")
         model = self.prepare_model(training_data=training_data)
+        if world_size > 1:
+            torch.cuda.set_device(rank)
+            model = model.to(device="cuda")
+            setup(rank, world_size)
+            model = DDP(model, device_ids=[rank], find_unused_parameters=True)
+        else:
+            model = model.to(device="cuda")
         if self.optim_name.lower() == "sgd":
             optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate, momentum=0.9)
         elif self.optim_name.lower() == "adam":
@@ -503,16 +510,9 @@ class FloodML_Runner:
         best_median_nse = None
         if self.load_checkpoint:
             checkpoint = torch.load(self.checkpoint_path)
-            model.load_state_dict(checkpoint['model_state_dict'])
+            model.load_state_dict(checkpoint['model_state_dict'], strict=False)
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             starting_epoch = checkpoint['epoch']
-        if world_size > 1:
-            torch.cuda.set_device(rank)
-            model = model.to(device="cuda")
-            setup(rank, world_size)
-            model = DDP(model, device_ids=[rank], find_unused_parameters=True)
-        else:
-            model = model.to(device="cuda")
         if world_size <= 1 and rank == 0 and self.run_sweeps:
             wandb.watch(model)
         if world_size > 1:
@@ -549,6 +549,8 @@ class FloodML_Runner:
                     warmup=1,
                     active=2), on_trace_ready=torch.profiler.tensorboard_trace_handler("./profiler_logs"))
             p.start()
+        if self.num_epochs == starting_epoch:
+            self.num_epochs = starting_epoch + 1
         for i in range(starting_epoch, self.num_epochs):
             if world_size > 1:
                 train_dataloader.sampler.set_epoch(i)
