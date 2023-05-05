@@ -483,6 +483,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
                 json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
-        print(f"went over {len(all_stations_ids)} station, from which {num_exist_stations} already "
+        print(f"went over {len(all_stations_ids)} stations from which {num_exist_stations} already "
               f"exists and {num_not_in_list_stations} not in the list")
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial

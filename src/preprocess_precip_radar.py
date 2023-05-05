@@ -9,9 +9,9 @@ import concurrent.futures
 
 
 def convert_all_grb_files_to_netCDF(grib_file_path, grib2_res_folder_path, nc_res_folder_path):
-    if not (grib2_res_folder_path / grib_file_path.parent).exists():
-        os.mkdir(grib2_res_folder_path / grib_file_path.parent)
-    grib_file_path_for_reading_using_xarray = grib2_res_folder_path / grib_file_path.parent / (
+    if not (grib2_res_folder_path / grib_file_path.parent.name).exists():
+        os.mkdir(grib2_res_folder_path / grib_file_path.parent.name)
+    grib_file_path_for_reading_using_xarray = grib2_res_folder_path / grib_file_path.parent.name / (
             grib_file_path.stem + ".grb2")
     if grib_file_path.suffix != ".grb2":
         if grib_file_path.suffix == ".gz":
@@ -26,9 +26,9 @@ def convert_all_grb_files_to_netCDF(grib_file_path, grib2_res_folder_path, nc_re
     else:
         shutil.copy(grib_file_path, grib_file_path_for_reading_using_xarray)
     data = xarray.open_dataset(grib_file_path_for_reading_using_xarray, engine='cfgrib')
-    if not (nc_res_folder_path / grib_file_path.parent).exists():
-        os.mkdir(nc_res_folder_path / grib_file_path.parent)
-    file_path_net_CDF = nc_res_folder_path / grib_file_path.parent / (grib_file_path.stem + ".nc")
+    if not (nc_res_folder_path / grib_file_path.parent.name).exists():
+        os.mkdir(nc_res_folder_path / grib_file_path.parent.name)
+    file_path_net_CDF = nc_res_folder_path / grib_file_path.parent.name / (grib_file_path.stem + ".nc")
     data.to_netcdf(file_path_net_CDF)
     nc_file = netCDF4.Dataset(file_path_net_CDF)
     print(nc_file.variables)
