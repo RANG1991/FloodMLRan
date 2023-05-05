@@ -44,18 +44,18 @@ def main(use_multiprocessing=True):
     #                                                  f"{len(all_grib_files_paths)}"
     grib2_res_folder_path = Path(grib_main_folder).resolve().parent / "stage4_grib_files"
     nc_res_folder_path = Path(grib_main_folder).resolve().parent / "stage4_nc_files"
-    if not grib2_res_folder_path.exists():
-        os.mkdir(grib2_res_folder_path)
-    else:
-        files = grib2_res_folder_path.glob('**/*.*')
-        for f in files:
-            os.remove(f)
-    if not nc_res_folder_path.exists():
-        os.mkdir(nc_res_folder_path)
-    else:
-        files = nc_res_folder_path.glob('**/*.*')
-        for f in files:
-            os.remove(f)
+    # if not grib2_res_folder_path.exists():
+    #     os.mkdir(grib2_res_folder_path)
+    # else:
+    #     files = grib2_res_folder_path.glob('**/*.*')
+    #     for f in files:
+    #         os.remove(f)
+    # if not nc_res_folder_path.exists():
+    #     os.mkdir(nc_res_folder_path)
+    # else:
+    #     files = nc_res_folder_path.glob('**/*.*')
+    #     for f in files:
+    #         os.remove(f)
     if use_multiprocessing:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_grib_file_path = {
