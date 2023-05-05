@@ -570,8 +570,10 @@ class FloodML_Runner:
             if rank == 0:
                 if world_size > 1:
                     model_name = model.module.__class__.__name__
+                    model_state_dict = model.module.state_dict()
                 else:
                     model_name = model.__class__.__name__
+                    model_state_dict = model.state_dict()
                 if self.save_checkpoint:
                     curr_datetime = datetime.now()
                     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
@@ -579,7 +581,7 @@ class FloodML_Runner:
                                                                                   self.limit_size_above_1000)
                     torch.save({
                         'epoch': (i + 1),
-                        'model_state_dict': model.state_dict(),
+                        'model_state_dict': model_state_dict,
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss_on_training_epoch,
                     }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}_{suffix_checkpoint_file_name}.pt")
