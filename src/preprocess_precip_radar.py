@@ -13,25 +13,27 @@ def convert_all_grb_files_to_netCDF(grib_file_path, grib2_res_folder_path, nc_re
         os.mkdir(grib2_res_folder_path / grib_file_path.parent.name)
     grib_file_path_for_reading_using_xarray = grib2_res_folder_path / grib_file_path.parent.name / (
             grib_file_path.stem + ".grb2")
-    if grib_file_path.suffix != ".grb2":
-        if grib_file_path.suffix == ".gz":
-            with gzip.open(grib_file_path, 'rb') as f_in:
-                uncompressed_data = f_in.read()
-        elif grib_file_path.suffix == ".Z":
-            uncompressed_data = unlzw3.unlzw(grib_file_path)
+    if not grib_file_path_for_reading_using_xarray.exists():
+        if grib_file_path.suffix != ".grb2":
+            if grib_file_path.suffix == ".gz":
+                with gzip.open(grib_file_path, 'rb') as f_in:
+                    uncompressed_data = f_in.read()
+            elif grib_file_path.suffix == ".Z":
+                uncompressed_data = unlzw3.unlzw(grib_file_path)
+            else:
+                raise Exception(f"unknown extension: {grib_file_path}")
+            with open(grib_file_path_for_reading_using_xarray, "wb") as f_out:
+                f_out.write(uncompressed_data)
         else:
-            raise Exception(f"unknown extension: {grib_file_path}")
-        with open(grib_file_path_for_reading_using_xarray, "wb") as f_out:
-            f_out.write(uncompressed_data)
-    else:
-        shutil.copy(grib_file_path, grib_file_path_for_reading_using_xarray)
+            shutil.copy(grib_file_path, grib_file_path_for_reading_using_xarray)
     data = xarray.open_dataset(grib_file_path_for_reading_using_xarray, engine='cfgrib')
     if not (nc_res_folder_path / grib_file_path.parent.name).exists():
         os.mkdir(nc_res_folder_path / grib_file_path.parent.name)
     file_path_net_CDF = nc_res_folder_path / grib_file_path.parent.name / (grib_file_path.stem + ".nc")
-    data.to_netcdf(file_path_net_CDF)
-    nc_file = netCDF4.Dataset(file_path_net_CDF)
-    print(nc_file.variables)
+    if not file_path_net_CDF.exists():
+        data.to_netcdf(file_path_net_CDF)
+        nc_file = netCDF4.Dataset(file_path_net_CDF)
+    print(f"finished with file: {grib_file_path}")
 
 
 def main(use_multiprocessing=True):

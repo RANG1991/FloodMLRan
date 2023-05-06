@@ -1,6 +1,11 @@
 import os
 from pathlib import Path
 import re
+import netCDF4 as nc
+
+
+def open_nc_radar():
+    dataset = nc.Dataset("/sci/labs/efratmorin/ranga/FloodMLRan/data/stage4_nc_files/200201/ST4.2002010100.01h.nc")
 
 
 def rename_checkpoint_files(checkpoint_files_folder):
@@ -12,7 +17,7 @@ def rename_checkpoint_files(checkpoint_files_folder):
 
 
 def main():
-    rename_checkpoint_files("../checkpoints")
+    open_nc_radar()
 
 
 if __name__ == "__main__":
