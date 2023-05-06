@@ -346,8 +346,7 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
 
 def main(use_multiprocessing=True):
     CAMELS_precip_data_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ncfiles_2010/"
-    boundaries_file_name = (
-            PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
+    boundaries_file_name = (PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
     output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_all_data/"
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"].tolist()
