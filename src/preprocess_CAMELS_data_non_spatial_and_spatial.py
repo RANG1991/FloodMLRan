@@ -244,8 +244,6 @@ def parse_single_basin_precipitation(
     # create a dataframe from the datetimes
     df_precip_times = pd.DataFrame(data=datetimes, index=datetimes)
     datetimes = df_precip_times.index.to_pydatetime()
-    # convert the precipitation data to the correct format by subtracting each hour from its previous hour
-    # starting from 1 - this is because the precipitation data is cumulative
     datetimes = [time + datetime.timedelta(hours=offset) for time in datetimes]
 
     ls = [[precip_mean_lat_lon[i]] for i in range(0, len(datetimes))]
