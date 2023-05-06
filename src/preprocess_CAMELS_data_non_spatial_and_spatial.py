@@ -218,8 +218,6 @@ def parse_single_basin_precipitation(
             :, ind_lat_min: ind_lat_max + 1, ind_lon_min: ind_lon_max + 1
             ]
         )
-        # multiply the precipitation by 1000 to get millimeter instead of meter
-        # tp[:, :, :] = tp[:, :, :] * 1000
         # zero out any precipitation that is less than 0
         tp[tp < 0] = 0
         # ti is an array containing the dates as the number of
