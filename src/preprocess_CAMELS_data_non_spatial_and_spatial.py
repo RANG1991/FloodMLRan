@@ -351,6 +351,7 @@ def main(use_multiprocessing=True):
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"].tolist()
     # station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
+    station_ids_list = ["01466500"]
     if use_multiprocessing:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_station_id = {
