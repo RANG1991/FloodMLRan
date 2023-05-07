@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import re
 import netCDF4 as nc
+import pandas as pd
 
 
 def calc_intersection_station_ids_files(file_1, file_2):
@@ -12,6 +13,9 @@ def calc_intersection_station_ids_files(file_1, file_2):
     print(f"intersection: {sorted(station_ids_files_1.intersection(station_ids_files_2))}")
     print(f"difference 1 -> 2: {sorted(station_ids_files_1.difference(station_ids_files_2))}")
     print(f"difference 2 -> 1: {sorted(station_ids_files_2.difference(station_ids_files_1))}")
+    diff_stations = [int(station_id) for station_id in sorted(station_ids_files_2.difference(station_ids_files_1))]
+    df = pd.read_csv(r"../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv").set_index("gauge_id")
+    df.loc[diff_stations, "area_gages2"].to_csv("sizes_small_basins.csv")
 
 
 def open_nc_radar():
@@ -27,7 +31,7 @@ def rename_checkpoint_files(checkpoint_files_folder):
 
 
 def main():
-    calc_intersection_station_ids_files("../data/spatial_basins_list.txt", "../data/671_basin_list.txt")
+    calc_intersection_station_ids_files("../data/spatial_basins_list.txt", "../data/531_basin_list.txt")
 
 
 if __name__ == "__main__":
