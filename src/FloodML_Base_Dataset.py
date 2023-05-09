@@ -142,14 +142,15 @@ class FloodML_Base_Dataset(Dataset):
                          self.x_mean_per_basin_dict)
         self.save_pickle(f"{self.folder_with_basins_pickles}/x_std_dict.pkl{self.suffix_pickle_file}",
                          self.x_std_per_basin_dict)
-        self.save_pickle(f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}",
-                         self.y_mean_per_basin_dict)
-        self.save_pickle(f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}",
-                         self.y_std_per_basin_dict)
         self.save_pickle(f"{self.folder_with_basins_pickles}/x_min_spatial_dict.pkl{self.suffix_pickle_file}",
                          self.x_min_spatial_per_basin)
         self.save_pickle(f"{self.folder_with_basins_pickles}/x_max_spatial_dict.pkl{self.suffix_pickle_file}",
                          self.x_max_spatial_per_basin)
+        
+        self.save_pickle(f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}",
+                         self.y_mean_per_basin_dict)
+        self.save_pickle(f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}",
+                         self.y_std_per_basin_dict)
 
         self.y_mean = y_mean if self.stage == "train" else self.y_mean
         self.y_std = y_std if self.stage == "train" else self.y_std
