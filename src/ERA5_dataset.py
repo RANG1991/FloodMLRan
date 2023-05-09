@@ -354,6 +354,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         else:
             std_x_spatial = None
             cumm_m_x_spatial = None
+            min_spatial = None
+            max_spatial = None
         with codecs.open(
                 f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'w',
