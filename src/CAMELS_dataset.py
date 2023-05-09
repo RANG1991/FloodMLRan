@@ -98,9 +98,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             y_std=None,
             limit_size_above_1000=False,
             use_all_static_attr=False,
-            num_basins=None,
-            min_spatial=None,
-            max_spatial=None
+            num_basins=None
     ):
         self.discharge_data_folder = discharge_data_folder
         super().__init__(
@@ -128,9 +126,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             create_new_files,
             limit_size_above_1000,
             use_all_static_attr,
-            num_basins,
-            min_spatial=min_spatial,
-            max_spatial=max_spatial)
+            num_basins)
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_station_ids
@@ -138,10 +134,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
                             f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}"),
-                             station_id not in self.x_mean_dict,
-                             station_id not in self.x_std_dict,
-                             station_id not in self.y_mean_dict,
-                             station_id not in self.y_std_dict,
                              create_new_files])))
 
     def get_basin_area(self, station_id):
@@ -222,16 +214,16 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             static_attrib_station_rep = static_attrib_station.repeat(
                 X_data.shape[0], axis=0
             )
-            if station_id not in self.x_mean_dict.keys():
-                self.x_mean_dict[station_id] = X_data.mean(axis=0)
-            if station_id not in self.x_std_dict.keys():
-                self.x_std_dict[station_id] = X_data.std(axis=0)
+            if station_id not in self.x_mean_per_basin_dict.keys():
+                self.x_mean_per_basin_dict[station_id] = X_data.mean(axis=0)
+            if station_id not in self.x_std_per_basin_dict.keys():
+                self.x_std_per_basin_dict[station_id] = X_data.std(axis=0)
             X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
             # print(f"finished with station id (basin): {station_id}")
-            if station_id not in self.y_mean_dict.keys():
-                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-            if station_id not in self.y_std_dict.keys():
-                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+            if station_id not in self.y_mean_per_basin_dict.keys():
+                self.y_mean_per_basin_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+            if station_id not in self.y_std_per_basin_dict.keys():
+                self.y_std_per_basin_dict[station_id] = torch.tensor(y_data.std(axis=0))
             # y_data -= (self.y_mean_dict[station_id].numpy())
             # y_data /= (self.y_std_dict[station_id].numpy())
             return X_data, y_data, list_dates
@@ -290,10 +282,18 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             .reshape(1, -1)
         )
         if self.stage == "train":
-            if station_id not in self.y_mean_dict.keys():
-                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-            if station_id not in self.y_std_dict.keys():
-                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+            if station_id not in self.y_mean_per_basin_dict.keys():
+                self.y_mean_per_basin_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+            if station_id not in self.y_std_per_basin_dict.keys():
+                self.y_std_per_basin_dict[station_id] = torch.tensor(y_data.std(axis=0))
+            if station_id not in self.x_min_spatial_per_basin.keys():
+                self.x_min_spatial_per_basin[station_id] = X_data_spatial.min()
+            if station_id not in self.x_max_spatial_per_basin.keys():
+                self.x_max_spatial_per_basin[station_id] = X_data_spatial.max()
+        else:
+            min_spatial_basin = self.x_min_spatial_per_basin[station_id]
+            max_spatial_basin = self.x_max_spatial_per_basin[station_id]
+            X_data_spatial = 255 * ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
         return X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
@@ -353,9 +353,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         df = df[self.list_static_attributes_names]
         return df, df.index.tolist()
 
-    def read_all_dynamic_attributes(self, all_stations_ids, model_name, max_width, max_height, create_new_files):
+    def read_all_dynamic_attributes(self):
         if os.path.exists(
-                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") \
+                and not self.create_new_files:
             obj_text = codecs.open(
                 f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'r',
@@ -363,38 +364,33 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
-            if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
-                    or model_name.lower() == "cnn_transformer":
+            if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                    or self.model_name.lower() == "cnn_transformer":
                 cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
                 cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
-                max_spatial = np.array(json_obj["max_spatial"])
-                min_spatial = np.array(json_obj["min_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
             cumm_s_y = float(json_obj["cumm_s_y"])
             count_of_samples = int(json_obj["count_of_samples"])
         else:
             cumm_m_x = 0
             cumm_s_x = 0
-            if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
-                    or model_name.lower() == "cnn_transformer":
+            if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                    or self.model_name.lower() == "cnn_transformer":
                 cumm_m_x_spatial = -1
                 cumm_s_x_spatial = -1
-                max_spatial = -1
-                min_spatial = -1
             cumm_m_y = 0
             cumm_s_y = 0
             count_of_samples = 0
         dict_station_id_to_data = {}
-        pbar = tqdm(all_stations_ids, file=sys.stdout)
+        pbar = tqdm(self.all_stations_ids, file=sys.stdout)
         pbar.set_description(f"processing basins - {self.stage}")
         num_exist_stations = 0
         num_not_in_list_stations = 0
         for station_id in pbar:
-            # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
-            if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
-                if (model_name.lower() == "conv_lstm" or
-                        model_name.lower() == "cnn_lstm" or
-                        model_name.lower() == "cnn_transformer"):
+            if self.check_is_valid_station_id(station_id, create_new_files=self.create_new_files):
+                if (self.model_name.lower() == "conv_lstm" or
+                        self.model_name.lower() == "cnn_lstm" or
+                        self.model_name.lower() == "cnn_transformer"):
                     if not os.path.exists(
                             f"{DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL}/precip24_spatial_{station_id}.nc"):
                         continue
@@ -444,9 +440,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0).item()
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
 
-                if (model_name.lower() == "conv_lstm" or
-                        model_name.lower() == "cnn_lstm" or
-                        model_name.lower() == "cnn_transformer"):
+                if (self.model_name.lower() == "conv_lstm" or
+                        self.model_name.lower() == "cnn_lstm" or
+                        self.model_name.lower() == "cnn_transformer"):
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
@@ -458,17 +454,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     cumm_s_x_spatial = cumm_s_x_spatial + (
                             (X_data_spatial[:] - cumm_m_x_spatial) * (X_data_spatial[:] - prev_mean_x_spatial)).sum(
                         axis=0)
-
-                    curr_max_spatial = np.max(X_data_spatial, axis=1, keep_dims=True)
-                    curr_min_spatial = np.min(X_data_spatial, axis=1, keep_dims=True)
-                    if type(max_spatial) == int and max_spatial == -1:
-                        max_spatial = curr_max_spatial
-                    else:
-                        max_spatial = np.maximum(max_spatial, curr_max_spatial)
-                    if type(min_spatial) == int and min_spatial == -1:
-                        min_spatial = curr_min_spatial
-                    else:
-                        min_spatial = np.minimum(min_spatial, curr_min_spatial)
 
                     X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
                     del X_data_spatial
@@ -482,14 +467,12 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
-        if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
-                or model_name.lower() == "cnn_transformer":
+        if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                or self.model_name.lower() == "cnn_transformer":
             std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
         else:
             std_x_spatial = None
             cumm_m_x_spatial = None
-            min_spatial = None
-            max_spatial = None
         with codecs.open(
                 f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'w',
@@ -501,12 +484,11 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 "cumm_s_y": cumm_s_y,
                 "count_of_samples": count_of_samples
             }
-            if model_name.lower() == "conv_lstm" or model_name.lower() == "cnn_lstm" \
-                    or model_name.lower() == "cnn_transformer":
+            if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                    or self.model_name.lower() == "cnn_transformer":
                 json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
                 json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
-        print(f"went over {len(all_stations_ids)} stations from which {num_exist_stations} already "
+        print(f"went over {len(self.all_stations_ids)} stations from which {num_exist_stations} already "
               f"exists and {num_not_in_list_stations} not in the list")
-        return (dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial, min_spatial,
-                max_spatial)
+        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial

@@ -71,29 +71,32 @@ class FloodML_Base_Dataset(Dataset):
                  create_new_files=False,
                  limit_size_above_1000=False,
                  use_all_static_attr=False,
-                 num_basins=None,
-                 min_spatial=None,
-                 max_spatial=None):
+                 num_basins=None):
         self.main_folder = main_folder
         self.limit_size_above_1000 = limit_size_above_1000
         self.use_all_static_attr = use_all_static_attr
         self.folder_with_basins_pickles = f"{main_folder}/pickled_basins_data"
         self.list_stations_static = []
         self.suffix_pickle_file = "_spatial" if "cnn" in model_name.lower() or "conv" in model_name.lower() else ""
-        self.x_mean_dict = self.read_pickle_if_exists(
+
+        self.x_mean_per_basin_dict = self.read_pickle_if_exists(
             f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}")
-        self.x_std_dict = self.read_pickle_if_exists(
+        self.x_std_per_basin_dict = self.read_pickle_if_exists(
             f"{self.folder_with_basins_pickles}/x_std_dict.pkl{self.suffix_pickle_file}")
+        self.x_min_spatial_per_basin = self.read_pickle_if_exists(
+            f"{self.folder_with_basins_pickles}/x_min_spatial_dict.pkl{self.suffix_pickle_file}")
+        self.x_max_spatial_per_basin = self.read_pickle_if_exists(
+            f"{self.folder_with_basins_pickles}/x_max_spatial_dict.pkl{self.suffix_pickle_file}")
         self.x_means = x_means if x_means is not None else None
         self.x_stds = x_stds if x_stds is not None else None
-        self.y_mean_dict = self.read_pickle_if_exists(
+
+        self.y_mean_per_basin_dict = self.read_pickle_if_exists(
             f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}")
-        self.y_std_dict = self.read_pickle_if_exists(
+        self.y_std_per_basin_dict = self.read_pickle_if_exists(
             f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}")
         self.y_mean = y_mean if y_mean is not None else None
         self.y_std = y_std if y_std is not None else None
-        self.min_spatial = min_spatial if min_spatial else None
-        self.max_spatial = max_spatial if max_spatial else None
+
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
@@ -109,7 +112,6 @@ class FloodML_Base_Dataset(Dataset):
         self.stage = stage
         self.model_name = model_name
         self.sequence_length_spatial = sequence_length_spatial
-        self.create_new_files = create_new_files
         (self.df_attr,
          self.list_stations_static
          ) = self.read_all_static_attributes(limit_size_above_1000=self.limit_size_above_1000)
@@ -118,6 +120,7 @@ class FloodML_Base_Dataset(Dataset):
             sorted(all_stations_ids)[:num_basins]
         self.all_station_ids = [station_id for station_id in all_stations_ids if station_id not in
                                 STATIONS_WITH_ERRORS]
+        self.create_new_files = (create_new_files and self.check_if_all_stations_are_in_files())
         (max_width,
          max_height,
          basin_id_with_maximum_width,
@@ -134,32 +137,24 @@ class FloodML_Base_Dataset(Dataset):
          y_mean,
          y_std,
          x_spatial_mean,
-         x_spatial_std,
-         min_spatial,
-         max_spatial
-         ) = self.read_all_dynamic_attributes(all_stations_ids=self.all_station_ids,
-                                              model_name=self.model_name,
-                                              max_width=self.max_width, max_height=self.max_height,
-                                              create_new_files=self.create_new_files)
-        self.save_pickle_if_not_exists(
-            f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}", self.x_mean_dict,
-            force=True)
-        self.save_pickle_if_not_exists(
-            f"{self.folder_with_basins_pickles}/x_std_dict.pkl{self.suffix_pickle_file}", self.x_std_dict,
-            force=True)
-        self.save_pickle_if_not_exists(
-            f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}", self.y_mean_dict,
-            force=True)
-        self.save_pickle_if_not_exists(
-            f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}", self.y_std_dict,
-            force=True)
+         x_spatial_std) = self.read_all_dynamic_attributes()
+        self.save_pickle(f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}",
+                         self.x_mean_per_basin_dict)
+        self.save_pickle(f"{self.folder_with_basins_pickles}/x_std_dict.pkl{self.suffix_pickle_file}",
+                         self.x_std_per_basin_dict)
+        self.save_pickle(f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}",
+                         self.y_mean_per_basin_dict)
+        self.save_pickle(f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}",
+                         self.y_std_per_basin_dict)
+        self.save_pickle(f"{self.folder_with_basins_pickles}/x_min_spatial_dict.pkl{self.suffix_pickle_file}",
+                         self.x_min_spatial_per_basin)
+        self.save_pickle(f"{self.folder_with_basins_pickles}/x_max_spatial_dict.pkl{self.suffix_pickle_file}",
+                         self.x_max_spatial_per_basin)
 
         self.y_mean = y_mean if self.stage == "train" else self.y_mean
         self.y_std = y_std if self.stage == "train" else self.y_std
         self.x_means = x_means if self.stage == "train" else self.x_means
         self.x_stds = x_stds if self.stage == "train" else self.x_stds
-        self.min_spatial = min_spatial if self.stage == "train" else self.min_spatial
-        self.max_spatial = max_spatial if self.stage == "train" else self.max_spatial
 
         x_data_mean_dynamic = self.x_means[:(len(self.list_dynamic_attributes_names))]
         x_data_std_dynamic = self.x_stds[:(len(self.list_dynamic_attributes_names))]
@@ -197,8 +192,6 @@ class FloodML_Base_Dataset(Dataset):
                 else:
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                                 + (len(self.list_static_attributes_names))):]
-                    current_x_data_spatial = ((current_x_data_spatial - self.min_spatial) / (
-                            self.max_spatial - self.min_spatial)) * 255
                     indices_all_features_non_spatial = range(0,
                                                              (len(self.list_dynamic_attributes_names))
                                                              + (len(self.list_static_attributes_names)))
@@ -217,6 +210,14 @@ class FloodML_Base_Dataset(Dataset):
         self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
         del dict_station_id_to_data
 
+    def check_if_all_stations_are_in_files(self):
+        set_keys_x_mean_dict = set(self.x_mean_per_basin_dict.keys())
+        set_keys_x_std_dict = set(self.x_std_per_basin_dict.keys())
+        set_keys_y_mean_dict = set(self.y_mean_per_basin_dict.keys())
+        set_keys_y_std_dict = set(self.y_std_per_basin_dict.keys())
+        return (set_keys_x_mean_dict.intersection([set_keys_x_std_dict, set_keys_y_mean_dict, set_keys_y_std_dict]) ==
+                self.all_station_ids)
+
     @staticmethod
     def read_pickle_if_exists(pickle_file_name):
         dict_obj = {}
@@ -226,10 +227,9 @@ class FloodML_Base_Dataset(Dataset):
         return dict_obj
 
     @staticmethod
-    def save_pickle_if_not_exists(pickle_file_name, obj_to_save, force=False):
-        if not os.path.exists(pickle_file_name) or force:
-            with open(pickle_file_name, "wb") as f:
-                pickle.dump(obj_to_save, f)
+    def save_pickle(pickle_file_name, obj_to_save):
+        with open(pickle_file_name, "wb") as f:
+            pickle.dump(obj_to_save, f)
 
     @staticmethod
     def crop_or_pad_precip_spatial(X_data_single_basin, max_width, max_height):
@@ -322,7 +322,7 @@ class FloodML_Base_Dataset(Dataset):
             y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]
                                          ).to(torch.float32).squeeze()
             dates_tensor = torch.tensor(list_dates[inner_ind + self.sequence_length - 1])
-        return self.y_std_dict[
+        return self.y_std_per_basin_dict[
             basin_id], basin_id, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor, dates_tensor
 
     def create_look_table(self, dict_station_id_to_data):
@@ -391,7 +391,7 @@ class FloodML_Base_Dataset(Dataset):
         print(f"max height is: {max_height}")
         return int(max_width), int(max_height), basin_id_with_maximum_width, basin_id_with_maximum_height
 
-    def read_all_dynamic_attributes(self, all_stations_ids, model_name, max_width, max_height, create_new_files):
+    def read_all_dynamic_attributes(self):
         raise NotImplementedError
 
     def read_all_static_attributes(self, limit_size_above_1000=False):
