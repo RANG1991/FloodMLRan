@@ -822,7 +822,7 @@ def read_arguments_from_yaml():
 
 def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000):
     if num_basins is not None:
-        return f"{str(num_basins)} basins"
+        return f"{str(num_basins)}_basins"
     if limit_size_above_1000:
         return "size_above_1000"
     if num_basins is None:

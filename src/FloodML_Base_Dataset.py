@@ -130,7 +130,9 @@ class FloodML_Base_Dataset(Dataset):
          y_mean,
          y_std,
          x_spatial_mean,
-         x_spatial_std
+         x_spatial_std,
+         min_spatial,
+         max_spatial
          ) = self.read_all_dynamic_attributes(all_stations_ids=self.all_station_ids,
                                               model_name=self.model_name,
                                               max_width=self.max_width, max_height=self.max_height,

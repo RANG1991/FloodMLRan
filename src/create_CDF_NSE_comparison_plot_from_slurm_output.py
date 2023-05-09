@@ -67,11 +67,11 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
                 if new_run_number != run_number:
                     models_basins_nse_dict[(model_name, new_run_number)] = {}
                     run_number = new_run_number
+                    print(f"run number: {run_number}")
             match_model_name_string = re.search("running with model: (.*?)\n", row)
             if match_model_name_string:
                 new_model_name = match_model_name_string.group(1)
                 if new_model_name != model_name:
-                    print(f"model: {model_name} has total of: {run_number} runs")
                     models_basins_nse_dict[(new_model_name, run_number)] = {}
                     model_name = new_model_name
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
@@ -83,7 +83,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-6758360.out", "slurm-6608804.out"]
+    input_file_names = ["slurm-6925514.out", "slurm-6925512.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
