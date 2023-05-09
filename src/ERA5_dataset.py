@@ -123,7 +123,9 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             create_new_files=False,
             limit_size_above_1000=False,
             use_all_static_attr=False,
-            num_basins=None
+            num_basins=None,
+            min_spatial=None,
+            max_spatial=None
     ):
         self.countries_abbreviations_stations_dict = {}
         self.countries_abbreviations = ["us"]
@@ -152,7 +154,10 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             y_std,
             create_new_files,
             limit_size_above_1000,
-            use_all_static_attr)
+            use_all_static_attr,
+            num_basins,
+            min_spatial=min_spatial,
+            max_spatial=max_spatial)
 
     def read_static_attributes_single_country(self, country_abbreviation, countries_abbreviations_stations_dict,
                                               limit_size_above_1000=False):
@@ -233,6 +238,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                     or model_name.lower() == "cnn_transformer":
                 cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
                 cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
+                max_spatial = np.array(json_obj["max_spatial"])
+                min_spatial = np.array(json_obj["min_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
             cumm_s_y = float(json_obj["cumm_s_y"])
             count_of_samples = int(json_obj["count_of_samples"])
@@ -243,6 +250,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                     or model_name.lower() == "cnn_transformer":
                 cumm_m_x_spatial = -1
                 cumm_s_x_spatial = -1
+                max_spatial = -1
+                min_spatial = -1
             cumm_m_y = 0
             cumm_s_y = 0
             count_of_samples = 0
@@ -316,6 +325,17 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                             (X_data_spatial[:] - cumm_m_x_spatial) * (X_data_spatial[:] - prev_mean_x_spatial)).sum(
                         axis=0)
 
+                    curr_max_spatial = np.max(X_data_spatial, axis=1, keep_dims=True)
+                    curr_min_spatial = np.min(X_data_spatial, axis=1, keep_dims=True)
+                    if type(max_spatial) == int and max_spatial == -1:
+                        max_spatial = curr_max_spatial
+                    else:
+                        max_spatial = np.maximum(max_spatial, curr_max_spatial)
+                    if type(min_spatial) == int and min_spatial == -1:
+                        min_spatial = curr_min_spatial
+                    else:
+                        min_spatial = np.minimum(min_spatial, curr_min_spatial)
+
                     X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
                     del X_data_spatial
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data,
@@ -352,7 +372,8 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
         print(f"went over {len(all_stations_ids)} stations from which {num_exist_stations} already "
               f"exists and {num_not_in_list_stations} not in the list")
-        return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial
+        return (dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial, min_spatial,
+                max_spatial)
 
     def read_single_station_file_spatial(self, station_id):
         country_abbreviation = self.countries_abbreviations_stations_dict[station_id]

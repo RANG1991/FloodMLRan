@@ -450,8 +450,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
-                    curr_max_spatial = np.max(X_data_spatial, axis=1, keep_dims=True)
-                    curr_min_spatial = np.min(X_data_spatial, axis=1, keep_dims=True)
+
                     prev_mean_x_spatial = cumm_m_x_spatial
                     cumm_m_x_spatial = cumm_m_x_spatial + (
                             (X_data_spatial[:] - cumm_m_x_spatial) / count_of_samples).sum(
@@ -460,6 +459,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                             (X_data_spatial[:] - cumm_m_x_spatial) * (X_data_spatial[:] - prev_mean_x_spatial)).sum(
                         axis=0)
 
+                    curr_max_spatial = np.max(X_data_spatial, axis=1, keep_dims=True)
+                    curr_min_spatial = np.min(X_data_spatial, axis=1, keep_dims=True)
                     if type(max_spatial) == int and max_spatial == -1:
                         max_spatial = curr_max_spatial
                     else:
@@ -468,6 +469,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         min_spatial = curr_min_spatial
                     else:
                         min_spatial = np.minimum(min_spatial, curr_min_spatial)
+
                     X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
                     del X_data_spatial
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data,
