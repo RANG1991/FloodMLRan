@@ -290,10 +290,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 self.x_min_spatial_per_basin[station_id] = X_data_spatial.min()
             if station_id not in self.x_max_spatial_per_basin.keys():
                 self.x_max_spatial_per_basin[station_id] = X_data_spatial.max()
-        else:
-            min_spatial_basin = self.x_min_spatial_per_basin[station_id]
-            max_spatial_basin = self.x_max_spatial_per_basin[station_id]
-            X_data_spatial = 255 * ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
+        min_spatial_basin = self.x_min_spatial_per_basin[station_id]
+        max_spatial_basin = self.x_max_spatial_per_basin[station_id]
+        X_data_spatial = 255 * ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
         return X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
