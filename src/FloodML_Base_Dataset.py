@@ -120,7 +120,7 @@ class FloodML_Base_Dataset(Dataset):
             sorted(all_stations_ids)[:num_basins]
         self.all_stations_ids = [station_id for station_id in all_stations_ids if station_id not in
                                  STATIONS_WITH_ERRORS]
-        self.create_new_files = (create_new_files and self.check_if_all_stations_are_in_files())
+        self.create_new_files = (create_new_files or not self.check_if_all_stations_are_in_files())
         (max_width,
          max_height,
          basin_id_with_maximum_width,
@@ -146,7 +146,7 @@ class FloodML_Base_Dataset(Dataset):
                          self.x_min_spatial_per_basin)
         self.save_pickle(f"{self.folder_with_basins_pickles}/x_max_spatial_dict.pkl{self.suffix_pickle_file}",
                          self.x_max_spatial_per_basin)
-        
+
         self.save_pickle(f"{self.folder_with_basins_pickles}/y_mean_dict.pkl{self.suffix_pickle_file}",
                          self.y_mean_per_basin_dict)
         self.save_pickle(f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}",
