@@ -409,7 +409,9 @@ class FloodML_Runner:
                 x_stds=training_data.x_stds,
                 use_all_static_attr=self.use_all_static_attr,
                 limit_size_above_1000=self.limit_size_above_1000,
-                num_basins=self.num_basins
+                num_basins=self.num_basins,
+                min_spatial=training_data.min_spatial,
+                max_spatial=training_data.max_spatial
             )
         else:
             raise Exception(f"wrong dataset type: {self.dataset_name}")

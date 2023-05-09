@@ -71,7 +71,9 @@ class FloodML_Base_Dataset(Dataset):
                  create_new_files=False,
                  limit_size_above_1000=False,
                  use_all_static_attr=False,
-                 num_basins=None):
+                 num_basins=None,
+                 min_spatial=None,
+                 max_spatial=None):
         self.main_folder = main_folder
         self.limit_size_above_1000 = limit_size_above_1000
         self.use_all_static_attr = use_all_static_attr
@@ -90,6 +92,8 @@ class FloodML_Base_Dataset(Dataset):
             f"{self.folder_with_basins_pickles}/y_std_dict.pkl{self.suffix_pickle_file}")
         self.y_mean = y_mean if y_mean is not None else None
         self.y_std = y_std if y_std is not None else None
+        self.min_spatial = min_spatial if min_spatial else None
+        self.max_spatial = max_spatial if max_spatial else None
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
@@ -154,6 +158,8 @@ class FloodML_Base_Dataset(Dataset):
         self.y_std = y_std if self.stage == "train" else self.y_std
         self.x_means = x_means if self.stage == "train" else self.x_means
         self.x_stds = x_stds if self.stage == "train" else self.x_stds
+        self.min_spatial = min_spatial if self.stage == "train" else self.min_spatial
+        self.max_spatial = max_spatial if self.stage == "train" else self.max_spatial
 
         x_data_mean_dynamic = self.x_means[:(len(self.list_dynamic_attributes_names))]
         x_data_std_dynamic = self.x_stds[:(len(self.list_dynamic_attributes_names))]
@@ -191,6 +197,8 @@ class FloodML_Base_Dataset(Dataset):
                 else:
                     current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
                                                                 + (len(self.list_static_attributes_names))):]
+                    current_x_data_spatial = ((current_x_data_spatial - self.min_spatial) / (
+                            self.max_spatial - self.min_spatial)) * 255
                     indices_all_features_non_spatial = range(0,
                                                              (len(self.list_dynamic_attributes_names))
                                                              + (len(self.list_static_attributes_names)))

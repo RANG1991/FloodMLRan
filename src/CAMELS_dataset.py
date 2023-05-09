@@ -98,7 +98,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             y_std=None,
             limit_size_above_1000=False,
             use_all_static_attr=False,
-            num_basins=None):
+            num_basins=None,
+            min_spatial=None,
+            max_spatial=None
+    ):
         self.discharge_data_folder = discharge_data_folder
         super().__init__(
             main_folder,
@@ -125,7 +128,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             create_new_files,
             limit_size_above_1000,
             use_all_static_attr,
-            num_basins)
+            num_basins,
+            min_spatial=min_spatial,
+            max_spatial=max_spatial)
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_station_ids
@@ -445,6 +450,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
+                    curr_max_spatial = np.max(X_data_spatial, axis=1, keep_dims=True)
+                    curr_min_spatial = np.min(X_data_spatial, axis=1, keep_dims=True)
                     prev_mean_x_spatial = cumm_m_x_spatial
                     cumm_m_x_spatial = cumm_m_x_spatial + (
                             (X_data_spatial[:] - cumm_m_x_spatial) / count_of_samples).sum(
@@ -453,13 +460,11 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                             (X_data_spatial[:] - cumm_m_x_spatial) * (X_data_spatial[:] - prev_mean_x_spatial)).sum(
                         axis=0)
 
-                    curr_max_spatial = np.max(X_data_spatial, axis=2)
-                    curr_min_spatial = np.min(X_data_spatial, axis=2)
-                    if max_spatial == -1:
+                    if type(max_spatial) == int and max_spatial == -1:
                         max_spatial = curr_max_spatial
                     else:
                         max_spatial = np.maximum(max_spatial, curr_max_spatial)
-                    if min_spatial == -1:
+                    if type(min_spatial) == int and min_spatial == -1:
                         min_spatial = curr_min_spatial
                     else:
                         min_spatial = np.minimum(min_spatial, curr_min_spatial)
