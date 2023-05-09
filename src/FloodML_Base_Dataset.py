@@ -118,14 +118,14 @@ class FloodML_Base_Dataset(Dataset):
         all_stations_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
         all_stations_ids = sorted(all_stations_ids)[:] if num_basins is None else \
             sorted(all_stations_ids)[:num_basins]
-        self.all_station_ids = [station_id for station_id in all_stations_ids if station_id not in
-                                STATIONS_WITH_ERRORS]
+        self.all_stations_ids = [station_id for station_id in all_stations_ids if station_id not in
+                                 STATIONS_WITH_ERRORS]
         self.create_new_files = (create_new_files and self.check_if_all_stations_are_in_files())
         (max_width,
          max_height,
          basin_id_with_maximum_width,
          basin_id_with_maximum_height) = \
-            self.get_maximum_width_and_length_of_basin("../data/ERA5/ERA_5_all_data", self.all_station_ids)
+            self.get_maximum_width_and_length_of_basin("../data/ERA5/ERA_5_all_data", self.all_stations_ids)
         if max_height <= 0 or max_width <= 0:
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max_width
@@ -204,9 +204,9 @@ class FloodML_Base_Dataset(Dataset):
                           'wb') as f:
                     pickle.dump(dict_curr_basin, f)
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
-        list_stations_current_run = '\n'.join([station_id for station_id in self.all_station_ids])
+        list_stations_current_run = '\n'.join([station_id for station_id in self.all_stations_ids])
         # print(f"stations in current run:\n{list_stations_current_run}")
-        print(f"number of stations in current run: {len(self.all_station_ids)}")
+        print(f"number of stations in current run: {len(self.all_stations_ids)}")
         self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
         del dict_station_id_to_data
 
@@ -215,8 +215,8 @@ class FloodML_Base_Dataset(Dataset):
         set_keys_x_std_dict = set(self.x_std_per_basin_dict.keys())
         set_keys_y_mean_dict = set(self.y_mean_per_basin_dict.keys())
         set_keys_y_std_dict = set(self.y_std_per_basin_dict.keys())
-        return (set_keys_x_mean_dict.intersection([set_keys_x_std_dict, set_keys_y_mean_dict, set_keys_y_std_dict]) ==
-                self.all_station_ids)
+        return (set_keys_x_mean_dict.intersection(*[set_keys_x_std_dict, set_keys_y_mean_dict, set_keys_y_std_dict]) ==
+                self.all_stations_ids)
 
     @staticmethod
     def read_pickle_if_exists(pickle_file_name):
@@ -339,7 +339,7 @@ class FloodML_Base_Dataset(Dataset):
 
     def load_basins_dicts_from_pickles(self):
         dict_station_id_to_data = {}
-        for basin_id in self.all_station_ids:
+        for basin_id in self.all_stations_ids:
             file_name = join(f"{self.folder_with_basins_pickles}/",
                              f"{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl")
             if os.path.exists(file_name):

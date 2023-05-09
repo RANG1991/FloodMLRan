@@ -317,7 +317,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data,
                                                        "list_dates": list_dates}
             else:
-                if station_id not in self.all_station_ids:
+                if station_id not in self.all_stations_ids:
                     num_not_in_list_stations += 1
                 else:
                     num_exist_stations += 1

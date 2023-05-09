@@ -129,7 +129,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             num_basins)
 
     def check_is_valid_station_id(self, station_id, create_new_files):
-        return (station_id in self.all_station_ids
+        return (station_id in self.all_stations_ids
                 and (not os.path.exists(
                     f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
@@ -172,7 +172,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         return df_discharge
 
     def read_single_station_file(self, station_id):
-        if station_id not in self.all_station_ids:
+        if station_id not in self.all_stations_ids:
             return np.array([]), np.array([]), np.array([])
         forcing_path = Path(self.dynamic_data_folder)
         file_path = list(forcing_path.glob(f"**/{station_id}_*_forcing_leap.txt"))
@@ -460,7 +460,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data,
                                                        "list_dates": list_dates}
             else:
-                if station_id not in self.all_station_ids:
+                if station_id not in self.all_stations_ids:
                     num_not_in_list_stations += 1
                 else:
                     num_exist_stations += 1
