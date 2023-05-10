@@ -1,6 +1,6 @@
 batch_size: 256
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
 debug: true
 dropout_rate: 0.4
@@ -9,7 +9,7 @@ limit_size_above_1000: false
 load_checkpoint: false
 model: CNN_LSTM
 mode: validation
-num_basins:
+num_basins: 10
 num_epochs: 10
 num_hidden_units: 256
 num_processes_ddp: 3
@@ -20,7 +20,7 @@ profile_code: false
 run_sweeps: false
 save_checkpoint: true
 sequence_length: 30
-sequence_length_spatial: 7
+sequence_length_spatial: 14
 use_all_static_attr: false
 train_start_date: "01/10/1997"
 train_end_date: "30/09/2002"

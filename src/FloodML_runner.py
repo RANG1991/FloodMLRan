@@ -852,7 +852,7 @@ def warmup_lr_schedule(optimizer, step, max_step, init_lr, max_lr):
 
 def main():
     # torch.backends.cudnn.enabled = False
-    # initialize_seed(123)
+    initialize_seed(123)
     args = read_arguments_from_yaml()
     if args["mode"] != "validation" and args["mode"] != "test":
         raise Exception("mode can only be validation or test")
