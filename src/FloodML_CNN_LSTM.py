@@ -27,12 +27,12 @@ class CNN(nn.Module):
         self.stride_size_conv = 1
         self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
-        self.conv_layers = nn.ModuleList([
+        self.cnn_layers = nn.ModuleList([
             torch.nn.Conv2d(in_channels=self.initial_num_channels, out_channels=self.channels_out_conv_1,
                             kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
-            nn.ReLU(),
             torch.nn.BatchNorm2d(self.channels_out_conv_1),
             torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            nn.ReLU(),
             # torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
             #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
             # torch.nn.BatchNorm2d(self.channels_out_conv_2),
@@ -48,16 +48,17 @@ class CNN(nn.Module):
             # torch.nn.BatchNorm2d(self.channels_out_conv_4),
             # nn.ReLU()
         ])
-        size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels)
-        self.size_for_fc = int(size_for_fc)
+        self.size_for_fc = int(self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels))
         self.fc = nn.Linear(self.size_for_fc, output_size_cnn)
+        self.relu_for_fc = nn.ReLU()
 
     def forward(self, x):
-        for layer in self.conv_layers:
+        for layer in self.cnn_layers:
             x = layer(x)
-        x = x.view(-1, self.size_for_fc)
-        x = self.fc(x)
-        return x
+        x_after_cnn = x.view(-1, self.size_for_fc)
+        x_after_fc = self.fc(x_after_cnn)
+        output = self.relu_for_fc(x_after_fc)
+        return output
 
     @staticmethod
     def calc_dims_after_filter(input_image_shape, filter_size, stride):
@@ -78,7 +79,7 @@ class CNN(nn.Module):
     def calc_dims_after_all_conv_op(self, input_image_shape: [int], num_in_channels):
         image_dims = (input_image_shape[-2], input_image_shape[-1])
         num_out_channels = num_in_channels
-        for op in self.conv_layers:
+        for op in self.cnn_layers:
             if "conv" in str(op).lower():
                 if op.padding == "valid":
                     image_dims = CNN.calc_dims_after_filter(image_dims,
