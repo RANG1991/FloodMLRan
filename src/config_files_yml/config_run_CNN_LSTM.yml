@@ -2,7 +2,7 @@ batch_size: 256
 checkpoint_path:
 create_new_files: false
 dataset: CAMELS
-debug: false
+debug: true
 dropout_rate: 0.4
 learning_rate: 5e-04
 limit_size_above_1000: false
@@ -19,8 +19,8 @@ print_tqdm_to_console: true
 profile_code: false
 run_sweeps: false
 save_checkpoint: true
-sequence_length: 270
-sequence_length_spatial: 14
+sequence_length: 30
+sequence_length_spatial: 7
 use_all_static_attr: false
 train_start_date: "01/10/1997"
 train_end_date: "30/09/2002"
@@ -31,4 +31,4 @@ test_end_date: "30/09/1997"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
-num_runs: 3
+num_runs: 1

@@ -23,20 +23,20 @@ class CNN(nn.Module):
         self.channels_out_conv_2 = 32
         self.channels_out_conv_3 = 64
         self.channels_out_conv_4 = 128
-        self.filter_size_conv = 2
+        self.filter_size_conv = 3
         self.stride_size_conv = 1
         self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
         self.conv_layers = nn.ModuleList([
             torch.nn.Conv2d(in_channels=self.initial_num_channels, out_channels=self.channels_out_conv_1,
                             kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+            nn.ReLU(),
             torch.nn.BatchNorm2d(self.channels_out_conv_1),
-            nn.ReLU(),
-            torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
-            torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
-            torch.nn.BatchNorm2d(self.channels_out_conv_2),
-            nn.ReLU(),
+            torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            # torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+            #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+            # torch.nn.BatchNorm2d(self.channels_out_conv_2),
+            # nn.ReLU(),
             # torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
             # torch.nn.Conv2d(in_channels=self.channels_out_conv_2, out_channels=self.channels_out_conv_3,
             #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),

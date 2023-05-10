@@ -10,6 +10,7 @@ from pathlib import Path
 import xarray as xr
 import concurrent.futures
 import pytz
+from scipy.interpolate import NearestNDInterpolator
 
 PATH_ROOT = "../../FloodMLRan/data"
 COUNTRY_ABBREVIATION = "us"
@@ -198,8 +199,11 @@ def parse_single_basin_precipitation(
             # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
             # e.g. - [780168, 780169, 780170, ...]
             if not started_reading_data:
-                lon = dataset["longitude"][:]
-                lat = dataset["latitude"][:]
+                lon_grid = dataset["longitude"][:]
+                lat_grid = dataset["latitude"][:]
+                mid_lon_array = lon_grid[lon_grid.shape[0] // 2]
+                mid_lat_array = lat_grid[lat_grid.shape[0] // 2]
+                NearestNDInterpolator(list(zip(mid_lat_array, mid_lon_array)), np.meshgrid(lon_grid))
                 min_lon_array = min_lon - lon
                 ind_lon_min = np.where(min_lon_array > 0, min_lon_array, np.inf).argmin()
                 max_lon_array = lon - max_lon

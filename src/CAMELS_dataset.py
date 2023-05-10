@@ -282,10 +282,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             .reshape(1, -1)
         )
         if self.stage == "train":
-            if station_id not in self.y_mean_per_basin_dict.keys():
-                self.y_mean_per_basin_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-            if station_id not in self.y_std_per_basin_dict.keys():
-                self.y_std_per_basin_dict[station_id] = torch.tensor(y_data.std(axis=0))
             if station_id not in self.x_min_spatial_per_basin.keys():
                 self.x_min_spatial_per_basin[station_id] = X_data_spatial.min()
             if station_id not in self.x_max_spatial_per_basin.keys():

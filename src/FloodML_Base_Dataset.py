@@ -121,6 +121,8 @@ class FloodML_Base_Dataset(Dataset):
         self.all_stations_ids = [station_id for station_id in all_stations_ids if station_id not in
                                  STATIONS_WITH_ERRORS]
         self.create_new_files = (create_new_files or not self.check_if_all_stations_are_in_files())
+        if self.create_new_files:
+            self.x_mean_per_basin_dict = self.y_mean_per_basin_dict = self.x_std_per_basin_dict = self.y_std_per_basin_dict = {}
         (max_width,
          max_height,
          basin_id_with_maximum_width,
