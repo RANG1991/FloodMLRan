@@ -376,18 +376,13 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             .reshape(1, -1)
         )
         if self.stage == "train":
-            if station_id not in self.y_mean_per_basin_dict.keys():
-                self.y_mean_per_basin_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-            if station_id not in self.y_std_per_basin_dict.keys():
-                self.y_std_per_basin_dict[station_id] = torch.tensor(y_data.std(axis=0))
             if station_id not in self.x_min_spatial_per_basin.keys():
                 self.x_min_spatial_per_basin[station_id] = X_data_spatial.min()
             if station_id not in self.x_max_spatial_per_basin.keys():
                 self.x_max_spatial_per_basin[station_id] = X_data_spatial.max()
-        else:
-            min_spatial_basin = self.x_min_spatial_per_basin[station_id]
-            max_spatial_basin = self.x_max_spatial_per_basin[station_id]
-            X_data_spatial = 255 * ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
+        min_spatial_basin = self.x_min_spatial_per_basin[station_id]
+        max_spatial_basin = self.x_max_spatial_per_basin[station_id]
+        X_data_spatial = 255 * ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
         return X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):

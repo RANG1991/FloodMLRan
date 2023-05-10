@@ -122,7 +122,10 @@ class FloodML_Base_Dataset(Dataset):
                                  STATIONS_WITH_ERRORS]
         self.create_new_files = (create_new_files or not self.check_if_all_stations_are_in_files())
         if self.create_new_files:
-            self.x_mean_per_basin_dict = self.y_mean_per_basin_dict = self.x_std_per_basin_dict = self.y_std_per_basin_dict = {}
+            self.x_mean_per_basin_dict = {}
+            self.y_mean_per_basin_dict = {}
+            self.x_std_per_basin_dict = {}
+            self.y_std_per_basin_dict = {}
         (max_width,
          max_height,
          basin_id_with_maximum_width,
@@ -219,7 +222,7 @@ class FloodML_Base_Dataset(Dataset):
         set_keys_y_mean_dict = set(self.y_mean_per_basin_dict.keys())
         set_keys_y_std_dict = set(self.y_std_per_basin_dict.keys())
         return (set_keys_x_mean_dict.intersection(*[set_keys_x_std_dict, set_keys_y_mean_dict, set_keys_y_std_dict]) ==
-                self.all_stations_ids)
+                set(self.all_stations_ids))
 
     @staticmethod
     def read_pickle_if_exists(pickle_file_name):
