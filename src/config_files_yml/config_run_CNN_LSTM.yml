@@ -2,7 +2,7 @@ batch_size: 256
 checkpoint_path:
 create_new_files: false
 dataset: CAMELS
-debug: false
+debug: true
 dropout_rate: 0.4
 learning_rate: 5e-04
 limit_size_above_1000: false
