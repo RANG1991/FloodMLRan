@@ -299,7 +299,6 @@ class FloodML_Runner:
             f"{self.sequence_length};"
             f"{self.num_hidden_units}"
         )
-        plt.show()
         plt.close()
         return nse_list_last_epoch
 
