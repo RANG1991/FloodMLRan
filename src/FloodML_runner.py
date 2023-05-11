@@ -500,9 +500,9 @@ class FloodML_Runner:
         else:
             model = model.to(device="cuda")
         if self.optim_name.lower() == "sgd":
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate, momentum=0.9)
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate * world_size, momentum=0.9)
         elif self.optim_name.lower() == "adam":
-            optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=0.05)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate * world_size, weight_decay=0.05)
         else:
             raise Exception(f"No such optimizer with name: {self.optim_name}")
         starting_epoch = 0
