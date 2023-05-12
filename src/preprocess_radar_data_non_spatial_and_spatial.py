@@ -11,6 +11,10 @@ import xarray as xr
 import concurrent.futures
 import pytz
 from scipy.interpolate import NearestNDInterpolator
+import sys
+from matplotlib.path import Path
+
+np.set_printoptions(threshold=sys.maxsize)
 
 PATH_ROOT = "../../FloodMLRan/data"
 COUNTRY_ABBREVIATION = "us"
@@ -103,13 +107,7 @@ def get_index_by_lat_lon(lat, lon, lat_grid, lon_grid):
 
 
 def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, output_folder_name, lat_grid, lon_grid,
-                                           lat_lon_lst):
-    h = len(lat_grid)
-    w = len(lon_grid)
-    idx_mat = np.zeros((h, w), dtype=bool)
-    for lat_i, lon_i in lat_lon_lst:
-        i, j = get_index_by_lat_lon(lat_i, lon_i, lat_grid, lon_grid)
-        idx_mat[i[0], j[0]] = True
+                                           mask_precip):
     ds = xr.Dataset(
         {
             "precipitation": xr.DataArray(
@@ -120,7 +118,7 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
         },
         attrs={"creation_date": datetime.datetime.now()},
     )
-    ds["precipitation"] = ds["precipitation"] * idx_mat
+    ds["precipitation"] = ds["precipitation"] * mask_precip
     ds = ds.resample(datetime="1D").sum()
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
 
@@ -140,11 +138,50 @@ def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder
     return df_precip_one_day
 
 
+def get_longitude_and_latitude_points(radar_precip_data_folder):
+    dataset_file = Path(f"{radar_precip_data_folder}").rglob(f"*/*.24h.nc")[0]
+    dataset = netCDF4.Dataset(dataset_file)
+    lon_grid = dataset["longitude"][:]
+    lat_grid = dataset["latitude"][:]
+    lat_grid = 360 - lat_grid
+    lon_grid.reshape(-1, 1).flatten().tolist()
+    lat_grid.reshape(-1, 1).flatten().tolist()
+    points = np.vstack((lon_grid, lat_grid)).T
+    return points, lon_grid.shape[0], lon_grid.shape[1]
+
+
+def plot_lon_lat_on_world_map(radar_precip_data_folder):
+    import pandas as pd
+    from shapely.geometry import Point
+    import geopandas as gpd
+    from geopandas import GeoDataFrame
+    from matplotlib import pyplot as plt
+
+    dataset_file = Path(f"{radar_precip_data_folder}").rglob(f"*/*.24h.nc")[0]
+    dataset = netCDF4.Dataset(dataset_file)
+    lon_grid = dataset["longitude"][:]
+    lat_grid = dataset["latitude"][:]
+    lat_grid = 360 - lat_grid
+    d = {"Longitude": lon_grid.reshape(-1, 1).flatten().tolist(),
+         "Latitude": lat_grid.reshape(-1, 1).flatten().tolist()}
+
+    df = pd.DataFrame.from_dict(d)
+
+    geometry = [Point(xy) for xy in zip(df['Longitude'], df['Latitude'])]
+    gdf = GeoDataFrame(df, geometry=geometry)
+    world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+    gdf.plot(ax=world.plot(figsize=(10, 6)), marker='o', color='red', markersize=15)
+    plt.savefig("check.png")
+
+
 def parse_single_basin_precipitation(
         station_id,
         basin_data,
         radar_precip_data_folder,
         output_folder_name,
+        lon_lat_points,
+        height,
+        width
 ):
     # all_files_exist = check_if_all_precip_files_exist(station_id, output_folder_name)
     # if all_files_exist:
@@ -156,35 +193,6 @@ def parse_single_basin_precipitation(
     min_lat = np.squeeze(np.floor(bounds["miny"].values * 10) / 10)
     max_lon = np.squeeze(np.ceil(bounds["maxx"].values * 10) / 10)
     max_lat = np.squeeze(np.ceil(bounds["maxy"].values * 10) / 10)
-
-    # if min_lon < 0:
-    #     min_lon += 360
-    #
-    # if max_lon < 0:
-    #     max_lon += 360
-    # fn = discharge_folder_name + "/timezone_" + station_id + ".txt"
-    # with open(fn, "r") as f:
-    #     lines = f.readlines()
-    #     utc_offset = int(float(lines[0].strip()))
-    #
-    # # read the discharge of the required station
-    # df_dis = pd.read_csv(discharge_file_name)
-    # # convert the columns of year, month, day, hour, minute to datetime and put it as the dataframe index
-    # df_dis.index = [
-    #     datetime.datetime(
-    #         df_dis["year"][i],
-    #         df_dis["month"][i],
-    #         df_dis["day"][i],
-    #         df_dis["hour"][i],
-    #         df_dis["minute"][i],
-    #     )
-    #     for i in range(0, len(df_dis))
-    # ]
-    # # read the precipitation of the required station
-    # # ERA5
-    # year_start = df_dis["year"].min() - 1
-    # year_end = df_dis["year"].max()
-    # print(year_start, year_end)
 
     offset = get_utc_offset((min_lat + max_lat) / 2)
     list_of_dates_all_years = []
@@ -199,27 +207,10 @@ def parse_single_basin_precipitation(
             # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
             # e.g. - [780168, 780169, 780170, ...]
             if not started_reading_data:
-                lon_grid = dataset["longitude"][:]
-                lat_grid = dataset["latitude"][:]
-                mid_lon_array = lon_grid[lon_grid.shape[0] // 2]
-                mid_lat_array = lat_grid[lat_grid.shape[0] // 2]
-                NearestNDInterpolator(list(zip(mid_lat_array, mid_lon_array)), np.meshgrid(lon_grid))
-                min_lon_array = min_lon - lon
-                ind_lon_min = np.where(min_lon_array > 0, min_lon_array, np.inf).argmin()
-                max_lon_array = lon - max_lon
-                ind_lon_max = np.where(max_lon_array > 0, max_lon_array, np.inf).argmin()
-                min_lat_array = lat - min_lat
-                ind_lat_min = np.where(min_lat_array > 0, min_lat_array, np.inf).argmin()
-                max_lat_array = max_lat - lat
-                ind_lat_max = np.where(max_lat_array > 0, max_lat_array, np.inf).argmin()
+                grid = basin_data["geometry"].contains_points(lon_lat_points)
+                mask_precip = grid.reshape(height, width)
                 started_reading_data = True
-            tp = np.asarray(
-                dataset["tp"][
-                :, ind_lat_max: ind_lat_min + 1, ind_lon_min: ind_lon_max + 1
-                ]
-            )
-            # multiply the precipitation by 1000 to get millimeter instead of meter
-            tp[:, :, :] = tp[:, :, :] * 1000
+            tp = np.asarray(dataset["tp"][:, mask_precip])
             # zero out any precipitation that is less than 0
             tp[tp < 0] = 0
             all_tp_one_year.append(tp)
@@ -270,7 +261,7 @@ def parse_single_basin_precipitation(
         output_folder_name,
         latb,
         lonb,
-        lat_lon_lst
+        mask_precip
     )
 
     fn = output_folder_name + "/shape_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
@@ -328,7 +319,8 @@ def check(ERA5_static_data_file_name, station_id):
     print(basin_static_data)
 
 
-def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder_name, output_folder_name):
+def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder_name, output_folder_name,
+                                    lon_lat_points, height, width):
     print(f"working on station with id: {station_id}")
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
@@ -337,7 +329,10 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
             station_id,
             basin_data,
             CAMELS_precip_data_folder_name,
-            output_folder_name
+            output_folder_name,
+            lon_lat_points,
+            height,
+            width
         )
     except Exception as e:
         print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
@@ -345,24 +340,26 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
 
 def main(use_multiprocessing=True):
     radar_precip_data_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/stage4_nc_files/"
+    plot_lon_lat_on_world_map(radar_precip_data_folder)
+    points, height, width = get_longitude_and_latitude_points(radar_precip_data_folder)
     boundaries_file_name = (
             PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
     output_folder_name = PATH_ROOT + "/CAMELS_US/radar_all_data/"
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"].tolist()
-    # station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
     if use_multiprocessing:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_station_id = {
                 executor.submit(run_processing_for_single_basin, station_id, basins_data,
-                                radar_precip_data_folder, output_folder_name): station_id for station_id in
-                station_ids_list}
+                                radar_precip_data_folder, output_folder_name, points, height, width): station_id for
+                station_id in station_ids_list}
             for future in concurrent.futures.as_completed(future_to_station_id):
                 station_id = future_to_station_id[future]
                 print(f"finished with station id: {station_id}")
     else:
         for station_id in station_ids_list:
-            run_processing_for_single_basin(station_id, basins_data, radar_precip_data_folder, output_folder_name)
+            run_processing_for_single_basin(station_id, basins_data, radar_precip_data_folder, output_folder_name,
+                                            points, height, width)
 
 
 if __name__ == "__main__":
