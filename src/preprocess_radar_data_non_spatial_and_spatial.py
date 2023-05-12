@@ -1,18 +1,15 @@
 import netCDF4
-import gzip
 import geopandas as gpd
-from climata.usgs import InstantValueIO
 import pandas as pd
 import numpy as np
 import datetime
-from shapely.geometry import Point
 from pathlib import Path
 import xarray as xr
 import concurrent.futures
-import pytz
-from scipy.interpolate import NearestNDInterpolator
 import sys
-from matplotlib.path import Path
+from shapely.geometry import Point
+from geopandas import GeoDataFrame
+from matplotlib import pyplot as plt
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -137,50 +134,29 @@ def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder
     return df_precip_one_day
 
 
-def get_longitude_and_latitude_points(radar_precip_data_folder):
-    dataset_file = Path(f"{radar_precip_data_folder}").rglob(f"*/*.24h.nc")[0]
-    dataset = netCDF4.Dataset(dataset_file)
-    lon_grid = dataset["longitude"][:]
-    lat_grid = dataset["latitude"][:]
-    lat_grid = 360 - lat_grid
+def get_longitude_and_latitude_points(lon_grid, lat_grid):
     lon_grid.reshape(-1, 1).flatten().tolist()
     lat_grid.reshape(-1, 1).flatten().tolist()
     points = np.vstack((lon_grid, lat_grid)).T
     return points, lon_grid.shape[0], lon_grid.shape[1]
 
 
-def plot_lon_lat_on_world_map(radar_precip_data_folder):
-    import pandas as pd
-    from shapely.geometry import Point
-    import geopandas as gpd
-    from geopandas import GeoDataFrame
-    from matplotlib import pyplot as plt
-
-    dataset_file = Path(f"{radar_precip_data_folder}").rglob(f"*/*.24h.nc")[0]
-    dataset = netCDF4.Dataset(dataset_file)
-    lon_grid = dataset["longitude"][:]
-    lat_grid = dataset["latitude"][:]
-    lat_grid = 360 - lat_grid
+def plot_lon_lat_on_world_map(lon_grid, lat_grid, file_name):
     d = {"Longitude": lon_grid.reshape(-1, 1).flatten().tolist(),
          "Latitude": lat_grid.reshape(-1, 1).flatten().tolist()}
-
     df = pd.DataFrame.from_dict(d)
-
     geometry = [Point(xy) for xy in zip(df['Longitude'], df['Latitude'])]
     gdf = GeoDataFrame(df, geometry=geometry)
     world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
     gdf.plot(ax=world.plot(figsize=(10, 6)), marker='o', color='red', markersize=15)
-    plt.savefig("check.png")
+    plt.savefig(f"f{file_name}_plot_lat_lon.png")
 
 
 def parse_single_basin_precipitation(
         station_id,
         basin_data,
         radar_precip_data_folder,
-        output_folder_name,
-        lon_lat_points,
-        height,
-        width
+        output_folder_name
 ):
     # all_files_exist = check_if_all_precip_files_exist(station_id, output_folder_name)
     # if all_files_exist:
@@ -201,12 +177,16 @@ def parse_single_basin_precipitation(
         print(f"parsing year: {year} of basin : {station_id}")
         all_datetimes_one_year = []
         all_tp_one_year = []
-        for dataset_file in Path(f"{radar_precip_data_folder}").rglob(f"{year}*/*.24h.nc"):
+        for dataset_file in Path(f"{radar_precip_data_folder}").rglob(f"{year}*/*pr*.24h.nc"):
             dataset = netCDF4.Dataset(dataset_file)
             # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
             # e.g. - [780168, 780169, 780170, ...]
             if not started_reading_data:
-                grid = basin_data["geometry"].contains_points(lon_lat_points)
+                lon_grid = dataset["longitude"][:]
+                lat_grid = dataset["latitude"][:]
+                lon_lat_points, height, width = get_longitude_and_latitude_points(lon_grid, lat_grid)
+                plot_lon_lat_on_world_map(lon_grid, lat_grid, dataset_file.stem)
+                grid = basin_data["geometry"].contains_points()
                 mask_precip = grid.reshape(height, width)
                 started_reading_data = True
             tp = np.asarray(dataset["tp"][:, mask_precip])
@@ -296,8 +276,7 @@ def check(ERA5_static_data_file_name, station_id):
     print(basin_static_data)
 
 
-def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder_name, output_folder_name,
-                                    lon_lat_points, height, width):
+def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder_name, output_folder_name):
     print(f"working on station with id: {station_id}")
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
@@ -306,19 +285,13 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
             station_id,
             basin_data,
             CAMELS_precip_data_folder_name,
-            output_folder_name,
-            lon_lat_points,
-            height,
-            width
-        )
+            output_folder_name)
     except Exception as e:
         print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
 
 
 def main(use_multiprocessing=True):
     radar_precip_data_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/stage4_nc_files/"
-    plot_lon_lat_on_world_map(radar_precip_data_folder)
-    points, height, width = get_longitude_and_latitude_points(radar_precip_data_folder)
     boundaries_file_name = (
             PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
     output_folder_name = PATH_ROOT + "/CAMELS_US/radar_all_data/"
@@ -328,15 +301,14 @@ def main(use_multiprocessing=True):
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_station_id = {
                 executor.submit(run_processing_for_single_basin, station_id, basins_data,
-                                radar_precip_data_folder, output_folder_name, points, height, width): station_id for
+                                radar_precip_data_folder, output_folder_name): station_id for
                 station_id in station_ids_list}
             for future in concurrent.futures.as_completed(future_to_station_id):
                 station_id = future_to_station_id[future]
                 print(f"finished with station id: {station_id}")
     else:
         for station_id in station_ids_list:
-            run_processing_for_single_basin(station_id, basins_data, radar_precip_data_folder, output_folder_name,
-                                            points, height, width)
+            run_processing_for_single_basin(station_id, basins_data, radar_precip_data_folder, output_folder_name)
 
 
 if __name__ == "__main__":
