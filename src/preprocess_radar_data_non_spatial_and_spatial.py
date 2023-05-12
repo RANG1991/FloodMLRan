@@ -106,8 +106,7 @@ def get_index_by_lat_lon(lat, lon, lat_grid, lon_grid):
     return i, j
 
 
-def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, output_folder_name, lat_grid, lon_grid,
-                                           mask_precip):
+def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, output_folder_name, mask_precip):
     ds = xr.Dataset(
         {
             "precipitation": xr.DataArray(
@@ -241,14 +240,7 @@ def parse_single_basin_precipitation(
         station_id,
         output_folder_name)
 
-    lonb = lon[ind_lon_min:ind_lon_max + 1]
-    latb = lat[ind_lat_min:ind_lat_max + 1]
-    lslon = [lonb[i] for i in range(0, len(lonb)) for j in range(0, len(latb))]
-    lslat = [latb[j] for i in range(0, len(lonb)) for j in range(0, len(latb))]
-    lat_lon_lst = []
-    for i in range(0, len(lslon)):
-        if np.squeeze(basin_data["geometry"].contains(Point(lslon[i], lslat[i]))):
-            lat_lon_lst.append([lslat[i], lslon[i]])
+    lat_lon_lst = lon_lat_points.reshape(height, width)[mask_precip].flatten().tolist()
     fn = output_folder_name + "/latlon_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
     pd.DataFrame(data=lat_lon_lst, columns=["lat", "lon"]).to_csv(
         fn, index=False, float_format="%6.1f"
@@ -259,8 +251,6 @@ def parse_single_basin_precipitation(
         precip,
         station_id,
         output_folder_name,
-        latb,
-        lonb,
         mask_precip
     )
 
@@ -276,35 +266,22 @@ def parse_single_basin_precipitation(
             precip.shape[0],
             precip.shape[1],
             precip.shape[2],
-            lat[ind_lat_min],
-            lat[ind_lat_max],
-            lon[ind_lon_min],
-            lon[ind_lon_max],
+            lat_lon_lst[0][0],
+            lat_lon_lst[0][1],
+            lat_lon_lst[-1][0],
+            lat_lon_lst[-1][1],
             file=f,
         )
     print(
         [
             station_id,
-            lat[ind_lat_min],
-            lat[ind_lat_max],
-            lon[ind_lon_min],
-            lon[ind_lon_max],
+            lat_lon_lst[0][0],
+            lat_lon_lst[0][1],
+            lat_lon_lst[-1][0],
+            lat_lon_lst[-1][1],
             precip.shape,
         ]
     )
-
-    fn = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
-    with open(fn, "w") as f:
-        print(
-            precip.shape[0],
-            precip.shape[1],
-            precip.shape[2],
-            lat[ind_lat_min],
-            lat[ind_lat_max],
-            lon[ind_lon_min],
-            lon[ind_lon_max],
-            file=f,
-        )
 
 
 def check(ERA5_static_data_file_name, station_id):
