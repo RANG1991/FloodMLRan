@@ -120,7 +120,7 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
     )
     ds["precipitation"] = ds["precipitation"] * idx_mat
     ds = ds.resample(datetime="1D").sum()
-    plt.imsave(output_folder_name / f"precip24_spatial_image_{station_id}.png", ds["precipitation"][:].sum(axis=0))
+    plt.imsave(output_folder_name + f"/precip24_spatial_image_{station_id}.png", ds["precipitation"][:].sum(axis=0))
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
 
 
