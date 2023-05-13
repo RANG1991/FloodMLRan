@@ -10,6 +10,7 @@ import sys
 from shapely.geometry import Point
 from geopandas import GeoDataFrame
 from matplotlib import pyplot as plt
+from matplotlib import path
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -135,21 +136,24 @@ def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder
 
 
 def get_longitude_and_latitude_points(lon_grid, lat_grid):
-    lon_grid.reshape(-1, 1).flatten().tolist()
-    lat_grid.reshape(-1, 1).flatten().tolist()
-    points = np.vstack((lon_grid, lat_grid)).T
+    lon_array = lon_grid.reshape(-1, 1).flatten().tolist()
+    lat_array = lat_grid.reshape(-1, 1).flatten().tolist()
+    points = np.vstack((lon_array, lat_array)).T
     return points, lon_grid.shape[0], lon_grid.shape[1]
 
 
-def plot_lon_lat_on_world_map(lon_grid, lat_grid, file_name):
-    d = {"Longitude": lon_grid.reshape(-1, 1).flatten().tolist(),
-         "Latitude": lat_grid.reshape(-1, 1).flatten().tolist()}
+def plot_lon_lat_on_world_map(lon_lat_points, masked_grid, basin_id):
+    list_lot_lan_points = lon_lat_points[masked_grid].tolist()
+    lon_array = [point[0] for point in list_lot_lan_points]
+    lat_array = [point[1] for point in list_lot_lan_points]
+    d = {"Longitude": lon_array,
+         "Latitude": lat_array}
     df = pd.DataFrame.from_dict(d)
     geometry = [Point(xy) for xy in zip(df['Longitude'], df['Latitude'])]
     gdf = GeoDataFrame(df, geometry=geometry)
     world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-    gdf.plot(ax=world.plot(figsize=(10, 6)), marker='o', color='red', markersize=15)
-    plt.savefig(f"f{file_name}_plot_lat_lon.png")
+    gdf.plot(ax=world.plot(figsize=(20, 12)), marker='o', color='red', markersize=8)
+    plt.savefig(f"{basin_id}_plot_lat_lon.png")
 
 
 def parse_single_basin_precipitation(
@@ -169,6 +173,12 @@ def parse_single_basin_precipitation(
     max_lon = np.squeeze(np.ceil(bounds["maxx"].values * 10) / 10)
     max_lat = np.squeeze(np.ceil(bounds["maxy"].values * 10) / 10)
 
+    # if min_lon < 0:
+    #     min_lon += 360
+    #
+    # if max_lon < 0:
+    #     max_lon += 360
+
     offset = get_utc_offset((min_lat + max_lat) / 2)
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
@@ -177,25 +187,30 @@ def parse_single_basin_precipitation(
         print(f"parsing year: {year} of basin : {station_id}")
         all_datetimes_one_year = []
         all_tp_one_year = []
-        for dataset_file in Path(f"{radar_precip_data_folder}").rglob(f"{year}*/*pr*.24h.nc"):
+        for dataset_file in Path(f"{radar_precip_data_folder}").rglob(f"{year}*/ST4.*.24h.nc"):
+            print(f"parsing file: {dataset_file}")
             dataset = netCDF4.Dataset(dataset_file)
             # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
             # e.g. - [780168, 780169, 780170, ...]
             if not started_reading_data:
                 lon_grid = dataset["longitude"][:]
                 lat_grid = dataset["latitude"][:]
-                lon_lat_points, height, width = get_longitude_and_latitude_points(lon_grid, lat_grid)
-                plot_lon_lat_on_world_map(lon_grid, lat_grid, dataset_file.stem)
-                grid = basin_data["geometry"].contains_points()
-                mask_precip = grid.reshape(height, width)
+                lon_grid_neg_180_to_180 = ((lon_grid + 180) % 360) - 180
+                lat_grid_neg_180_to_180 = ((lat_grid + 180) % 360) - 180
+                lon_lat_points, height, width = get_longitude_and_latitude_points(lon_grid_neg_180_to_180,
+                                                                                  lat_grid_neg_180_to_180)
+                masked_grid = path.Path([(min_lon, min_lat), (max_lon, min_lat), (min_lon, max_lat),
+                                         (max_lon, max_lat)]).contains_points(lon_lat_points)
+                plot_lon_lat_on_world_map(lon_lat_points, masked_grid, station_id)
+                mask_precip = masked_grid.reshape(height, width)
                 started_reading_data = True
-            tp = np.asarray(dataset["tp"][:, mask_precip])
+            tp = np.asarray(dataset["tp"][:][mask_precip])
             # zero out any precipitation that is less than 0
             tp[tp < 0] = 0
             all_tp_one_year.append(tp)
             # the format of each file is - ST4.yyyymmddhh.xxh.Z
             datetime_str = dataset_file.name.split(".")[1][:-2]
-            datetime_object = datetime.strptime(datetime_str, 'yyyymmdd')
+            datetime_object = datetime.datetime.strptime(datetime_str, '%Y%m%d')
             all_datetimes_one_year.append(datetime_object)
 
         # append the datetimes from specific year to the list of datetimes of all years
