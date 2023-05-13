@@ -12,4 +12,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 
 source $virtual_env
 
-python ./preprocess_precip_radar.py
+python ./convert_radar_data_to_netCDF.py
