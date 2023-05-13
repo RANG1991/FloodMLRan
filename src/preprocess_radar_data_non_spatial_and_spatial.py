@@ -157,6 +157,14 @@ def plot_lon_lat_on_world_map(lon_lat_points, masked_grid, basin_id):
     plt.savefig(f"{basin_id}_plot_lat_lon.png")
 
 
+def get_basin_precip_indices(masked_precip):
+    i, j = np.where(masked_precip)
+    indices = np.meshgrid(np.arange(min(i), max(i) + 1),
+                          np.arange(min(j), max(j) + 1),
+                          indexing='ij')
+    return indices
+
+
 def parse_single_basin_precipitation(
         station_id,
         basin_data,
@@ -184,7 +192,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(2002, 2020):
+    for year in range(2002, 2003):
         print(f"parsing year: {year} of basin : {station_id}")
         all_datetimes_one_year = []
         all_tp_one_year = []
@@ -200,14 +208,17 @@ def parse_single_basin_precipitation(
                 lat_grid_neg_180_to_180 = ((lat_grid + 180) % 360) - 180
                 lon_lat_points, height, width = get_longitude_and_latitude_points(lon_grid_neg_180_to_180,
                                                                                   lat_grid_neg_180_to_180)
-                masked_grid = path.Path([(min_lon, min_lat), (max_lon, min_lat), (min_lon, max_lat),
-                                         (max_lon, max_lat)]).contains_points(lon_lat_points)
+                basin_geo = path.Path([(min_lon, min_lat), (max_lon, min_lat), (min_lon, max_lat),
+                                       (max_lon, max_lat)])
+                masked_grid = basin_geo.contains_points(lon_lat_points)
                 # plot_lon_lat_on_world_map(lon_lat_points, masked_grid, station_id)
                 mask_precip = masked_grid.reshape(height, width)
+                mask_precip_indices = get_basin_precip_indices(mask_precip)
                 started_reading_data = True
-            tp = np.asarray(dataset["tp"][:][mask_precip])
+            tp = np.asarray(dataset["tp"][:][mask_precip_indices])
             # zero out any precipitation that is less than 0
             tp[tp < 0] = 0
+            tp[np.isnan(tp)] = 0
             all_tp_one_year.extend(tp)
             # the format of each file is - ST4.yyyymmddhh.xxh.Z
             datetime_str = dataset_file.name.split(".")[1][:-2]
@@ -329,4 +340,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main()
+    main(False)
