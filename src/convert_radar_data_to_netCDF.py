@@ -38,7 +38,7 @@ def convert_all_grb_files_to_netCDF(grib_file_path, grib2_res_folder_path, nc_re
 
 def main(use_multiprocessing=True):
     grib_main_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/stage4/"
-    all_grib_files_paths = list(Path(grib_main_folder).resolve().rglob("**/*.*"))
+    all_grib_files_paths = list(Path(grib_main_folder).resolve().rglob("*.*"))
     # files_count = sum([1 for r, d, files in os.walk(grib_main_folder) for f in files])
     # assert len(all_grib_files_paths) == files_count, f"the total number of files in the directory: " \
     #                                                  f"{files_count} is not equal " \
