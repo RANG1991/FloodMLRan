@@ -117,6 +117,7 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
     )
     ds["precipitation"] = ds["precipitation"] * mask_precip
     ds = ds.resample(datetime="1D").sum()
+    plt.imsave(output_folder_name + f"/precip24_spatial_image_{station_id}.png", ds["precipitation"][:].sum(axis=0))
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
 
 
@@ -201,7 +202,7 @@ def parse_single_basin_precipitation(
                                                                                   lat_grid_neg_180_to_180)
                 masked_grid = path.Path([(min_lon, min_lat), (max_lon, min_lat), (min_lon, max_lat),
                                          (max_lon, max_lat)]).contains_points(lon_lat_points)
-                plot_lon_lat_on_world_map(lon_lat_points, masked_grid, station_id)
+                # plot_lon_lat_on_world_map(lon_lat_points, masked_grid, station_id)
                 mask_precip = masked_grid.reshape(height, width)
                 started_reading_data = True
             tp = np.asarray(dataset["tp"][:][mask_precip])

@@ -1,7 +1,6 @@
 import netCDF4
 import gzip
 import geopandas as gpd
-from climata.usgs import InstantValueIO
 import pandas as pd
 import numpy as np
 import datetime
@@ -9,7 +8,7 @@ from shapely.geometry import Point
 from pathlib import Path
 import xarray as xr
 import concurrent.futures
-import pytz
+import matplotlib.pyplot as plt
 
 PATH_ROOT = "../../FloodMLRan/data"
 COUNTRY_ABBREVIATION = "us"
@@ -121,6 +120,7 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
     )
     ds["precipitation"] = ds["precipitation"] * idx_mat
     ds = ds.resample(datetime="1D").sum()
+    plt.imsave(output_folder_name / f"precip24_spatial_image_{station_id}.png", ds["precipitation"][:].sum(axis=0))
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
 
 
