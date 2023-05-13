@@ -207,7 +207,7 @@ def parse_single_basin_precipitation(
             tp = np.asarray(dataset["tp"][:][mask_precip])
             # zero out any precipitation that is less than 0
             tp[tp < 0] = 0
-            all_tp_one_year.append(tp)
+            all_tp_one_year.extend(tp)
             # the format of each file is - ST4.yyyymmddhh.xxh.Z
             datetime_str = dataset_file.name.split(".")[1][:-2]
             datetime_object = datetime.datetime.strptime(datetime_str, '%Y%m%d')
@@ -255,6 +255,7 @@ def parse_single_basin_precipitation(
         columns=["time", "lat", "lon"],
         index=[1],
     ).to_csv(fn)
+
     fn = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
     with open(fn, "w") as f:
         print(

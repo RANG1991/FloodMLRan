@@ -280,6 +280,7 @@ def parse_single_basin_precipitation(
         columns=["time", "lat", "lon"],
         index=[1],
     ).to_csv(fn)
+
     fn = output_folder_name + "/info_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".txt"
     with open(fn, "w") as f:
         print(
@@ -351,7 +352,7 @@ def main(use_multiprocessing=True):
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"].tolist()
     # station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
-    station_ids_list = ["01466500"]
+    # station_ids_list = ["01466500"]
     if use_multiprocessing:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_station_id = {
@@ -367,4 +368,4 @@ def main(use_multiprocessing=True):
 
 
 if __name__ == "__main__":
-    main()
+    main(False)
