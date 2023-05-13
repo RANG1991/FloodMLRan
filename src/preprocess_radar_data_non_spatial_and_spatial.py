@@ -174,6 +174,7 @@ def parse_single_basin_precipitation(
     # if all_files_exist:
     #     print("all precipitation file of the basin: {} exists".format(station_id))
     #     return
+    basin_data.reset_index(drop=True, inplace=True)
     bounds = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
     min_lon = np.squeeze(np.floor(bounds["minx"].values * 10) / 10)
@@ -191,7 +192,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(2002, 2003):
+    for year in range(2002, 2022):
         print(f"parsing year: {year} of basin : {station_id}")
         all_datetimes_one_year = []
         all_tp_one_year = []
@@ -207,7 +208,7 @@ def parse_single_basin_precipitation(
                 lat_grid_neg_180_to_180 = ((lat_grid + 180) % 360) - 180
                 lon_lat_points, height, width = get_longitude_and_latitude_points(lon_grid_neg_180_to_180,
                                                                                   lat_grid_neg_180_to_180)
-                basin_geo = path.Path([(min_lon, min_lat), (min_lon, max_lat), (max_lon, max_lat), (max_lon, min_lat)])
+                basin_geo = path.Path(list(basin_data.geometry.convex_hull[0].exterior.coords))
                 masked_grid_region_size = basin_geo.contains_points(lon_lat_points)
                 # plot_lon_lat_on_world_map(lon_lat_points, masked_grid, station_id)
                 masked_grid_region_size_reshaped = masked_grid_region_size.reshape(height, width)
@@ -234,7 +235,7 @@ def parse_single_basin_precipitation(
     datetimes = np.concatenate(list_of_dates_all_years, axis=0)
     # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations_all_years, axis=0)
-    precip = (precip * mask_grid_basin_basin_size).transpose((0, 2, 1))
+    precip = (precip * mask_grid_basin_basin_size)
     # take the mean of the precipitation data spatially (along the latitude and longitude)
     precip_mean_lat_lon = np.mean(precip, axis=(1, 2))
     # create a dataframe from the datetimes
