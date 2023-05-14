@@ -138,7 +138,7 @@ def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder
 def get_longitude_and_latitude_points(lon_grid, lat_grid):
     lon_array = lon_grid.reshape(-1, 1).flatten().tolist()
     lat_array = lat_grid.reshape(-1, 1).flatten().tolist()
-    points = np.vstack((lat_array, lon_array)).T
+    points = np.vstack((lon_array, lat_array)).T
     return points, lon_grid.shape[0], lon_grid.shape[1]
 
 
@@ -192,7 +192,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(2002, 2022):
+    for year in range(2002, 2020):
         print(f"parsing year: {year} of basin : {station_id}")
         all_datetimes_one_year = []
         all_tp_one_year = []
@@ -206,11 +206,11 @@ def parse_single_basin_precipitation(
                 lat_grid = dataset["latitude"][:]
                 lon_grid_neg_180_to_180 = ((lon_grid + 180) % 360) - 180
                 lat_grid_neg_180_to_180 = ((lat_grid + 180) % 360) - 180
-                lat_lon_points, height, width = get_longitude_and_latitude_points(lon_grid_neg_180_to_180,
+                lon_lat_points, height, width = get_longitude_and_latitude_points(lon_grid_neg_180_to_180,
                                                                                   lat_grid_neg_180_to_180)
-                list_coors = [(coor[1], coor[0]) for coor in list(basin_data.geometry.convex_hull[0].exterior.coords)]
+                list_coors = [(coor[0], coor[1]) for coor in list(basin_data.geometry.convex_hull[0].exterior.coords)]
                 basin_geo = path.Path(list_coors)
-                masked_grid_region_size = basin_geo.contains_points(lat_lon_points)
+                masked_grid_region_size = basin_geo.contains_points(lon_lat_points)
                 masked_grid_region_size_reshaped = masked_grid_region_size.reshape(height, width)
                 mask_precip_indices_only_basin = get_basin_precip_indices(masked_grid_region_size_reshaped)
                 mask_grid_basin_basin_size = masked_grid_region_size_reshaped[tuple(mask_precip_indices_only_basin)][
@@ -235,7 +235,7 @@ def parse_single_basin_precipitation(
     datetimes = np.concatenate(list_of_dates_all_years, axis=0)
     # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations_all_years, axis=0)
-    precip = np.flip(precip * mask_grid_basin_basin_size, (1, 2))
+    precip = np.flip(precip * mask_grid_basin_basin_size, 1).transpose((0, 2, 1))
     # take the mean of the precipitation data spatially (along the latitude and longitude)
     precip_mean_lat_lon = np.mean(precip, axis=(1, 2))
     # create a dataframe from the datetimes
@@ -250,9 +250,9 @@ def parse_single_basin_precipitation(
         station_id,
         output_folder_name)
 
-    lon_lat_lst = lat_lon_points[masked_grid_region_size].tolist()
+    lon_lat_lst = lon_lat_points[masked_grid_region_size].tolist()
     fn = output_folder_name + "/latlon_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
-    pd.DataFrame(data=lon_lat_lst, columns=["lat", "lon"]).to_csv(
+    pd.DataFrame(data=lon_lat_lst, columns=["lon", "lat"]).to_csv(
         fn, index=False, float_format="%6.1f"
     )
 
@@ -266,7 +266,7 @@ def parse_single_basin_precipitation(
     fn = output_folder_name + "/shape_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".csv"
     pd.DataFrame(
         data=np.array([(len(datetimes),), (precip.shape[1],), (precip.shape[2],)]).T,
-        columns=["time", "lat", "lon"],
+        columns=["time", "lon", "lat"],
         index=[1],
     ).to_csv(fn)
 
