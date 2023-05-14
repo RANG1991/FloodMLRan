@@ -192,7 +192,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(2002, 2020):
+    for year in range(2002, 2003):
         print(f"parsing year: {year} of basin : {station_id}")
         all_datetimes_one_year = []
         all_tp_one_year = []
@@ -208,7 +208,8 @@ def parse_single_basin_precipitation(
                 lat_grid_neg_180_to_180 = ((lat_grid + 180) % 360) - 180
                 lon_lat_points, height, width = get_longitude_and_latitude_points(lon_grid_neg_180_to_180,
                                                                                   lat_grid_neg_180_to_180)
-                list_coors = [(coor[0], coor[1]) for coor in list(basin_data.geometry.convex_hull[0].exterior.coords)]
+                list_coors = [point for polygon in basin_data.geometry[0].geoms for point in
+                              polygon.exterior.coords[:-1]]
                 basin_geo = path.Path(list_coors)
                 masked_grid_region_size = basin_geo.contains_points(lon_lat_points)
                 masked_grid_region_size_reshaped = masked_grid_region_size.reshape(height, width)
@@ -235,7 +236,7 @@ def parse_single_basin_precipitation(
     datetimes = np.concatenate(list_of_dates_all_years, axis=0)
     # concatenate the precipitation data from all the years
     precip = np.concatenate(list_of_total_precipitations_all_years, axis=0)
-    precip = np.flip(precip * mask_grid_basin_basin_size, 1).transpose((0, 2, 1))
+    precip = np.flip(precip * mask_grid_basin_basin_size, (1, 2))
     # take the mean of the precipitation data spatially (along the latitude and longitude)
     precip_mean_lat_lon = np.mean(precip, axis=(1, 2))
     # create a dataframe from the datetimes

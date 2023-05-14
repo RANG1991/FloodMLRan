@@ -19,10 +19,10 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = 16
-        self.channels_out_conv_2 = 32
-        self.channels_out_conv_3 = 64
-        self.channels_out_conv_4 = 128
+        self.channels_out_conv_1 = 4
+        self.channels_out_conv_2 = 8
+        self.channels_out_conv_3 = 16
+        self.channels_out_conv_4 = 32
         self.filter_size_conv = 2
         self.stride_size_conv = 1
         self.filter_size_pool = 2
@@ -33,10 +33,10 @@ class CNN(nn.Module):
             torch.nn.BatchNorm2d(self.channels_out_conv_1),
             nn.ReLU(),
             torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
-            torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
-            torch.nn.BatchNorm2d(self.channels_out_conv_2),
-            nn.ReLU(),
+            # torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+            #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+            # torch.nn.BatchNorm2d(self.channels_out_conv_2),
+            # nn.ReLU(),
             # torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
             # torch.nn.Conv2d(in_channels=self.channels_out_conv_2, out_channels=self.channels_out_conv_3,
             #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
@@ -57,8 +57,8 @@ class CNN(nn.Module):
             x = layer(x)
         x_after_cnn = x.view(-1, self.size_for_fc)
         x_after_fc = self.fc(x_after_cnn)
-        output = x_after_fc
-        return output
+        # output = x_after_fc
+        return x_after_fc
 
     @staticmethod
     def calc_dims_after_filter(input_image_shape, filter_size, stride):
@@ -115,7 +115,7 @@ class CNN_LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
-        input_size = 4
+        input_size = 1
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size)
         self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,
