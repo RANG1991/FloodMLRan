@@ -104,6 +104,9 @@ class FloodML_Base_Dataset(Dataset):
         self.dynamic_data_folder_spatial = dynamic_data_folder_spatial
         self.list_static_attributes_names = sorted(static_attributes_names)
         self.list_dynamic_attributes_names = dynamic_attributes_names
+        self.cls_token = torch.randn(
+            size=(1, len(self.list_dynamic_attributes_names) + len(self.list_static_attributes_names)),
+            requires_grad=True)
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
         self.train_end_date = train_end_date
@@ -137,7 +140,8 @@ class FloodML_Base_Dataset(Dataset):
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max_width
         self.max_height = max_height
-        self.max_dim = max([self.max_height, self.max_width])
+        # self.max_dim = max([self.max_height, self.max_width])
+        self.max_dim = 32
         (dict_station_id_to_data,
          x_means,
          x_stds,
@@ -282,12 +286,17 @@ class FloodML_Base_Dataset(Dataset):
             dict_curr_basin = pickle.load(f)
         X_data_tensor_spatial = torch.tensor([])
         list_dates = dict_curr_basin["list_dates"]
-        if self.model_name.lower() == "lstm" or self.model_name.lower() == "transformer_lstm" or \
-                self.model_name.lower() == "transformer_encoder":
+        if self.model_name.lower() == "lstm" or self.model_name.lower() == "transformer_lstm":
             X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
                 X_data[inner_ind: inner_ind + self.sequence_length]
             ).to(torch.float32)
+        elif self.model_name.lower() == "transformer_encoder":
+            X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
+            X_data_tensor_non_spatial = torch.tensor(
+                X_data[inner_ind: inner_ind + self.sequence_length]
+            ).to(torch.float32)
+            torch.vstack([self.cls_token, X_data_tensor_non_spatial])
         elif self.model_name.lower() == "conv_lstm":
             X_data, X_data_spatial, y_data = \
                 dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
