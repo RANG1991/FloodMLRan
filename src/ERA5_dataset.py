@@ -83,7 +83,7 @@ DYNAMIC_ATTRIBUTES_NAMES_ERA5 = ["precip"]
 
 DISCHARGE_STR_ERA5 = "flow"
 
-DYNAMIC_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
+DYNAMIC_DATA_FOLDER_SPATIAL = "../data/ERA5/ERA_5_all_data"
 
 DISCHARGE_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
 
@@ -101,6 +101,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             main_folder,
             dynamic_data_folder,
             static_data_folder,
+            dynamic_data_folder_spatial,
             dynamic_attributes_names,
             discharge_str,
             train_start_date,
@@ -132,6 +133,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
             main_folder,
             dynamic_data_folder,
             static_data_folder,
+            dynamic_data_folder_spatial,
             dynamic_attributes_names,
             discharge_str,
             train_start_date,
@@ -197,7 +199,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
         return (station_id in self.list_stations_static
                 and os.path.exists(Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
                                    / f"{country_abbreviation}_{station_id}.csv")
-                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
+                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc")
                 and (not os.path.exists(
                     f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
                      or any([not os.path.exists(
@@ -353,7 +355,7 @@ class Dataset_ERA5(FloodML_Base_Dataset):
     def read_single_station_file_spatial(self, station_id):
         country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
         station_data_file_spatial = (
-                Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc"
+                Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc"
         )
         station_data_file_discharge = (
                 Path(f"{self.dynamic_data_folder}/{country_abbreviation}")

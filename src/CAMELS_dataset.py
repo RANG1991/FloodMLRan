@@ -65,7 +65,7 @@ STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
 
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
 
-DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL = "../data/CAMELS_US/CAMELS_all_data/"
+DYNAMIC_DATA_FOLDER_SPATIAL = "../data/CAMELS_US/CAMELS_all_data/"
 
 MAIN_FOLDER = "../data/CAMELS_US/"
 
@@ -76,6 +76,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             main_folder,
             dynamic_data_folder,
             static_data_folder,
+            dynamic_data_folder_spatial,
             discharge_data_folder,
             dynamic_attributes_names,
             discharge_str,
@@ -105,6 +106,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             main_folder,
             dynamic_data_folder,
             static_data_folder,
+            dynamic_data_folder_spatial,
             dynamic_attributes_names,
             discharge_str,
             train_start_date,
@@ -264,7 +266,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
     def read_single_station_file_spatial(self, station_id):
         station_data_file_spatial = (
-                Path(DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL) / f"precip24_spatial_{station_id}.nc")
+                Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc")
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
         df_dis_data = self.read_discharge_data(station_id)
@@ -387,7 +389,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         self.model_name.lower() == "cnn_lstm" or
                         self.model_name.lower() == "cnn_transformer"):
                     if not os.path.exists(
-                            f"{DYNAMIC_DATA_FOLDER_NON_SPATIAL_AND_SPATIAL}/precip24_spatial_{station_id}.nc"):
+                            f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial_{station_id}.nc"):
                         continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)
@@ -398,14 +400,13 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         del X_data_non_spatial
                         del y_data
                         continue
-                    # X_data_spatial_list = []
-                    # for i in range(X_data_spatial.shape[0]):
-                    #     X_data_spatial_list.append(
-                    #         np.expand_dims(self.crop_or_pad_precip_spatial(X_data_spatial[i, :, :].squeeze(),
-                    #                                                        self.max_dim, self.max_dim), axis=0))
-                    # X_data_spatial = np.concatenate(X_data_spatial_list)
+                    X_data_spatial_list = []
+                    for i in range(X_data_spatial.shape[0]):
+                        X_data_spatial_list.append(
+                            np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                                                      interpolation=cv2.INTER_CUBIC), axis=0))
+                    X_data_spatial = np.concatenate(X_data_spatial_list)
                     # X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
-                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim, self.max_dim)
                     gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).sum(
                         axis=0)
                     plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",

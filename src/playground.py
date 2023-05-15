@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
 import re
-import netCDF4 as nc
 import pandas as pd
+import netCDF4 as nc
+import xarray as xr
+import numpy as np
 
 
 def calc_intersection_station_ids_files(file_1, file_2):
@@ -30,8 +32,30 @@ def rename_checkpoint_files(checkpoint_files_folder):
         os.rename(checkpoint_file, checkpoint_file.parent / new_checkpoint_file_name)
 
 
+def fix_wrong_aligned_images_files_radar():
+    spatial_files = Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob(
+        "precip24_spatial_*.nc")
+    shape_files = Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("shape_*.csv")
+    info_files = Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("info_*.txt")
+    for station_data_file_spatial, shape_file, info_file in zip(spatial_files, shape_files, info_files):
+        # fix spatial file
+        ds = nc.Dataset(station_data_file_spatial)
+        ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
+        X_data_spatial = np.asarray(ds["precipitation"])
+        X_data_spatial = np.flip(np.rot90(X_data_spatial, axes=(2,)), axis=(2,))
+        ds["precipitation"] = X_data_spatial
+        ds.to_netcdf(station_data_file_spatial)
+        # fix shape file
+        df_shape = pd.read_csv(shape_file)
+        width = df_shape.iloc[1, 2]
+        height = df_shape.iloc[1, 3]
+        df_shape.iloc[1, 2] = height
+        df_shape.iloc[1, 3] = width
+        df_shape.to_csv(shape_file)
+
+
 def main():
-    calc_intersection_station_ids_files("../data/spatial_basins_list.txt", "../data/531_basin_list.txt")
+    fix_wrong_aligned_images_files_radar()
 
 
 if __name__ == "__main__":

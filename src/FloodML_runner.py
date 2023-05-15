@@ -55,6 +55,7 @@ class FloodML_Runner:
                  dynamic_attributes_names,
                  discharge_str,
                  dynamic_data_folder_train,
+                 dynamic_data_folder_spatial,
                  static_data_folder,
                  discharge_data_folder,
                  learning_rate,
@@ -95,6 +96,7 @@ class FloodML_Runner:
         self.dynamic_data_folder = dynamic_data_folder_train
         self.static_data_folder = static_data_folder
         self.discharge_data_folder = discharge_data_folder
+        self.dynamic_data_folder_spatial = dynamic_data_folder_spatial
         self.dataset_name = dataset_name
         self.model_name = model_name
         self.mode = mode
@@ -309,6 +311,7 @@ class FloodML_Runner:
                 main_folder=ERA5_dataset.MAIN_FOLDER,
                 dynamic_data_folder=self.dynamic_data_folder,
                 static_data_folder=self.static_data_folder,
+                dynamic_data_folder_spatial=self.dynamic_data_folder_spatial,
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
                 train_start_date=self.train_start_date,
@@ -333,6 +336,7 @@ class FloodML_Runner:
                 main_folder=ERA5_dataset.MAIN_FOLDER,
                 dynamic_data_folder=self.dynamic_data_folder,
                 static_data_folder=self.static_data_folder,
+                dynamic_data_folder_spatial=self.dynamic_data_folder_spatial,
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
                 train_start_date=self.train_start_date,
@@ -362,6 +366,7 @@ class FloodML_Runner:
                 main_folder=CAMELS_dataset.MAIN_FOLDER,
                 dynamic_data_folder=self.dynamic_data_folder,
                 static_data_folder=self.static_data_folder,
+                dynamic_data_folder_spatial=self.dynamic_data_folder_spatial,
                 discharge_data_folder=self.discharge_data_folder,
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
@@ -385,6 +390,7 @@ class FloodML_Runner:
             test_data = CAMELS_dataset.Dataset_CAMELS(
                 main_folder=CAMELS_dataset.MAIN_FOLDER,
                 dynamic_data_folder=self.dynamic_data_folder,
+                dynamic_data_folder_spatial=self.dynamic_data_folder_spatial,
                 static_data_folder=self.static_data_folder,
                 dynamic_attributes_names=self.dynamic_attributes_names,
                 static_attributes_names=self.static_attributes_names,
@@ -889,6 +895,7 @@ def main():
             static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
             discharge_str=CAMELS_dataset.DISCHARGE_STR,
             dynamic_data_folder_train=CAMELS_dataset.DYNAMIC_DATA_FOLDER_NON_SPATIAL,
+            dynamic_data_folder_spatial=CAMELS_dataset.DYNAMIC_DATA_FOLDER_SPATIAL,
             static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
             optim_name=args["optim"],
@@ -933,6 +940,7 @@ def main():
             dynamic_data_folder_train=ERA5_dataset.DYNAMIC_DATA_FOLDER_CARAVAN,
             static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
+            dynamic_data_folder_spatial=ERA5_dataset.DYNAMIC_DATA_FOLDER_SPATIAL,
             optim_name=args["optim"],
             num_epochs=args["num_epochs"],
             num_workers_data_loader=args["num_workers_data_loader"],

@@ -50,6 +50,7 @@ class FloodML_Base_Dataset(Dataset):
                  main_folder,
                  dynamic_data_folder,
                  static_data_folder,
+                 dynamic_data_folder_spatial,
                  dynamic_attributes_names,
                  discharge_str,
                  train_start_date,
@@ -100,6 +101,7 @@ class FloodML_Base_Dataset(Dataset):
         self.sequence_length = sequence_length
         self.dynamic_data_folder = dynamic_data_folder
         self.static_data_folder = static_data_folder
+        self.dynamic_data_folder_spatial = dynamic_data_folder_spatial
         self.list_static_attributes_names = sorted(static_attributes_names)
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
@@ -130,12 +132,12 @@ class FloodML_Base_Dataset(Dataset):
          max_height,
          basin_id_with_maximum_width,
          basin_id_with_maximum_height) = \
-            self.get_maximum_width_and_length_of_basin("../data/ERA5/ERA_5_all_data", self.all_stations_ids)
+            self.get_maximum_width_and_length_of_basin(self.dynamic_data_folder_spatial, self.all_stations_ids)
         if max_height <= 0 or max_width <= 0:
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max_width
         self.max_height = max_height
-        self.max_dim = max([self.max_height, self.max_width, 47])
+        self.max_dim = max([self.max_height, self.max_width])
         (dict_station_id_to_data,
          x_means,
          x_stds,
