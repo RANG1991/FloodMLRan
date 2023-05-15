@@ -5,6 +5,7 @@ import pandas as pd
 import netCDF4 as nc
 import xarray as xr
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def calc_intersection_station_ids_files(file_1, file_2):
@@ -32,26 +33,46 @@ def rename_checkpoint_files(checkpoint_files_folder):
         os.rename(checkpoint_file, checkpoint_file.parent / new_checkpoint_file_name)
 
 
-def fix_wrong_aligned_images_files_radar():
-    spatial_files = Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob(
-        "precip24_spatial_*.nc")
-    shape_files = Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("shape_*.csv")
-    info_files = Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("info_*.txt")
+def fix_wrong_aligned_images_files_radar(basin_id=-1):
+    if basin_id != -1:
+        spatial_files = Path(
+            f"/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/precip24_spatial_{basin_id}.nc")
+        shape_files = Path(f"/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/shape_{basin_id}.csv")
+        info_files = Path(f"/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/info_{basin_id}.txt")
+    else:
+        spatial_files = sorted(Path(
+            f"/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("precip24_spatial_*.nc"))
+        shape_files = sorted(
+            Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("shape_*.csv"))
+        info_files = sorted(
+            Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("info_*.txt"))
     for station_data_file_spatial, shape_file, info_file in zip(spatial_files, shape_files, info_files):
         # fix spatial file
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
         X_data_spatial = np.asarray(ds["precipitation"])
-        X_data_spatial = np.flip(np.rot90(X_data_spatial, axes=(2,)), axis=(2,))
-        ds["precipitation"] = X_data_spatial
-        ds.to_netcdf(station_data_file_spatial)
+        X_data_spatial = np.rot90(X_data_spatial, 2)
+        X_data_spatial[np.isnan(X_data_spatial)] = 0
+        plt.imsave("check.png", X_data_spatial.sum(axis=0))
+        ds["precipitation"][:] = X_data_spatial
+        # ds.to_netcdf(station_data_file_spatial)
         # fix shape file
         df_shape = pd.read_csv(shape_file)
-        width = df_shape.iloc[1, 2]
-        height = df_shape.iloc[1, 3]
-        df_shape.iloc[1, 2] = height
-        df_shape.iloc[1, 3] = width
-        df_shape.to_csv(shape_file)
+        width = df_shape.iloc[0, 2]
+        height = df_shape.iloc[0, 3]
+        df_shape.iloc[0, 2] = height
+        df_shape.iloc[0, 3] = width
+        # df_shape.to_csv(shape_file)
+        # fix info file
+        with open(info_file) as f:
+            f_text = f.read()
+            f_text_split = f_text.split(" ")
+            width = f_text_split[1]
+            height = f_text_split[2]
+            f_text_split[1] = height
+            f_text_split[2] = width
+        # with open(info_file, "w") as f:
+        #     f.write(" ".join(f_text_split))
 
 
 def main():
