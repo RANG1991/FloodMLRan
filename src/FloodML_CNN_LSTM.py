@@ -33,11 +33,11 @@ class CNN(nn.Module):
             torch.nn.BatchNorm2d(self.channels_out_conv_1),
             nn.ReLU(),
             torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
-            # torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
-            #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
-            # torch.nn.BatchNorm2d(self.channels_out_conv_2),
-            # nn.ReLU(),
-            # torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+            torch.nn.BatchNorm2d(self.channels_out_conv_2),
+            nn.ReLU(),
+            torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
             # torch.nn.Conv2d(in_channels=self.channels_out_conv_2, out_channels=self.channels_out_conv_3,
             #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
             # torch.nn.BatchNorm2d(self.channels_out_conv_3),
@@ -55,9 +55,16 @@ class CNN(nn.Module):
     def forward(self, x):
         for layer in self.cnn_layers:
             x = layer(x)
+        # self.plot_as_image(x)
         x_after_cnn = x.view(-1, self.size_for_fc)
         x_after_fc = self.fc(x_after_cnn)
         return x_after_fc
+
+    @staticmethod
+    def plot_as_image(x):
+        import matplotlib.pyplot as plt
+        x_to_plot = x.permute((0, 2, 3, 1)).sum(axis=0).sum(axis=-1).squeeze().cpu().detach().numpy()
+        plt.imsave("check_x_after_cnn.png", x_to_plot)
 
     @staticmethod
     def calc_dims_after_filter(input_image_shape, filter_size, stride):
@@ -134,6 +141,7 @@ class CNN_LSTM(nn.Module):
         batch_size, time_steps, _ = x_non_spatial.size()
         c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.image_width, self.image_height)
         # c_in = torch.zeros_like(c_in)
+        # CNN.plot_as_image(c_in)
         self.number_of_images_counter += (batch_size * time_steps)
         # CNN part
         c_out = self.cnn(c_in)
