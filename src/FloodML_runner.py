@@ -502,7 +502,7 @@ class FloodML_Runner:
             torch.cuda.set_device(rank)
             model = model.to(device="cuda")
             setup(rank, world_size)
-            model = DDP(model, device_ids=[rank], find_unused_parameters=True)
+            model = DDP(model, device_ids=[rank], find_unused_parameters=False)
         else:
             model = model.to(device="cuda")
         if self.optim_name.lower() == "sgd":
@@ -975,7 +975,7 @@ def main():
 
 
 if __name__ == "__main__":
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     args = read_arguments_from_yaml()
     if args["run_sweeps"]:
         print("running with sweeps")

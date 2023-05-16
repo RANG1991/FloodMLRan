@@ -10,17 +10,17 @@ class PositionalEncoding(nn.Module):
         super().__init__()
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        pe = torch.zeros(1, max_len, d_model)
+        pe[0, :, 0::2] = torch.sin(position * div_term)
+        pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer('pe', pe)
 
     def forward(self, x: Tensor) -> Tensor:
         """
         Arguments:
-            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+            x: Tensor, shape ``[batch_size, seq_len, embedding_dim]``
         """
-        x = x + self.pe[:x.size(0)]
+        x = x + self.pe[:x.size(1)]
         return x
 
 
@@ -40,7 +40,7 @@ class Transformer_Encoder(nn.Module):
         self.register_buffer('exponential_decay', exponential_decay)
 
     def forward(self, x):
-        out_fc_1 = self.fc_1(x) * math.sqrt(self.intermediate_dim)
+        out_fc_1 = self.fc_1(x)
         out_pe = self.positional_encoding(out_fc_1)
         out_transformer = self.transformer_encoder(out_pe)[:, 0, :]
         # out_decay = torch.sum(out_transformer * self.exponential_decay, dim=1)

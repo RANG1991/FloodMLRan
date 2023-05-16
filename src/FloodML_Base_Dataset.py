@@ -106,7 +106,7 @@ class FloodML_Base_Dataset(Dataset):
         self.list_dynamic_attributes_names = dynamic_attributes_names
         self.cls_token = torch.randn(
             size=(1, len(self.list_dynamic_attributes_names) + len(self.list_static_attributes_names)),
-            requires_grad=True)
+            requires_grad=False)
         self.discharge_str = discharge_str
         self.train_start_date = train_start_date
         self.train_end_date = train_end_date

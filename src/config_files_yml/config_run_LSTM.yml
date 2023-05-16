@@ -2,10 +2,10 @@ batch_size: 256
 checkpoint_path:
 create_new_files: false
 dataset: CAMELS
-debug: true
+debug: false
 dropout_rate: 0.4
 learning_rate: 5e-04
-limit_size_above_1000: true
+limit_size_above_1000: false
 load_checkpoint: false
 model: LSTM
 mode: validation
