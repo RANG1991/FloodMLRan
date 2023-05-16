@@ -1,9 +1,9 @@
 batch_size: 256
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
 debug: true
-dropout_rate: 0.1
+dropout_rate: 0.4
 learning_rate: 5e-05
 limit_size_above_1000: false
 load_checkpoint: false
@@ -25,10 +25,10 @@ use_all_static_attr: false
 train_start_date: "01/10/1997"
 train_end_date: "30/09/2002"
 validation_start_date: "01/10/1988"
-validation_end_date: "30/09/1992"
+validation_end_date: "30/09/1993"
 test_start_date: "01/10/1992"
 test_end_date: "30/09/1997"
-intermediate_dim_transformer: 32
+intermediate_dim_transformer: 64
 num_heads_transformer: 4
 num_layers_transformer: 6
 num_runs: 3
