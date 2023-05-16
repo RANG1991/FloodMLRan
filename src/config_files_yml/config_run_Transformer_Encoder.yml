@@ -1,10 +1,10 @@
 batch_size: 256
 checkpoint_path:
-create_new_files: false
+create_new_files: true
 dataset: CAMELS
-debug: false
+debug: true
 dropout_rate: 0.1
-learning_rate: 1e-04
+learning_rate: 5e-05
 limit_size_above_1000: false
 load_checkpoint: false
 mode: validation
@@ -19,7 +19,7 @@ print_tqdm_to_console: true
 profile_code: false
 run_sweeps: false
 save_checkpoint: true
-sequence_length: 10
+sequence_length: 270
 sequence_length_spatial: 14
 use_all_static_attr: false
 train_start_date: "01/10/1997"

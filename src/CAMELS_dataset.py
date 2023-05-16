@@ -51,10 +51,10 @@ STATIC_ATTRIBUTES_NAMES = [
 
 DYNAMIC_ATTRIBUTES_NAMES = [
     "prcp(mm/day)",
-    # "srad(w/m2)",
-    # "tmax(c)",
-    # "tmin(c)",
-    # "vp(pa)",
+    "srad(w/m2)",
+    "tmax(c)",
+    "tmin(c)",
+    "vp(pa)",
 ]
 
 DISCHARGE_STR = "qobs"
