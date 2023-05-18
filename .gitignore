@@ -20,3 +20,4 @@ neuralhydrology/runs/**
 **/runs/*
 **/profiler_logs/**
 *.pt
+*.pb

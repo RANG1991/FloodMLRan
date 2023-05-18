@@ -383,6 +383,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         pbar.set_description(f"processing basins - {self.stage}")
         num_exist_stations = 0
         num_not_in_list_stations = 0
+        sr = cv2.dnn_superres.DnnSuperResImpl_create()
+        path = "EDSR_x4.pb"
+        sr.readModel(path)
+        sr.setModel("edsr", 4)
         for station_id in pbar:
             if self.check_is_valid_station_id(station_id, create_new_files=self.create_new_files):
                 if (self.model_name.lower() == "conv_lstm" or
@@ -401,14 +405,16 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         del y_data
                         continue
                     X_data_spatial_list = []
+                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim // 4,
+                                                                     self.max_dim // 4)
                     for i in range(X_data_spatial.shape[0]):
-                        X_data_spatial_list.append(
-                            np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
-                                                      interpolation=cv2.INTER_CUBIC), axis=0))
+                        X_data_spatial_single_day = cv2.cvtColor(X_data_spatial[i, :, :].squeeze(), cv2.COLOR_GRAY2RGB)
+                        X_data_spatial_single_day_after_sr = sr.upsample(X_data_spatial_single_day)
+                        X_data_spatial_single_day = cv2.cvtColor(X_data_spatial_single_day_after_sr, cv2.COLOR_RGB2GRAY)
+                        X_data_spatial_list.append(X_data_spatial_single_day[None, :, :])
                     X_data_spatial = np.concatenate(X_data_spatial_list)
-                    # X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
-                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).sum(
-                        axis=0)
+                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], (self.max_dim // 4) * 4,
+                                                        (self.max_dim // 4) * 4).sum(axis=0)
                     plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
                                gray_image)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
@@ -441,7 +447,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         self.model_name.lower() == "cnn_lstm" or
                         self.model_name.lower() == "cnn_transformer"):
                     X_data_spatial = np.array(
-                        X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
+                        X_data_spatial.reshape(X_data_non_spatial.shape[0],
+                                               (self.max_dim // 4) * 4 * (self.max_dim // 4) * 4),
                         dtype=np.float64)
 
                     prev_mean_x_spatial = cumm_m_x_spatial

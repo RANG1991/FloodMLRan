@@ -140,8 +140,8 @@ class FloodML_Base_Dataset(Dataset):
             raise Exception("max length or max width are not greater than 0")
         self.max_width = max_width
         self.max_height = max_height
-        # self.max_dim = max([self.max_height, self.max_width])
-        self.max_dim = 32
+        self.max_dim = max([self.max_height, self.max_width])
+        # self.max_dim = 32
         (dict_station_id_to_data,
          x_means,
          x_stds,
@@ -262,7 +262,7 @@ class FloodML_Base_Dataset(Dataset):
                                          constant_values=0)
         if X_data_single_basin.shape[2] > max_height:
             start = X_data_single_basin.shape[2] // 2 - (max_height // 2)
-            X_data_single_basin = X_data_single_basin[:, start:start + max_height, :]
+            X_data_single_basin = X_data_single_basin[:, :, start:start + max_height]
         else:
             X_data_single_basin = np.pad(X_data_single_basin,
                                          ((0, 0),
