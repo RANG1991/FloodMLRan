@@ -141,6 +141,7 @@ class FloodML_Base_Dataset(Dataset):
         self.max_width = max_width
         self.max_height = max_height
         self.max_dim = max([self.max_height, self.max_width])
+        self.max_dim = (self.max_dim // 4) * 4
         # self.max_dim = 32
         (dict_station_id_to_data,
          x_means,

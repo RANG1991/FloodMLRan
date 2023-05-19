@@ -19,7 +19,7 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
         self.embedding_size = 10
         self.lstm = torch.nn.LSTM(
             input_size=self.num_dynamic_attr + self.embedding_size,
-            hidden_size=self.hidden_dim,
+            hidden_size=self.hidden_dim, bias=True,
             batch_first=True
         )
         self.cnn_lstm = CNN_LSTM(image_width=self.image_width,
