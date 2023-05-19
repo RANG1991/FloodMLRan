@@ -21,32 +21,35 @@ def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
 
 
 def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict, calc_average_nse_per_basin=False):
-    run_numbers = set([run_number for _, run_number in models_basins_nse_dict.keys()])
-    model_names = set([model_name for model_name, _ in models_basins_nse_dict.keys()])
+    run_numbers = set([run_number for _, run_number, _ in models_basins_nse_dict.keys()])
+    model_names = set([model_name for model_name, _, _ in models_basins_nse_dict.keys()])
+    epoch_numbers = set([epoch_num for _, _, epoch_num in models_basins_nse_dict.keys()])
     model_name_and_basins_tuple_to_best_nse = {}
     for model_name in model_names:
         for run_number in run_numbers:
-            if (model_name, run_number) not in models_basins_nse_dict.keys() or \
-                    len(models_basins_nse_dict[(model_name, run_number)].items()) == 0:
-                continue
-            basin_id_to_nse_list_tuples = sorted(list(models_basins_nse_dict[(model_name, run_number)].items()),
-                                                 key=lambda x: x[0])
-            list_basin_ids, list_nse = zip(*basin_id_to_nse_list_tuples)
-            list_nse = np.array(list_nse)
-            median_nse = statistics.median(list_nse)
-            basins_tuple = tuple(list_basin_ids)
-            if (model_name, basins_tuple) not in model_name_and_basins_tuple_to_best_nse.keys():
-                if calc_average_nse_per_basin:
-                    model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)] = [list_nse]
-                else:
-                    model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)] = list_nse
-            else:
-                if calc_average_nse_per_basin:
-                    model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)].append(list_nse)
-                else:
-                    if median_nse > statistics.median(
-                            model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)]):
+            for epoch_num in epoch_numbers:
+                if (model_name, run_number, epoch_num) not in models_basins_nse_dict.keys() or \
+                        len(models_basins_nse_dict[(model_name, run_number, epoch_num)].items()) == 0:
+                    continue
+                basin_id_to_nse_list_tuples = sorted(
+                    list(models_basins_nse_dict[(model_name, run_number, epoch_num)].items()),
+                    key=lambda x: x[0])
+                list_basin_ids, list_nse = zip(*basin_id_to_nse_list_tuples)
+                list_nse = np.array(list_nse)
+                median_nse = statistics.median(list_nse)
+                basins_tuple = tuple(list_basin_ids)
+                if (model_name, basins_tuple) not in model_name_and_basins_tuple_to_best_nse.keys():
+                    if calc_average_nse_per_basin:
+                        model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)] = [list_nse]
+                    else:
                         model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)] = list_nse
+                else:
+                    if calc_average_nse_per_basin:
+                        model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)].append(list_nse)
+                    else:
+                        if median_nse > statistics.median(
+                                model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)]):
+                            model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)] = list_nse
     if calc_average_nse_per_basin:
         for model_name, basins_tuple in model_name_and_basins_tuple_to_best_nse.keys():
             lists_of_nse_of_num_basins = model_name_and_basins_tuple_to_best_nse[(model_name, basins_tuple)]
@@ -59,31 +62,38 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
     models_basins_nse_dict = {}
     model_name = "empty_model_name"
     run_number = 0
+    epoch_num = 1
     with open(logs_filename, "r", encoding="utf-8") as f:
         for row in f:
             match_run_number_string = re.search("(run number: |wandb: Agent Starting Run: )", row)
             if match_run_number_string:
                 new_run_number = run_number + 1
                 if new_run_number != run_number:
-                    models_basins_nse_dict[(model_name, new_run_number)] = {}
+                    models_basins_nse_dict[(model_name, new_run_number, epoch_num)] = {}
                     run_number = new_run_number
+                    epoch_num = 1
                     print(f"run number: {run_number}")
             match_model_name_string = re.search("running with model: (.*?)\n", row)
             if match_model_name_string:
                 new_model_name = match_model_name_string.group(1)
                 if new_model_name != model_name:
-                    models_basins_nse_dict[(new_model_name, run_number)] = {}
+                    models_basins_nse_dict[(new_model_name, run_number, epoch_num)] = {}
                     model_name = new_model_name
+                    epoch_num = 1
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
                 basin_nse = float(match_nse_string.group(2))
-                models_basins_nse_dict[(model_name, run_number)][basin_id] = basin_nse
+                models_basins_nse_dict[(model_name, run_number, epoch_num)][basin_id] = basin_nse
+            match_best_nse_so_far_string = re.search("best median NSE so far: (.*?)\n", row)
+            if match_best_nse_so_far_string:
+                epoch_num += 1
+                models_basins_nse_dict[(new_model_name, run_number, epoch_num)] = {}
     return models_basins_nse_dict
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["../slurm-7307191.out", "../slurm-7291659.out"]
+    input_file_names = ["slurm-7307225.out", "slurm-7307202.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
