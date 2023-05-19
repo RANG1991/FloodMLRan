@@ -872,11 +872,15 @@ def main():
         args["num_heads_transformer"] = wandb.config.num_heads_transformer
         args["num_layers_transformer"] = wandb.config.num_layers_transformer
     if args["load_checkpoint"] and not args["checkpoint_path"]:
+        model_name_for_finding_checkpoint = args["model"]
+        if model_name_for_finding_checkpoint == "CNN_LSTM":
+            model_name_for_finding_checkpoint = "TWO_LSTM_CNN_LSTM"
         suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"])
-        list_of_files = glob.glob(f'../checkpoints/{args["model"]}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
+        list_of_files = glob.glob(
+            f'../checkpoints/{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
         if len(list_of_files) == 0:
             raise FileNotFoundError('can\'t find checkpoint file name with pattern: '
-                                    f'{args["model"]}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
+                                    f'{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
         latest_file = \
             max(list_of_files, key=lambda file_name:
             int(Path(file_name).name.replace(f"{args['model']}_epoch_number_", "")
