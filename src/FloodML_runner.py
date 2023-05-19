@@ -883,7 +883,7 @@ def main():
                                     f'{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
         latest_file = \
             max(list_of_files, key=lambda file_name:
-            int(Path(file_name).name.replace(f"{args['model']}_epoch_number_", "")
+            int(Path(file_name).name.replace(f"{model_name_for_finding_checkpoint}_epoch_number_", "")
                 .replace(f"_{suffix_checkpoint_file_name}.pt", "")))
         print(f"loading checkpoint from file: {latest_file}")
         args["checkpoint_path"] = latest_file
