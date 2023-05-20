@@ -28,7 +28,7 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
                                  num_channels=self.in_cnn_channels,
                                  dropout_rate=dropout,
                                  image_input_size=(self.image_width, self.image_height),
-                                 num_attributes=(self.num_dynamic_attr - 1 + self.embedding_size))
+                                 num_attributes=(self.num_dynamic_attr + self.embedding_size))
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
     def forward(self, x_non_spatial, x_spatial):
@@ -37,5 +37,5 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
         x_s = self.embedding(x_s)
         x_non_spatial = torch.cat([x_d, x_s], axis=-1)
         _, (h_n, c_n) = self.lstm(x_non_spatial[:, :-self.sequence_length_cnn_lstm, :])
-        output = self.cnn_lstm(x_non_spatial[:, -self.sequence_length_cnn_lstm:, 1:], x_spatial, h_n, c_n)
+        output = self.cnn_lstm(x_non_spatial[:, -self.sequence_length_cnn_lstm:, :], x_spatial, h_n, c_n)
         return output
