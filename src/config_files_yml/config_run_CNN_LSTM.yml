@@ -1,6 +1,6 @@
 batch_size: 512
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
 debug: false
 dropout_rate: 0.4
@@ -31,4 +31,4 @@ test_end_date: "30/09/1997"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
-num_runs: 1
+num_runs: 3
