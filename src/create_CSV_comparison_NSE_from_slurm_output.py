@@ -76,7 +76,7 @@ def generate_csv_from_CAMELS_static_attr_files(static_data_folder):
 
 def main():
     generate_csv_from_CAMELS_static_attr_files("../data/CAMELS_US/camels_attributes_v2.0")
-    generate_csv_from_output_file(["slurm-7307546.out", "slurm-7307545.out"],
+    generate_csv_from_output_file(["slurm-7307546.out", "slurm-7313647.out"],
                                   "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 
