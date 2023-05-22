@@ -171,10 +171,10 @@ def parse_single_basin_precipitation(
         radar_precip_data_folder,
         output_folder_name
 ):
-    # all_files_exist = check_if_all_precip_files_exist(station_id, output_folder_name)
-    # if all_files_exist:
-    #     print("all precipitation file of the basin: {} exists".format(station_id))
-    #     return
+    all_files_exist = check_if_all_precip_files_exist(station_id, output_folder_name)
+    if all_files_exist:
+        print("all precipitation file of the basin: {} exists".format(station_id))
+        return
     basin_data.reset_index(drop=True, inplace=True)
     bounds = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
