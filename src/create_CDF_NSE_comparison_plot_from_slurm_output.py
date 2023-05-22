@@ -70,17 +70,17 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
             if match_run_number_string:
                 new_run_number = run_number + 1
                 if new_run_number != run_number:
-                    models_basins_nse_dict[(model_name, new_run_number, epoch_num)] = {}
                     run_number = new_run_number
                     epoch_num = 1
+                    models_basins_nse_dict[(model_name, new_run_number, epoch_num)] = {}
                     print(f"run number: {run_number}")
             match_model_name_string = re.search("running with model: (.*?)\n", row)
             if match_model_name_string:
                 new_model_name = match_model_name_string.group(1)
                 if new_model_name != model_name:
-                    models_basins_nse_dict[(new_model_name, run_number, epoch_num)] = {}
                     model_name = new_model_name
                     epoch_num = 1
+                    models_basins_nse_dict[(new_model_name, run_number, epoch_num)] = {}
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
@@ -94,7 +94,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-7307546.out", "slurm-7313647.out"]
+    input_file_names = ["slurm-7307546.out", "slurm-7479540.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:

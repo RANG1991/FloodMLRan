@@ -44,14 +44,15 @@ def generate_csv_from_output_file(slurm_output_files, static_attr_file):
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     output_file_name = Path(input_files_names_formatted).stem
     basins_ids = None
-    for (model_name, basins_tuple) in dict_all_files.keys():
+    for (model_name, run_number, basins_tuple) in dict_all_files.keys():
         if basins_ids is None:
             basins_ids = basins_tuple
         elif basins_ids != basins_tuple:
             raise Exception("not all basins tuples are the same - the CSV will be incorrect")
     basins_dict_for_data_frame = {"basin_id": basins_ids}
-    for (model_name, basins_tuple) in dict_all_files.keys():
-        basins_dict_for_data_frame[f'NSE_{model_name}_{len(basins_tuple)}'] = dict_all_files[(model_name, basins_tuple)]
+    for (model_name, run_number, basins_tuple) in dict_all_files.keys():
+        basins_dict_for_data_frame[f'NSE_{model_name}_{len(basins_tuple)}'] = dict_all_files[
+            (model_name, run_number, basins_tuple)]
     df_nse = pd.DataFrame(basins_dict_for_data_frame)
     df_static_attrib = pd.read_csv(static_attr_file, dtype={"gauge_id": str})
     df_static_attrib["gauge_id"] = df_static_attrib["gauge_id"].apply(lambda x: x.replace("us_", ""))
@@ -76,7 +77,7 @@ def generate_csv_from_CAMELS_static_attr_files(static_data_folder):
 
 def main():
     generate_csv_from_CAMELS_static_attr_files("../data/CAMELS_US/camels_attributes_v2.0")
-    generate_csv_from_output_file(["slurm-7307546.out", "slurm-7313647.out"],
+    generate_csv_from_output_file(["slurm-7307546.out", "slurm-7479540.out"],
                                   "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 
