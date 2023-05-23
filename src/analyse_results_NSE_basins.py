@@ -4,6 +4,10 @@ import numpy as np
 from sklearn import tree
 from matplotlib import pyplot as plt
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+import CAMELS_dataset
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.inspection import permutation_importance
 
 
 def fit_clf_analysis(csv_results_file_with_static_attr, clf):
@@ -12,6 +16,7 @@ def fit_clf_analysis(csv_results_file_with_static_attr, clf):
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna()
+    df_results = df_results[CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["label"]]
     clf.fit(df_results.to_numpy()[:, :-1], df_results["label"])
     return clf, df_results
 
@@ -21,9 +26,9 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig("decision_tree_analysis.png")
+    plt.savefig("analysis_decision_tree.png")
 
 
 def analyse_results_by_logistic_regression(csv_results_file_with_static_attr):
@@ -31,13 +36,38 @@ def analyse_results_by_logistic_regression(csv_results_file_with_static_attr):
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.coef_[0]
     plt.figure(figsize=(25, 20))
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig("logistic_regression_analysis.png")
+    plt.savefig("analysis_logistic_regression.png")
+
+
+def analyse_results_by_random_forest(csv_results_file_with_static_attr):
+    clf = RandomForestClassifier()
+    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
+    importance = clf.feature_importances_
+    plt.figure(figsize=(25, 20))
+    plt.xticks(rotation=90)
+    plt.bar([x for x in df_results.columns[:-1]], importance)
+    plt.savefig("analysis_random_forest.png")
+
+
+def analyse_results_by_permutation(csv_results_file_with_static_attr):
+    clf = KNeighborsClassifier()
+    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
+    results = permutation_importance(clf, df_results.iloc[:, :-1].to_numpy(), df_results.iloc[:, -1].to_numpy(),
+                                     scoring='accuracy')
+    importance = results.importances_mean
+    plt.figure(figsize=(25, 20))
+    plt.xticks(rotation=90)
+    plt.bar([x for x in df_results.columns[:-1]], importance)
+    plt.savefig("analysis_permutation.png")
 
 
 def main():
     analyse_results_by_logistic_regression("7307546_7479540.csv")
+    analyse_results_by_decision_tree("7307546_7479540.csv")
+    analyse_results_by_random_forest("7307546_7479540.csv")
+    analyse_results_by_permutation("7307546_7479540.csv")
 
 
 if __name__ == "__main__":
