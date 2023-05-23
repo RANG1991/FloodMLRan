@@ -24,6 +24,14 @@ def fit_clf_analysis(csv_results_file_with_static_attr, clf):
 def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
     clf = DecisionTreeClassifier(random_state=0, max_depth=3)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
+    tree.plot_tree(clf, feature_names=df_results.columns[:-1],
+                   class_names=["0", "1"])
+    plt.savefig("decision_tree.png")
+
+
+def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_static_attr):
+    clf = DecisionTreeClassifier(random_state=0, max_depth=3)
+    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
@@ -31,7 +39,7 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
     plt.savefig("analysis_decision_tree.png")
 
 
-def analyse_results_by_logistic_regression(csv_results_file_with_static_attr):
+def analyse_results_feat_importance_by_logistic_regression(csv_results_file_with_static_attr):
     clf = LogisticRegression()
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.coef_[0]
@@ -41,7 +49,7 @@ def analyse_results_by_logistic_regression(csv_results_file_with_static_attr):
     plt.savefig("analysis_logistic_regression.png")
 
 
-def analyse_results_by_random_forest(csv_results_file_with_static_attr):
+def analyse_results_feat_importance_by_random_forest(csv_results_file_with_static_attr):
     clf = RandomForestClassifier()
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.feature_importances_
@@ -51,7 +59,7 @@ def analyse_results_by_random_forest(csv_results_file_with_static_attr):
     plt.savefig("analysis_random_forest.png")
 
 
-def analyse_results_by_permutation(csv_results_file_with_static_attr):
+def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_attr):
     clf = KNeighborsClassifier()
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     results = permutation_importance(clf, df_results.iloc[:, :-1].to_numpy(), df_results.iloc[:, -1].to_numpy(),
@@ -64,10 +72,11 @@ def analyse_results_by_permutation(csv_results_file_with_static_attr):
 
 
 def main():
-    analyse_results_by_logistic_regression("7307546_7479540.csv")
     analyse_results_by_decision_tree("7307546_7479540.csv")
-    analyse_results_by_random_forest("7307546_7479540.csv")
-    analyse_results_by_permutation("7307546_7479540.csv")
+    analyse_results_feat_importance_by_logistic_regression("7307546_7479540.csv")
+    analyse_results_feat_importance_by_decision_tree("7307546_7479540.csv")
+    analyse_results_feat_importance_by_random_forest("7307546_7479540.csv")
+    analyse_results_feat_importance_by_permutation("7307546_7479540.csv")
 
 
 if __name__ == "__main__":
