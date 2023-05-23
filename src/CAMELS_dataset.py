@@ -451,8 +451,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         self.model_name.lower() == "cnn_lstm" or
                         self.model_name.lower() == "cnn_transformer"):
                     X_data_spatial = np.array(
-                        X_data_spatial.reshape(X_data_non_spatial.shape[0], (self.max_dim * self.max_dim),
-                                               dtype=np.float64))
+                        X_data_spatial.reshape(X_data_non_spatial.shape[0], (self.max_dim * self.max_dim)),
+                        dtype=np.float64)
 
                     prev_mean_x_spatial = cumm_m_x_spatial
                     cumm_m_x_spatial = cumm_m_x_spatial + (
