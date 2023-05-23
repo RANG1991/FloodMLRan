@@ -65,7 +65,7 @@ STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
 
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
 
-DYNAMIC_DATA_FOLDER_SPATIAL = "../data/CAMELS_US/radar_all_data/"
+DYNAMIC_DATA_FOLDER_SPATIAL = "../data/CAMELS_US/CAMELS_all_data/"
 
 MAIN_FOLDER = "../data/CAMELS_US/"
 
