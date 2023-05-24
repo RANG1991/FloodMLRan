@@ -65,7 +65,7 @@ STATIC_DATA_FOLDER = "../data/CAMELS_US/camels_attributes_v2.0"
 
 DISCHARGE_DATA_FOLDER = "../data/CAMELS_US/usgs_streamflow"
 
-DYNAMIC_DATA_FOLDER_SPATIAL = "../data/CAMELS_US/CAMELS_all_data/"
+DYNAMIC_DATA_FOLDER_SPATIAL = "../data/CAMELS_US/all_radar_data/"
 
 MAIN_FOLDER = "../data/CAMELS_US/"
 
@@ -410,11 +410,11 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     for i in range(X_data_spatial.shape[0]):
                         # X_data_spatial_list.append(
                         #     np.expand_dims(np.ones((self.max_dim, self.max_dim)), axis=0))
-                        X_data_spatial_list.append(
-                            np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
                         # X_data_spatial_list.append(
-                        #     np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
-                        #                               interpolation=cv2.INTER_CUBIC), axis=0))
+                        #     np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
+                        X_data_spatial_list.append(
+                            np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                                                      interpolation=cv2.INTER_CUBIC), axis=0))
                         # X_data_spatial_single_day = cv2.cvtColor(X_data_spatial[i, :, :].squeeze(), cv2.COLOR_GRAY2RGB)
                         # X_data_spatial_single_day_after_sr = sr.upsample(X_data_spatial_single_day)
                         # X_data_spatial_single_day = cv2.cvtColor(X_data_spatial_single_day_after_sr, cv2.COLOR_RGB2GRAY)
