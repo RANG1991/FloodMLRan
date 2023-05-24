@@ -48,29 +48,30 @@ def fix_wrong_aligned_images_files_radar(basin_id=-1):
             Path("/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("info_*.txt"))
     for station_data_file_spatial, shape_file, info_file in zip(spatial_files, shape_files, info_files):
         # fix spatial file
-        ds = nc.Dataset(station_data_file_spatial)
-        ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
-        X_data_spatial = np.asarray(ds["precipitation"])
-        X_data_spatial = np.rot90(X_data_spatial, 2)
+        ds_ncf = nc.Dataset(station_data_file_spatial, 'r+')
+        # ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds_ncf))
+        X_data_spatial = np.asarray(ds_ncf["precipitation"])
+        X_data_spatial = X_data_spatial[:, ::-1, ::-1]
         X_data_spatial[np.isnan(X_data_spatial)] = 0
         # plt.imsave("check.png", X_data_spatial.sum(axis=0))
-        ds["precipitation"][:] = X_data_spatial
-        # ds.to_netcdf(station_data_file_spatial)
+        ds_ncf["precipitation"][:] = X_data_spatial
+        ds_ncf.close()
         # fix shape file
-        df_shape = pd.read_csv(shape_file)
-        width = df_shape.iloc[0, 2]
-        height = df_shape.iloc[0, 3]
-        df_shape.iloc[0, 2] = height
-        df_shape.iloc[0, 3] = width
+        # df_shape = pd.read_csv(shape_file)
+        # df_shape = df_shape[["time", "lat", "lon"]]
+        # width = df_shape.iloc[0, 2]
+        # height = df_shape.iloc[0, 3]
+        # df_shape.iloc[0, 2] = height
+        # df_shape.iloc[0, 3] = width
         # df_shape.to_csv(shape_file)
         # fix info file
-        with open(info_file) as f:
-            f_text = f.read()
-            f_text_split = f_text.split(" ")
-            width = f_text_split[1]
-            height = f_text_split[2]
-            f_text_split[1] = height
-            f_text_split[2] = width
+        # with open(info_file) as f:
+        #     f_text = f.read()
+        #     f_text_split = f_text.split(" ")
+        #     width = f_text_split[1]
+        #     height = f_text_split[2]
+        #     f_text_split[1] = height
+        #     f_text_split[2] = width
         # with open(info_file, "w") as f:
         #     f.write(" ".join(f_text_split))
 
