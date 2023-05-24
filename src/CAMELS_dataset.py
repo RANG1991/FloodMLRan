@@ -99,9 +99,13 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             y_std=None,
             limit_size_above_1000=False,
             use_all_static_attr=False,
-            num_basins=None
+            num_basins=None,
+            use_only_precip_feature=False
     ):
         self.discharge_data_folder = discharge_data_folder
+        self.use_only_precip_feature = use_only_precip_feature
+        if use_only_precip_feature:
+            dynamic_attributes_names = ["prcp(mm/day)"]
         super().__init__(
             main_folder,
             dynamic_data_folder,
