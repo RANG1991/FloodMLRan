@@ -408,10 +408,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim // 4,
                                                                      self.max_dim // 4)
                     for i in range(X_data_spatial.shape[0]):
-                        X_data_spatial_list.append(
-                            np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
                         # X_data_spatial_list.append(
-                        #     np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
+                        #     np.expand_dims(np.ones((self.max_dim, self.max_dim)), axis=0))
+                        X_data_spatial_list.append(
+                            np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
                         # X_data_spatial_list.append(
                         #     np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
                         #                               interpolation=cv2.INTER_CUBIC), axis=0))
