@@ -53,7 +53,7 @@ def fix_wrong_aligned_images_files_radar(basin_id=-1):
         X_data_spatial = np.asarray(ds["precipitation"])
         X_data_spatial = np.rot90(X_data_spatial, 2)
         X_data_spatial[np.isnan(X_data_spatial)] = 0
-        plt.imsave("check.png", X_data_spatial.sum(axis=0))
+        # plt.imsave("check.png", X_data_spatial.sum(axis=0))
         ds["precipitation"][:] = X_data_spatial
         # ds.to_netcdf(station_data_file_spatial)
         # fix shape file

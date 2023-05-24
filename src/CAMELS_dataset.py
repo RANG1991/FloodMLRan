@@ -412,6 +412,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         #     np.expand_dims(np.ones((self.max_dim, self.max_dim)), axis=0))
                         # X_data_spatial_list.append(
                         #     np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
+                        X_data_spatial[np.isnan(X_data_spatial)] = 0
                         X_data_spatial_list.append(
                             np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
                                                       interpolation=cv2.INTER_CUBIC), axis=0))

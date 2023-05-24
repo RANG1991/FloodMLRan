@@ -23,11 +23,11 @@ sequence_length: 270
 sequence_length_spatial: 14
 use_all_static_attr: false
 train_start_date: "01/10/2002"
-train_end_date: "30/09/2007"
-validation_start_date: "1/10/2007"
-validation_end_date: "30/09/2012"
-test_start_date: "30/09/2012"
-test_end_date: "1/10/2016"
+train_end_date: "30/09/2006"
+validation_start_date: "1/10/2006"
+validation_end_date: "30/09/2007"
+test_start_date: "30/09/2007"
+test_end_date: "1/10/2008"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
