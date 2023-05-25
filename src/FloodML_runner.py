@@ -90,7 +90,8 @@ class FloodML_Runner:
                  print_tqdm_to_console=True,
                  create_box_plots=False,
                  run_sweeps=False,
-                 use_only_precip_feature=False):
+                 use_only_precip_feature=False,
+                 run_with_radar_data=False):
         self.static_attributes_names = static_attributes_names
         self.dynamic_attributes_names = dynamic_attributes_names
         self.discharge_str = discharge_str
@@ -139,6 +140,7 @@ class FloodML_Runner:
         self.warmup_steps = 3000
         self.warmup_lr = 1e-6
         self.use_only_precip_feature = use_only_precip_feature
+        self.run_with_radar_data = run_with_radar_data
         if dataset_name.lower() == "caravan":
             all_stations_list_sorted = sorted(open("../data/spatial_basins_list.txt").read().splitlines())
         else:
@@ -388,7 +390,8 @@ class FloodML_Runner:
                 use_all_static_attr=self.use_all_static_attr,
                 limit_size_above_1000=self.limit_size_above_1000,
                 num_basins=self.num_basins,
-                use_only_precip_feature=self.use_only_precip_feature
+                use_only_precip_feature=self.use_only_precip_feature,
+                run_with_radar_data=self.run_with_radar_data
             )
             test_data = CAMELS_dataset.Dataset_CAMELS(
                 main_folder=CAMELS_dataset.MAIN_FOLDER,
@@ -418,7 +421,8 @@ class FloodML_Runner:
                 use_all_static_attr=self.use_all_static_attr,
                 limit_size_above_1000=self.limit_size_above_1000,
                 num_basins=self.num_basins,
-                use_only_precip_feature=self.use_only_precip_feature
+                use_only_precip_feature=self.use_only_precip_feature,
+                run_with_radar_data=self.run_with_radar_data
             )
         else:
             raise Exception(f"wrong dataset type: {self.dataset_name}")
@@ -934,7 +938,8 @@ def main():
             num_heads_transformer=args["num_heads_transformer"],
             num_layers_transformer=args["num_layers_transformer"],
             mode=args["mode"],
-            use_only_precip_feature=args["only_precip"]
+            use_only_precip_feature=args["only_precip"],
+            run_with_radar_data=args["run_with_radar_data"]
         )
     elif args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
@@ -977,7 +982,8 @@ def main():
             intermediate_dim_transformer=args["intermediate_dim_transformer"],
             num_heads_transformer=args["num_heads_transformer"],
             num_layers_transformer=args["num_layers_transformer"],
-            mode=args["mode"]
+            mode=args["mode"],
+            run_with_radar_data=args["run_with_radar_data"]
         )
     else:
         raise Exception(f"wrong dataset name: {args['dataset']}")
