@@ -91,8 +91,9 @@ def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
                                 + df["minute"].map(str),
                                 format="%Y/%m/%d_%H-%M")
     df = df.drop(columns=["year", "month", "day", "hour", "minute"])
-    df = df.resample("1D", on="date").mean()
     df.loc[df["qobs"] < 0, "qobs"] = 0
+    df.loc[np.isnan(df["qobs"]), "qobs"] = 0
+    df = df.resample("1D", on="date").mean()
     df["qobs"] = df["qobs"].round(decimals=2)
     fn = output_folder_name + "/timezone_" + station_id + ".txt"
     with open(fn, "w") as f:
