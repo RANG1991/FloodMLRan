@@ -2,14 +2,14 @@ batch_size: 512
 checkpoint_path:
 create_new_files: true
 dataset: CAMELS
-debug: true
+debug: false
 dropout_rate: 0.4
-learning_rate: 5e-05
+learning_rate: 5e-04
 limit_size_above_1000: true
 load_checkpoint: false
 model: CNN_LSTM
 mode: validation
-num_basins: 10
+num_basins:
 num_epochs: 15
 num_hidden_units: 256
 num_processes_ddp: 3
@@ -28,6 +28,12 @@ validation_start_date: "1/10/2006"
 validation_end_date: "30/09/2007"
 test_start_date: "30/09/2007"
 test_end_date: "1/10/2008"
+#train_start_date: "01/10/1997"
+#train_end_date: "30/09/2002"
+#validation_start_date: "01/10/1988"
+#validation_end_date: "30/09/1992"
+#test_start_date: "01/10/1992"
+#test_end_date: "30/09/1997"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8

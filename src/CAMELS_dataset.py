@@ -423,10 +423,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         # X_data_spatial_list.append(
                         #     np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
-                        X_data_spatial_list.append(
-                            np.expand_dims(
-                                np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
-                                                   interpolation=cv2.INTER_CUBIC), 0, 1), axis=0))
+                        X_data_spatial_list.append(np.expand_dims(
+                            np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                                               interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
                         # X_data_spatial_single_day = cv2.cvtColor(X_data_spatial[i, :, :].squeeze(), cv2.COLOR_GRAY2RGB)
                         # X_data_spatial_single_day_after_sr = sr.upsample(X_data_spatial_single_day)
                         # X_data_spatial_single_day = cv2.cvtColor(X_data_spatial_single_day_after_sr, cv2.COLOR_RGB2GRAY)
