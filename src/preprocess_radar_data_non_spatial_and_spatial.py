@@ -12,6 +12,7 @@ from shapely.geometry import Polygon
 from geopandas import GeoDataFrame
 from matplotlib import pyplot as plt
 from matplotlib import path
+from climata.usgs import InstantValueIO
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -56,45 +57,48 @@ def get_utc_offset(longitude):
     return utc_offset
 
 
-# def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
-#     dis_file_exists = check_if_discharge_file_exists(station_id, output_folder_name)
-#     if dis_file_exists:
-#         print("The discharge file of the basin: {} exists".format(station_id))
-#         return
-#     start_time = pd.to_datetime("1980-01-01 00:00:00")
-#     end_time = pd.to_datetime("2021-09-15 00:00:00")
-#     param_id = "00060"
-#     data = InstantValueIO(
-#         start_date=start_time, end_date=end_time, station=station_id, parameter=param_id
-#     )
-#
-#     FT2M = 0.3048
-#     datetimes = []
-#     flow = []
-#     for series in data:
-#         flow = [r[1] for r in series.data]
-#         datetimes = [r[0] for r in series.data]
-#
-#     utc_offset = datetimes[0].utcoffset().total_seconds() / 60 / 60
-#
-#     area = basin_data["AREA"].values[0] / 1000000
-#     ls = []
-#     for i in range(0, len(datetimes)):
-#         t = datetimes[i]
-#         flow_curr = flow[i] * (FT2M ** 3) * 3.6 * 24 / area
-#         ls.append([t.year, t.month, t.day, t.hour, t.minute, flow_curr])
-#     df = pd.DataFrame(
-#         data=ls, columns=["year", "month", "day", "hour", "minute", "flow"]
-#     )
-#     df_group = df.groupby(by=["year", "month", "day", "hour"]).mean()
-#     df_group = df_group.assign(minute=0)
-#     df_group.loc[df_group["flow"] < 0, "flow"] = 0
-#
-#     fn = output_folder_name + "/timezone_" + station_id + ".txt"
-#     with open(fn, "w") as f:
-#         print(utc_offset, file=f)
-#     filename = output_folder_name + "/dis_" + station_id + ".csv"
-#     df_group.to_csv(filename)
+def parse_single_basin_discharge(station_id, basin_data, output_folder_name):
+    # dis_file_exists = check_if_discharge_file_exists(station_id, output_folder_name)
+    # if dis_file_exists:
+    #     print("The discharge file of the basin: {} exists".format(station_id))
+    #     return
+    start_time = pd.to_datetime("2002-01-01 00:00:00")
+    end_time = pd.to_datetime("2020-01-01 00:00:00")
+    param_id = "00060"
+    data = InstantValueIO(start_date=start_time, end_date=end_time, station=station_id, parameter=param_id)
+    FT2M = 0.3048
+    datetimes = []
+    flow = []
+    for series in data:
+        flow = [r[1] for r in series.data]
+        datetimes = [r[0] for r in series.data]
+    utc_offset = datetimes[0].utcoffset().total_seconds() / 60 / 60
+    area = basin_data["AREA"].values[0] / 1000000
+    ls = []
+    for i in range(0, len(datetimes)):
+        t = datetimes[i]
+        flow_curr = flow[i] * (FT2M ** 3) * 3.6 * 24 / area
+        ls.append([t.year, t.month, t.day, t.hour, t.minute, flow_curr])
+    df = pd.DataFrame(data=ls, columns=["year", "month", "day", "hour", "minute", "qobs"])
+    df["date"] = pd.to_datetime(df["year"].map(str)
+                                + "/"
+                                + df["month"].map(str)
+                                + "/"
+                                + df["day"].map(str)
+                                + "_"
+                                + df["hour"].map(str)
+                                + "-"
+                                + df["minute"].map(str),
+                                format="%Y/%m/%d_%H-%M")
+    df = df.drop(columns=["year", "month", "day", "hour", "minute"])
+    df = df.resample("1D", on="date").mean()
+    df.loc[df["qobs"] < 0, "qobs"] = 0
+    df["qobs"] = df["qobs"].round(decimals=2)
+    fn = output_folder_name + "/timezone_" + station_id + ".txt"
+    with open(fn, "w") as f:
+        print(utc_offset, file=f)
+    filename = output_folder_name + "/dis_" + station_id + ".csv"
+    df.to_csv(filename)
 
 
 def get_index_by_lat_lon(lat, lon, lat_grid, lon_grid):
@@ -175,6 +179,7 @@ def parse_single_basin_precipitation(
     if all_files_exist:
         print("all precipitation file of the basin: {} exists".format(station_id))
         return
+    print(f"parsing basin: {station_id}")
     basin_data.reset_index(drop=True, inplace=True)
     bounds = basin_data.bounds
     # get the minimum and maximum longitude and latitude (square boundaries)
@@ -194,7 +199,7 @@ def parse_single_basin_precipitation(
     list_of_total_precipitations_all_years = []
     started_reading_data = False
     for year in range(2002, 2020):
-        print(f"parsing year: {year} of basin : {station_id}")
+        # print(f"parsing year: {year} of basin : {station_id}")
         all_datetimes_one_year = []
         all_tp_one_year = []
         for dataset_file in Path(f"{radar_precip_data_folder}").rglob(f"{year}*/ST4.*.24h.nc"):
@@ -287,16 +292,16 @@ def parse_single_basin_precipitation(
             lon_lat_lst[-1][1],
             file=f,
         )
-    print(
-        [
-            station_id,
-            lon_lat_lst[0][0],
-            lon_lat_lst[0][1],
-            lon_lat_lst[-1][0],
-            lon_lat_lst[-1][1],
-            precip.shape,
-        ]
-    )
+    # print(
+    #     [
+    #         station_id,
+    #         lon_lat_lst[0][0],
+    #         lon_lat_lst[0][1],
+    #         lon_lat_lst[-1][0],
+    #         lon_lat_lst[-1][1],
+    #         precip.shape,
+    #     ]
+    # )
 
 
 def check(ERA5_static_data_file_name, station_id):
@@ -315,6 +320,7 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
     print(f"working on station with id: {station_id}")
     station_id = str(station_id).zfill(8)
     basin_data = basins_data[basins_data["hru_id"] == int(station_id)]
+    parse_single_basin_discharge(station_id, basin_data, output_folder_name)
     try:
         parse_single_basin_precipitation(
             station_id,

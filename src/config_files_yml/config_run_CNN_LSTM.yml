@@ -25,9 +25,9 @@ use_all_static_attr: false
 train_start_date: "01/10/2002"
 train_end_date: "30/09/2006"
 validation_start_date: "1/10/2006"
-validation_end_date: "30/09/2007"
-test_start_date: "30/09/2007"
-test_end_date: "1/10/2008"
+validation_end_date: "30/09/2008"
+test_start_date: "30/09/2008"
+test_end_date: "1/10/2009"
 #train_start_date: "01/10/1997"
 #train_end_date: "30/09/2002"
 #validation_start_date: "01/10/1988"
@@ -39,4 +39,4 @@ num_heads_transformer: 6
 num_layers_transformer: 8
 num_runs: 3
 only_precip: false
-run_with_radar_data: false
+run_with_radar_data: true
