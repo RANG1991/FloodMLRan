@@ -32,5 +32,5 @@ intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
 num_runs: 3
-only_precip: false
+only_precip: true
 run_with_radar_data: false
