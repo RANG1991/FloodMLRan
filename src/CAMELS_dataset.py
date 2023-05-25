@@ -275,12 +275,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         return df_dynamic_data, list_dates
 
     def read_single_station_file_spatial(self, station_id):
-        if self.run_with_radar_data:
-            station_data_file_spatial = (
-                    Path(DYNAMIC_DATA_FOLDER_SPATIAL_RADAR) / f"precip24_spatial_{station_id}.nc")
-        else:
-            station_data_file_spatial = (
-                    Path(DYNAMIC_DATA_FOLDER_SPATIAL_CAMELS) / f"precip24_spatial_{station_id}.nc")
+        station_data_file_spatial = (
+                Path(self.dynamic_data_folder_spatial) / f"precip24_spatial_{station_id}.nc")
         ds = nc.Dataset(station_data_file_spatial)
         ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds))
         df_dis_data = self.read_discharge_data(station_id)
@@ -407,7 +403,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         self.model_name.lower() == "cnn_lstm" or
                         self.model_name.lower() == "cnn_transformer"):
                     if not os.path.exists(
-                            f"{DYNAMIC_DATA_FOLDER_SPATIAL}/precip24_spatial_{station_id}.nc"):
+                            f"{self.dynamic_data_folder_spatial}/precip24_spatial_{station_id}.nc"):
                         continue
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
                     X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)

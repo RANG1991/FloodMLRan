@@ -908,7 +908,7 @@ def main():
             static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
             discharge_str=CAMELS_dataset.DISCHARGE_STR,
             dynamic_data_folder_train=CAMELS_dataset.DYNAMIC_DATA_FOLDER_NON_SPATIAL,
-            dynamic_data_folder_spatial=CAMELS_dataset.DYNAMIC_DATA_FOLDER_SPATIAL,
+            dynamic_data_folder_spatial=CAMELS_dataset.DYNAMIC_DATA_FOLDER_SPATIAL_CAMELS,
             static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
             optim_name=args["optim"],
