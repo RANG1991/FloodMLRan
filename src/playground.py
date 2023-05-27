@@ -6,6 +6,8 @@ import netCDF4 as nc
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
+from statsmodels.tsa.stattools import adfuller
+import CAMELS_dataset
 
 
 def calc_intersection_station_ids_files(file_1, file_2):
@@ -52,7 +54,7 @@ def fix_wrong_aligned_images_files_radar(basin_id=-1):
         # ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds_ncf))
         X_data_spatial = np.asarray(ds_ncf["precipitation"])
         X_data_spatial = X_data_spatial[:, ::-1, ::-1]
-        X_data_spatial[np.isnan(X_data_spatial)] = 0
+        X_data_spatial = 0
         # plt.imsave("check.png", X_data_spatial.sum(axis=0))
         ds_ncf["precipitation"][:] = X_data_spatial
         ds_ncf.close()
@@ -76,8 +78,46 @@ def fix_wrong_aligned_images_files_radar(basin_id=-1):
         #     f.write(" ".join(f_text_split))
 
 
+def check_stationary():
+    camels_dataset = CAMELS_dataset.Dataset_CAMELS(
+        main_folder=CAMELS_dataset.MAIN_FOLDER,
+        dynamic_data_folder=CAMELS_dataset.DYNAMIC_DATA_FOLDER_NON_SPATIAL,
+        static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
+        dynamic_data_folder_spatial=CAMELS_dataset.DYNAMIC_DATA_FOLDER_SPATIAL_CAMELS,
+        discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
+        dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
+        static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
+        train_start_date="01/10/1997",
+        train_end_date="30/09/2002",
+        validation_start_date="01/10/1988",
+        validation_end_date="30/09/1992",
+        test_start_date="01/10/1992",
+        test_end_date="30/09/1997",
+        stage="train",
+        model_name="CNN_LSTM",
+        sequence_length_spatial=14,
+        create_new_files=False,
+        all_stations_ids=sorted(open("../data/spatial_basins_list.txt").read().splitlines()),
+        sequence_length=270,
+        discharge_str=CAMELS_dataset.DISCHARGE_STR,
+        use_all_static_attr=False,
+        limit_size_above_1000=True,
+        num_basins=None,
+        use_only_precip_feature=False,
+        run_with_radar_data=False
+    )
+    for i in range(10):
+        _, _, xs_non_spatial, _, _, _ = camels_dataset[i]
+        result = adfuller(xs_non_spatial.numpy()[:, 1])
+        print('ADF Statistic: %f' % result[0])
+        print('p-value: %f' % result[1])
+        print('Critical Values:')
+        for key, value in result[4].items():
+            print('\t%s: %.3f' % (key, value))
+
+
 def main():
-    fix_wrong_aligned_images_files_radar()
+    check_stationary()
 
 
 if __name__ == "__main__":
