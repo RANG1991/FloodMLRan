@@ -429,7 +429,7 @@ class FloodML_Runner:
         if self.create_box_plots:
             training_data.create_boxplot_of_entire_dataset()
             test_data.create_boxplot_of_entire_dataset()
-            all_attributes_names = self.dynamic_attributes_names + self.static_attributes_names
+            all_attributes_names = training_data.dynamic_attributes_names + training_data.static_attributes_names
             for i in range(test_data.X_data.shape[1]):
                 dict_boxplots_data = {
                     f"{ERA5_dataset.ATTRIBUTES_TO_TEXT_DESC[all_attributes_names[i]]}-test": test_data.X_data[
@@ -449,15 +449,16 @@ class FloodML_Runner:
     def prepare_model(self, training_data):
         if self.model_name.lower() == "transformer_encoder":
             model = Transformer_Encoder(
-                len(self.dynamic_attributes_names) + len(training_data.list_static_attributes_names),
+                len(training_data.list_dynamic_attributes_names) + len(training_data.list_static_attributes_names),
                 self.sequence_length, dropout=self.dropout_rate, intermediate_dim=self.intermediate_dim_transformer,
                 num_layers=self.num_layers_transformer, num_heads=self.num_heads_transformer)
         elif self.model_name.lower() == "transformer_seq2seq":
             model = Transformer_Seq2Seq(
-                in_features=len(self.dynamic_attributes_names) + len(training_data.list_static_attributes_names))
+                in_features=len(training_data.list_dynamic_attributes_names) + len(
+                    training_data.list_static_attributes_names))
         elif self.model_name.lower() == "conv_lstm":
             model = TWO_LSTM_CONV_LSTM(dropout=self.dropout_rate,
-                                       input_dim=len(self.dynamic_attributes_names) +
+                                       input_dim=len(training_data.list_dynamic_attributes_names) +
                                                  len(training_data.list_static_attributes_names),
                                        hidden_dim=self.num_hidden_units,
                                        sequence_length_conv_lstm=self.sequence_length_spatial,
@@ -467,17 +468,19 @@ class FloodML_Runner:
         elif self.model_name.lower() == "lstm":
             model = LSTM(
                 num_static_attr=len(training_data.list_static_attributes_names),
-                num_dynamic_attr=len(self.dynamic_attributes_names),
+                num_dynamic_attr=len(training_data.list_dynamic_attributes_names),
                 hidden_dim=self.num_hidden_units,
                 dropout=self.dropout_rate)
         elif self.model_name.lower() == "cnn_lstm":
             model = TWO_LSTM_CNN_LSTM(
-                input_dim=len(self.dynamic_attributes_names) + len(training_data.list_static_attributes_names),
+                input_dim=len(training_data.list_dynamic_attributes_names)
+                          + len(training_data.list_static_attributes_names),
                 image_height=training_data.max_dim, image_width=training_data.max_dim,
                 hidden_dim=self.num_hidden_units, sequence_length_conv_lstm=self.sequence_length_spatial,
                 in_cnn_channels=1, dropout=self.dropout_rate,
                 num_static_attributes=len(training_data.list_static_attributes_names),
-                num_dynamic_attributes=len(self.dynamic_attributes_names))
+                num_dynamic_attributes=len(training_data.list_dynamic_attributes_names),
+                use_only_precip_feature=self.use_only_precip_feature)
         elif self.model_name.lower() == "transformer_hf":
             configuration = TimeSeriesTransformerConfig(prediction_length=1,
                                                         context_length=self.sequence_length,
@@ -493,7 +496,7 @@ class FloodML_Runner:
             model = TimeSeriesTransformerModel(configuration)
         elif self.model_name.lower() == "transformer_cnn":
             model = Transformer_CNN(sequence_length_spatial=self.sequence_length_spatial,
-                                    num_dynamic_attr=len(self.dynamic_attributes_names),
+                                    num_dynamic_attr=len(training_data.list_dynamic_attributes_names),
                                     num_static_attr=len(training_data.list_static_attributes_names),
                                     embedding_size=10,
                                     image_size=training_data.max_dim,

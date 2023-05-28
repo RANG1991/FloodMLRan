@@ -54,7 +54,7 @@ def fix_wrong_aligned_images_files_radar(basin_id=-1):
         # ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds_ncf))
         X_data_spatial = np.asarray(ds_ncf["precipitation"])
         X_data_spatial = X_data_spatial[:, ::-1, ::-1]
-        X_data_spatial = 0
+        # X_data_spatial = 0
         # plt.imsave("check.png", X_data_spatial.sum(axis=0))
         ds_ncf["precipitation"][:] = X_data_spatial
         ds_ncf.close()
