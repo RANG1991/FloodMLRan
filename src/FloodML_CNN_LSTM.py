@@ -142,7 +142,7 @@ class CNN_LSTM(nn.Module):
         c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.image_width, self.image_height)
         # c_in = torch.zeros_like(c_in)
         # CNN.plot_as_image(c_in)
-        self.number_of_images_counter += (batch_size * time_steps)
+        # self.number_of_images_counter += (batch_size * time_steps)
         # CNN part
         c_out = self.cnn(c_in)
         # CNN output should be in the size of (input size - attributes_size)
