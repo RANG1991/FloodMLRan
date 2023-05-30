@@ -335,6 +335,10 @@ class FloodML_Base_Dataset(Dataset):
                 y_data[inner_ind + 1: inner_ind + self.sequence_length + 1]
             ).to(torch.float32).squeeze()
             dates_tensor = torch.tensor(list_dates[inner_ind + 1: inner_ind + self.sequence_length + 1])
+        elif self.model_name.lower() == "cnn_lstm" or self.model_name.lower() == "transformer_cnn":
+            y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length_spatial + self.sequence_length - 1]
+                                         ).to(torch.float32).squeeze()
+            dates_tensor = torch.tensor(list_dates[inner_ind + self.sequence_length_spatial + self.sequence_length - 1])
         else:
             y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]
                                          ).to(torch.float32).squeeze()
