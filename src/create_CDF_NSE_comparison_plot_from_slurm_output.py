@@ -106,7 +106,7 @@ def plot_NSE_CDF_graphs_my_code():
     run_numbers = set([run_number for _, run_number, _ in dict_all_files.keys()])
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
-    plot_title = f"Comparison of different configurations of CNN_LSTM and LSTM"
+    plot_title = f"{input_files_names_formatted}"
     for model_name in model_names:
         for run_number in run_numbers:
             for basin_tuple in all_basins_tuples:
