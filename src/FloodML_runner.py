@@ -38,6 +38,7 @@ import wandb
 from collections import OrderedDict
 import json
 import math
+import gc
 
 matplotlib.use("AGG")
 
@@ -243,7 +244,7 @@ class FloodML_Runner:
                         (pred_expected[i].clone().item(), pred_actual[i].item()))
                     preds_obs_dicts_ranks_queue.put((station_id, dates[i],
                                                      (pred_expected[i].clone().item(), pred_actual[i].item())))
-
+                gc.collect()
         return preds_obs_dict_per_basin
 
     def start_run_wrapper(self):
