@@ -312,11 +312,10 @@ class FloodML_Base_Dataset(Dataset):
             X_data, X_data_spatial, y_data = \
                 dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
-                X_data[inner_ind: inner_ind + self.sequence_length]
-            ).to(torch.float32)
+                X_data[inner_ind: inner_ind + self.sequence_length + self.sequence_length_spatial]).to(torch.float32)
             X_data_tensor_spatial = torch.tensor(
                 X_data_spatial[
-                inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
+                inner_ind + self.sequence_length: inner_ind + self.sequence_length + self.sequence_length_spatial]
             ).to(torch.float32)
         elif self.model_name.lower() == "transformer_seq2seq":
             X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]

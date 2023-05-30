@@ -1007,10 +1007,10 @@ if __name__ == "__main__":
             'parameters':
                 {
                     'learning_rate': {'min': 10 ** -6, 'max': 10 ** -4},
-                    'sequence_length': {'min': 30, 'max': 365},
+                    'sequence_length': {'min': 30, 'max': 90},
                     'num_hidden_units': {'min': 32, 'max': 256},
                     'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
-                    'sequence_length_spatial': {'min': 4, 'max': 14},
+                    'sequence_length_spatial': {'min': 180, 'max': 400},
                     'intermediate_dim_transformer': {'values': [32]},
                     'num_heads_transformer': {'values': [2, 4, 8]},
                     'num_layers_transformer': {'values': [6, 8]}
