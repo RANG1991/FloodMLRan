@@ -350,10 +350,17 @@ class FloodML_Base_Dataset(Dataset):
         lookup_table_basins = {}
         length_of_dataset = 0
         for key in dict_station_id_to_data.keys():
-            for ind in range(
-                    len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length - self.sequence_length_spatial):
-                lookup_table_basins[length_of_dataset] = (key, ind)
-                length_of_dataset += 1
+            if self.model_name.lower() in ["cnn_lstm", "transformer_cnn"]:
+                for ind in range(
+                        len(dict_station_id_to_data[key][
+                                "x_data"]) - self.sequence_length - self.sequence_length_spatial):
+                    lookup_table_basins[length_of_dataset] = (key, ind)
+                    length_of_dataset += 1
+            else:
+                for ind in range(
+                        len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
+                    lookup_table_basins[length_of_dataset] = (key, ind)
+                    length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
 
     def check_is_valid_station_id(self, station_id, create_new_files):
