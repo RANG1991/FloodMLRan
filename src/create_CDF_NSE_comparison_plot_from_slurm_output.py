@@ -94,7 +94,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-16186727.out", "slurm-16323203.out", "slurm-16482441.out"]
+    input_file_names = ["slurm-16509335.out", "slurm-7307546.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
@@ -106,7 +106,7 @@ def plot_NSE_CDF_graphs_my_code():
     run_numbers = set([run_number for _, run_number, _ in dict_all_files.keys()])
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
-    plot_title = f"{input_files_names_formatted}"
+    plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
     for model_name in model_names:
         for run_number in run_numbers:
             for basin_tuple in all_basins_tuples:

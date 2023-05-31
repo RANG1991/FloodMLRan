@@ -103,11 +103,15 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             use_all_static_attr=False,
             num_basins=None,
             use_only_precip_feature=False,
-            run_with_radar_data=False
+            run_with_radar_data=False,
+            use_random_noise_spatial=False,
+            use_zeros_spatial=False
     ):
         self.discharge_data_folder = discharge_data_folder
         self.use_only_precip_feature = use_only_precip_feature
         self.run_with_radar_data = run_with_radar_data
+        self.use_random_noise_spatial = use_random_noise_spatial
+        self.use_zeros_spatial = use_zeros_spatial
         if run_with_radar_data:
             dynamic_data_folder_spatial = DYNAMIC_DATA_FOLDER_SPATIAL_RADAR
         if use_only_precip_feature:
@@ -393,10 +397,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         pbar.set_description(f"processing basins - {self.stage}")
         num_exist_stations = 0
         num_not_in_list_stations = 0
-        sr = cv2.dnn_superres.DnnSuperResImpl_create()
-        path = "EDSR_x4.pb"
-        sr.readModel(path)
-        sr.setModel("edsr", 4)
         for station_id in pbar:
             if self.check_is_valid_station_id(station_id, create_new_files=self.create_new_files):
                 if (self.model_name.lower() == "conv_lstm" or
@@ -418,18 +418,16 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     # X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim // 4,
                     #                                                  self.max_dim // 4)
                     for i in range(X_data_spatial.shape[0]):
-                        # X_data_spatial_list.append(
-                        #     np.expand_dims(np.ones((self.max_dim, self.max_dim)), axis=0))
-                        # X_data_spatial_list.append(
-                        #     np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
-                        X_data_spatial_list.append(np.expand_dims(
-                            np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
-                                               interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
-                        # X_data_spatial_single_day = cv2.cvtColor(X_data_spatial[i, :, :].squeeze(), cv2.COLOR_GRAY2RGB)
-                        # X_data_spatial_single_day_after_sr = sr.upsample(X_data_spatial_single_day)
-                        # X_data_spatial_single_day = cv2.cvtColor(X_data_spatial_single_day_after_sr, cv2.COLOR_RGB2GRAY)
-                        # X_data_spatial_list.append(X_data_spatial_single_day[None, :, :])
+                        if self.use_random_noise_spatial:
+                            X_data_spatial_list.append(
+                                np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
+                        elif self.use_zeros_spatial:
+                            X_data_spatial_list.append(np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
+                        else:
+                            X_data_spatial_list.append(np.expand_dims(
+                                np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                                                   interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
                     X_data_spatial = np.concatenate(X_data_spatial_list)
                     gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).mean(
                         axis=0)
