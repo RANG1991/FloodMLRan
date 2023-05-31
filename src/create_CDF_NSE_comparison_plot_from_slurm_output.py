@@ -6,6 +6,17 @@ from scipy.special import softmax
 from pathlib import Path
 import json
 import statistics
+from matplotlib.pyplot import figure
+
+KEYS_FROM_PARAMS_DICT = ["batch_size",
+                         "num_epochs",
+                         "num_hidden_units",
+                         "sequence_length",
+                         "sequence_length_spatial",
+                         "use_all_static_attr",
+                         "use_only_precip_feature",
+                         "use_random_noise_spatial",
+                         "use_zeros_spatial"]
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -64,8 +75,20 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
     model_name = "empty_model_name"
     run_number = 0
     epoch_num = 1
+    dict_params = {}
+    model_name_to_dict_params = {}
     with open(logs_filename, "r", encoding="utf-8") as f:
         for row in f:
+            match_parameters_dict = re.search(r"running with parameters: \{", row)
+            if match_parameters_dict:
+                row = next(f)
+                dict_params_as_str = "{"
+                while row != "}\n":
+                    dict_params_as_str += row.replace("\n", "")
+                    row = next(f)
+                dict_params_as_str += "}"
+                dict_params = json.loads(dict_params_as_str)
+                dict_params = dict((k, dict_params.get(k, None)) for k in KEYS_FROM_PARAMS_DICT)
             match_run_number_string = re.search("(run number: |wandb: Agent Starting Run: )", row)
             if match_run_number_string:
                 new_run_number = run_number + 1
@@ -81,6 +104,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
                     model_name = new_model_name
                     epoch_num = 1
                     models_basins_nse_dict[(new_model_name, run_number, epoch_num)] = {}
+                    model_name_to_dict_params[new_model_name] = dict_params
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
@@ -90,15 +114,17 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
             if match_best_nse_so_far_string:
                 epoch_num += 1
                 models_basins_nse_dict[(new_model_name, run_number, epoch_num)] = {}
-    return models_basins_nse_dict
+    return models_basins_nse_dict, model_name_to_dict_params
 
 
 def plot_NSE_CDF_graphs_my_code():
     input_file_names = ["slurm-16509335.out", "slurm-7307546.out"]
     input_file_paths = [Path(file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
+    model_name_to_dict_params_all_file = {}
     for input_file_path in input_file_paths:
-        d = create_dict_basin_id_to_NSE_my_code(f"{input_file_path}")
+        d, model_name_to_dict_params = create_dict_basin_id_to_NSE_my_code(f"{input_file_path}")
+        model_name_to_dict_params_all_file.update(model_name_to_dict_params)
         d = calc_best_nse_per_model_and_num_basins(d)
         dict_all_files.update(d)
     all_basins_tuples = set([basin_tuple for _, _, basin_tuple in dict_all_files.keys()])
@@ -107,14 +133,17 @@ def plot_NSE_CDF_graphs_my_code():
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
+    figure(figsize=(12, 10))
     for model_name in model_names:
+        dict_params = model_name_to_dict_params_all_file[model_name]
         for run_number in run_numbers:
             for basin_tuple in all_basins_tuples:
                 if (model_name, run_number, basin_tuple) not in dict_all_files.keys():
                     continue
                 print(f"number of basins of model with name: {model_name} "
                       f"and run number: {run_number} is: {len(basin_tuple)}")
-                plot_CDF_NSE_basins(dict_all_files[(model_name, run_number, basin_tuple)], model_name=model_name,
+                plot_CDF_NSE_basins(dict_all_files[(model_name, run_number, basin_tuple)], dict_params,
+                                    model_name=model_name,
                                     num_basins=len(basin_tuple))
     if plot_title != "":
         plt.title(plot_title)
@@ -130,14 +159,14 @@ def plot_NSE_CDF_graph_frederik_code():
     plot_title = f"NSE CDF of process ID - " \
                  f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
     d = create_dict_basin_id_to_NSE_frederik_code(input_file_name)
-    plot_CDF_NSE_basins(d, model_name, 1)
+    plot_CDF_NSE_basins(d, {}, model_name, 1)
     plt.legend()
     plt.grid()
     plt.savefig(plot_title)
     plt.clf()
 
 
-def plot_CDF_NSE_basins(nse_losses_np, model_name, num_basins):
+def plot_CDF_NSE_basins(nse_losses_np, dict_params, model_name, num_basins):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     # evaluate the histogram
     values, base = np.histogram(nse_losses_np, bins=100000)
@@ -148,7 +177,9 @@ def plot_CDF_NSE_basins(nse_losses_np, model_name, num_basins):
     plt.xlim((0, 1))
     plt.xlabel("NSE")
     plt.ylabel("CDF")
-    plt.plot(base[:-1], cumulative, label=f"model name: {model_name} number of basins: {num_basins}")
+    plt.plot(base[:-1], cumulative,
+             label=f"model name: {model_name}; number of basins: {num_basins}; dict_params:"
+                   f" {json.dumps(dict_params, indent=4)}")
 
 
 def main():
