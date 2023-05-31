@@ -41,11 +41,11 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict, calc_average_
         for run_number in run_numbers:
             for epoch_num in epoch_numbers:
                 for params_dict in params_dicts:
-                    if (model_name, run_number, epoch_num) not in models_basins_nse_dict.keys() or \
-                            len(models_basins_nse_dict[(model_name, run_number, epoch_num)].items()) == 0:
+                    if (model_name, run_number, epoch_num, params_dict) not in models_basins_nse_dict.keys() or \
+                            len(models_basins_nse_dict[(model_name, run_number, epoch_num, params_dict)].items()) == 0:
                         continue
                     basin_id_to_nse_list_tuples = sorted(
-                        list(models_basins_nse_dict[(model_name, run_number, epoch_num)].items()),
+                        list(models_basins_nse_dict[(model_name, run_number, epoch_num, params_dict)].items()),
                         key=lambda x: x[0])
                     list_basin_ids, list_nse = zip(*basin_id_to_nse_list_tuples)
                     list_nse = np.array(list_nse)
@@ -84,25 +84,26 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
     model_name = "empty_model_name"
     run_number = 0
     epoch_num = 1
+    params_tuple = ()
     with open(logs_filename, "r", encoding="utf-8") as f:
         for row in f:
             match_parameters_dict = re.search(r"running with parameters: \{", row)
             if match_parameters_dict:
                 row = next(f)
-                dict_params_as_str = "{"
+                params_tuple_as_str = "{"
                 while row != "}\n":
-                    dict_params_as_str += row.replace("\n", "")
+                    params_tuple_as_str += row.replace("\n", "")
                     row = next(f)
-                dict_params_as_str += "}"
-                dict_params = json.loads(dict_params_as_str)
-                dict_params = dict((k, dict_params.get(k, None)) for k in KEYS_FROM_PARAMS_DICT)
+                params_tuple_as_str += "}"
+                dict_params = json.loads(params_tuple_as_str)
+                params_tuple = ((k, dict_params.get(k, None)) for k in KEYS_FROM_PARAMS_DICT)
             match_run_number_string = re.search("(run number: |wandb: Agent Starting Run: )", row)
             if match_run_number_string:
                 new_run_number = run_number + 1
                 if new_run_number != run_number:
                     run_number = new_run_number
                     epoch_num = 1
-                    models_basins_nse_dict[(model_name, new_run_number, epoch_num, dict_params)] = {}
+                    models_basins_nse_dict[(model_name, new_run_number, epoch_num, params_tuple)] = {}
                     print(f"run number: {run_number}")
             match_model_name_string = re.search("running with model: (.*?)\n", row)
             if match_model_name_string:
@@ -110,16 +111,16 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
                 if new_model_name != model_name:
                     model_name = new_model_name
                     epoch_num = 1
-                    models_basins_nse_dict[(new_model_name, run_number, epoch_num, dict_params)] = {}
+                    models_basins_nse_dict[(new_model_name, run_number, epoch_num, params_tuple)] = {}
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
                 basin_nse = float(match_nse_string.group(2))
-                models_basins_nse_dict[(model_name, run_number, epoch_num, dict_params)][basin_id] = basin_nse
+                models_basins_nse_dict[(model_name, run_number, epoch_num, params_tuple)][basin_id] = basin_nse
             match_best_nse_so_far_string = re.search("best median NSE so far: (.*?)\n", row)
             if match_best_nse_so_far_string:
                 epoch_num += 1
-                models_basins_nse_dict[(new_model_name, run_number, epoch_num, dict_params)] = {}
+                models_basins_nse_dict[(new_model_name, run_number, epoch_num, params_tuple)] = {}
     return models_basins_nse_dict
 
 
@@ -147,7 +148,7 @@ def plot_NSE_CDF_graphs_my_code():
                         continue
                     print(f"number of basins of model with name: {model_name} "
                           f"and run number: {run_number} is: {len(basin_tuple)}")
-                    plot_CDF_NSE_basins(dict_all_files[(model_name, run_number, basin_tuple)], params_dict,
+                    plot_CDF_NSE_basins(dict_all_files[(model_name, run_number, basin_tuple, params_dict)], params_dict,
                                         model_name=model_name,
                                         num_basins=len(basin_tuple))
     if plot_title != "":
@@ -171,7 +172,7 @@ def plot_NSE_CDF_graph_frederik_code():
     plt.clf()
 
 
-def plot_CDF_NSE_basins(nse_losses_np, dict_params, model_name, num_basins):
+def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     # evaluate the histogram
     values, base = np.histogram(nse_losses_np, bins=100000)
@@ -183,8 +184,8 @@ def plot_CDF_NSE_basins(nse_losses_np, dict_params, model_name, num_basins):
     plt.xlabel("NSE")
     plt.ylabel("CDF")
     plt.plot(base[:-1], cumulative,
-             label=f"model name: {model_name}; number of basins: {num_basins}; dict_params:"
-                   f" {json.dumps(dict_params, indent=4)}")
+             label=f"model name: {model_name}; number of basins: {num_basins}; params_tuple:"
+                   f" {json.dumps(dict(params_tuple), indent=4)}")
 
 
 def main():
