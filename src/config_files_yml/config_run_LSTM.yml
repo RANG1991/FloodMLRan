@@ -20,7 +20,7 @@ profile_code: false
 run_sweeps: false
 save_checkpoint: true
 sequence_length: 450
-sequence_length_spatial: 14
+sequence_length_spatial: 0
 use_all_static_attr: false
 train_start_date: '01/10/1999'
 train_end_date: '30/09/2008'
