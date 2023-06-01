@@ -12,10 +12,10 @@ from alibi.explainers import ALE, plot_ale
 
 
 def create_accumulated_local_effects(clf, df_results):
-    logit_fun_clf = clf.decision_function
-    logit_ale_clf = ALE(logit_fun_clf, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES, target_names=["label"])
-    logit_exp_clf = logit_ale_clf.explain(df_results.to_numpy()[:, :-1])
-    plot_ale(logit_exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
+    fun_clf = clf.predict_proba
+    ale_clf = ALE(fun_clf, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES, target_names=["label"])
+    exp_clf = ale_clf.explain(df_results.to_numpy()[:, :-1])
+    plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
     plt.savefig("ALE.png")
 
 
