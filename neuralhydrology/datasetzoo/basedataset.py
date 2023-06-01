@@ -299,6 +299,7 @@ class BaseDataset(Dataset):
 
                 # remove unnecessary columns
                 try:
+                    df.columns = map(str.lower, df.columns)
                     df = df[keep_cols]
                 except KeyError:
                     not_available_columns = [x for x in keep_cols if x not in df.columns]
