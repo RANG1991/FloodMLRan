@@ -6,7 +6,7 @@ debug: false
 dropout_rate: 0.4
 learning_rate: 5e-04
 limit_size_above_1000: true
-load_checkpoint: false
+load_checkpoint: true
 model: CNN_LSTM
 mode: validation
 num_basins:
