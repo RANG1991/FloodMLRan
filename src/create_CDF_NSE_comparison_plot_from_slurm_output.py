@@ -7,6 +7,7 @@ from pathlib import Path
 import json
 import statistics
 from matplotlib.pyplot import figure
+from alibi.explainers import ALE, plot_ale
 
 KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "num_epochs",
@@ -125,7 +126,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-17066889.out", "slurm-17207800.out"]
+    input_file_names = ["slurm-17066889.out"]
     input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:

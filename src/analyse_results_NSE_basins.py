@@ -10,6 +10,14 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.inspection import permutation_importance
 
 
+def create_accumulated_local_effects(clf, df_results):
+    logit_fun_clf = clf.decision_function
+    logit_ale_clf = ALE(logit_fun_clf, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES, target_names=["label"])
+    logit_exp_clf = logit_ale_clf.explain(df_results)
+    plot_ale(logit_exp_clf, n_cols=2, fig_kw={'figwidth': 8, 'figheight': 5}, sharey=None)
+    plt.savefig("ALE.png")
+
+
 def fit_clf_analysis(csv_results_file_with_static_attr, clf):
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
@@ -32,6 +40,7 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
 def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_static_attr):
     clf = DecisionTreeClassifier(random_state=0, max_depth=3)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
+    create_accumulated_local_effects(clf, df_results)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
@@ -72,11 +81,12 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
 
 
 def main():
-    analyse_results_by_decision_tree("7307546_7479540.csv")
-    analyse_results_feat_importance_by_logistic_regression("7307546_7479540.csv")
-    analyse_results_feat_importance_by_decision_tree("7307546_7479540.csv")
-    analyse_results_feat_importance_by_random_forest("7307546_7479540.csv")
-    analyse_results_feat_importance_by_permutation("7307546_7479540.csv")
+    plt.rc('font', size=12)
+    analyse_results_by_decision_tree("16509335_17066889.csv")
+    analyse_results_feat_importance_by_logistic_regression("16509335_17066889.csv")
+    analyse_results_feat_importance_by_decision_tree("16509335_17066889.csv")
+    analyse_results_feat_importance_by_random_forest("16509335_17066889.csv")
+    analyse_results_feat_importance_by_permutation("16509335_17066889.csv")
 
 
 if __name__ == "__main__":
