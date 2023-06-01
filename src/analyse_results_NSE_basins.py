@@ -8,6 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 import CAMELS_dataset
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.inspection import permutation_importance
+from alibi.explainers import ALE, plot_ale
 
 
 def create_accumulated_local_effects(clf, df_results):
