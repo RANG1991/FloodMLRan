@@ -7,7 +7,6 @@ from pathlib import Path
 import json
 import statistics
 from matplotlib.pyplot import figure
-from alibi.explainers import ALE, plot_ale
 
 KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "num_epochs",

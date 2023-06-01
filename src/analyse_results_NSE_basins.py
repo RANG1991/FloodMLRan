@@ -40,7 +40,6 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
 def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_static_attr):
     clf = DecisionTreeClassifier(random_state=0, max_depth=3)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
-    create_accumulated_local_effects(clf, df_results)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
@@ -51,6 +50,7 @@ def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_stati
 def analyse_results_feat_importance_by_logistic_regression(csv_results_file_with_static_attr):
     clf = LogisticRegression()
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
+    create_accumulated_local_effects(clf, df_results)
     importance = clf.coef_[0]
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
