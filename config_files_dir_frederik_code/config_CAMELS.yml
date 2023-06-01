@@ -134,8 +134,8 @@ forcings:
 dynamic_inputs:
   - prcp(mm/day)
   - srad(w/m2)
-  - tmax(C)
-  - tmin(C)
+  - tmax(c)
+  - tmin(c)
   - vp(pa)
 
 # which columns to use as target

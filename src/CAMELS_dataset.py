@@ -191,7 +191,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         if station_id not in self.all_stations_ids:
             return np.array([]), np.array([]), np.array([])
         forcing_path = Path(self.dynamic_data_folder)
-        file_path = list(forcing_path.glob(f"**/{station_id}_*_forcing_leap.txt"))
+        file_path = list(forcing_path.glob(f"**/maurer/**/{station_id}_*_forcing_leap.txt"))
         file_path = file_path[0]
         with open(file_path, "r") as fp:
             # load area from header
