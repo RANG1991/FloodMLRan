@@ -3,6 +3,7 @@ from torch import nn
 import math
 from Transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 from transformers import ViTConfig, ViTModel
+from FloodML_Transformer_Encoder import PositionalEncoding
 
 
 def get_pad_mask(seq, pad_idx):
@@ -15,29 +16,6 @@ def get_subsequent_mask(seq):
     subsequent_mask = (1 - torch.triu(
         torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).bool()
     return subsequent_mask
-
-
-class PositionalEncoding(nn.Module):
-
-    def __init__(self, d_hid, sequence_length=270):
-        super(PositionalEncoding, self).__init__()
-        # Not a parameter
-        self.register_buffer('pos_table', self._get_sinusoid_encoding_table(sequence_length, d_hid))
-
-    def _get_sinusoid_encoding_table(self, sequence_length, d_hid):
-        """ Sinusoid position encoding table """
-
-        def get_position_angle_vec(position):
-            return torch.FloatTensor([position / math.pow(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)])
-
-        sinusoid_table = torch.vstack([get_position_angle_vec(pos_i) for pos_i in range(sequence_length)])
-        sinusoid_table[:, 0::2] = torch.sin(sinusoid_table[:, 0::2])  # dim 2i
-        sinusoid_table[:, 1::2] = torch.cos(sinusoid_table[:, 1::2])  # dim 2i+1
-
-        return sinusoid_table.unsqueeze(0)
-
-    def forward(self, x):
-        return x + self.pos_table[:, :x.size(1)].clone().detach()
 
 
 class Transformer_CNN(nn.Module):
@@ -58,8 +36,8 @@ class Transformer_CNN(nn.Module):
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
     def forward(self, non_spatial_input, spatial_input):
-        non_spatial_input = non_spatial_input.premute((1, 0, 2))
-        spatial_input = spatial_input.permute((1, 0, 2))
+        # non_spatial_input = non_spatial_input.permute((1, 0, 2))
+        # spatial_input = spatial_input.permute((1, 0, 2))
         x_d = non_spatial_input[:, :, :self.num_dynamic_attr]
         x_s = non_spatial_input[:, :, -self.num_static_attr:]
         x_s = self.embedding(x_s)
@@ -70,7 +48,7 @@ class Transformer_CNN(nn.Module):
         spatial_input = spatial_input.reshape(batch_size, seq_length, -1)
         non_spatial_input = self.fc_1(non_spatial_input)
         enc_out = self.encoder(non_spatial_input, spatial_input)
-        return self.fc_2(self.dropout(enc_out))[-1, :, :]
+        return self.fc_2(self.dropout(enc_out))[:, 0, :]
 
 
 class EncoderLayer(nn.Module):
@@ -95,7 +73,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         # the nn.Embedding creates a lookup table that can retrieve a word embedding using an index in the table
         # d_word_vec should be equal to d_model (?) - for example 512
-        self.position_enc = PositionalEncoding(d_model, sequence_length=sequence_length)
+        self.position_enc = PositionalEncoding(d_model, max_len=sequence_length + 1)
         self.dropout = nn.Dropout(p=dropout)
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner, n_head, d_model // n_head, d_model // n_head, dropout=dropout)
@@ -118,8 +96,7 @@ class VIT(nn.Module):
     def __init__(self, d_model, image_size):
         super(VIT, self).__init__()
         configuration = ViTConfig(num_hidden_layers=6, num_attention_heads=8, image_size=image_size,
-                                  hidden_size=d_model,
-                                  num_channels=1)
+                                  hidden_size=d_model, patch_size=image_size // 2, num_channels=1)
         self.vit_model = ViTModel(configuration)
 
     def forward(self, spatial_input):
