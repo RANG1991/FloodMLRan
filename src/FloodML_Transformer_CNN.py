@@ -47,7 +47,8 @@ class Transformer_CNN(nn.Module):
         super(Transformer_CNN, self).__init__()
         self.vit = VIT(d_model=d_model, image_size=image_size)
         self.fc_1 = nn.Linear((num_dynamic_attr + embedding_size), d_model)
-        self.encoder = Encoder(n_layers=num_layers, n_head=num_heads, d_model=d_model, d_inner=d_model)
+        self.encoder = Encoder(n_layers=num_layers, n_head=num_heads, d_model=d_model, d_inner=d_model,
+                               sequence_length=sequence_length)
         self.fc_2 = nn.Linear(d_model, 1)
         self.num_static_attr = num_static_attr
         self.num_dynamic_attr = num_dynamic_attr
@@ -57,17 +58,19 @@ class Transformer_CNN(nn.Module):
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
     def forward(self, non_spatial_input, spatial_input):
+        non_spatial_input = non_spatial_input.premute((1, 0, 2))
+        spatial_input = spatial_input.permute((1, 0, 2))
         x_d = non_spatial_input[:, :, :self.num_dynamic_attr]
         x_s = non_spatial_input[:, :, -self.num_static_attr:]
         x_s = self.embedding(x_s)
-        non_spatial_input = torch.cat([x_d, x_s], axis=-1)
+        non_spatial_input = torch.cat([x_d, x_s], axis=2)
         batch_size, seq_length, _ = spatial_input.shape
         spatial_input = spatial_input.reshape(batch_size * seq_length, 1, self.image_size, self.image_size)
         spatial_input = self.vit(spatial_input).pooler_output
         spatial_input = spatial_input.reshape(batch_size, seq_length, -1)
         non_spatial_input = self.fc_1(non_spatial_input)
         enc_out = self.encoder(non_spatial_input, spatial_input)
-        return self.fc_2(self.dropout(enc_out))[:, -1, :]
+        return self.fc_2(self.dropout(enc_out))[-1, :, :]
 
 
 class EncoderLayer(nn.Module):

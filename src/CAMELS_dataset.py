@@ -376,7 +376,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
             if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
-                    or self.model_name.lower() == "cnn_transformer":
+                    or self.model_name.lower() == "transformer_cnn":
                 cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
                 cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
@@ -386,7 +386,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             cumm_m_x = 0
             cumm_s_x = 0
             if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
-                    or self.model_name.lower() == "cnn_transformer":
+                    or self.model_name.lower() == "transformer_cnn":
                 cumm_m_x_spatial = -1
                 cumm_s_x_spatial = -1
             cumm_m_y = 0
@@ -401,7 +401,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             if self.check_is_valid_station_id(station_id, create_new_files=self.create_new_files):
                 if (self.model_name.lower() == "conv_lstm" or
                         self.model_name.lower() == "cnn_lstm" or
-                        self.model_name.lower() == "cnn_transformer"):
+                        self.model_name.lower() == "transformer_cnn"):
                     if not os.path.exists(
                             f"{self.dynamic_data_folder_spatial}/precip24_spatial_{station_id}.nc"):
                         continue
@@ -461,7 +461,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
                 if (self.model_name.lower() == "conv_lstm" or
                         self.model_name.lower() == "cnn_lstm" or
-                        self.model_name.lower() == "cnn_transformer"):
+                        self.model_name.lower() == "transformer_cnn"):
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], (self.max_dim * self.max_dim)),
                         dtype=np.float64)
@@ -487,7 +487,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
         if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
-                or self.model_name.lower() == "cnn_transformer":
+                or self.model_name.lower() == "transformer_cnn":
             std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
         else:
             std_x_spatial = None
@@ -504,7 +504,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 "count_of_samples": count_of_samples
             }
             if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
-                    or self.model_name.lower() == "cnn_transformer":
+                    or self.model_name.lower() == "transformer_cnn":
                 json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
                 json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
