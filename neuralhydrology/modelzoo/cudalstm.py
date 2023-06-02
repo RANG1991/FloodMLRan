@@ -74,5 +74,5 @@ class CudaLSTM(BaseModel):
 
         pred = {'lstm_output': lstm_output, 'h_n': h_n, 'c_n': c_n}
         pred.update(self.head(self.dropout(lstm_output)))
-
+        print(pred)
         return pred

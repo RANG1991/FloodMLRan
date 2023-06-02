@@ -108,7 +108,9 @@ def check_stationary():
     )
     for i in range(10):
         _, _, xs_non_spatial, _, _, _ = camels_dataset[i]
-        result = adfuller(xs_non_spatial.numpy()[:, 1])
+        plt.plot(xs_non_spatial.numpy()[:, 0])
+        plt.savefig("check.png")
+        result = adfuller(xs_non_spatial.numpy()[:, 0])
         print('ADF Statistic: %f' % result[0])
         print('p-value: %f' % result[1])
         print('Critical Values:')
