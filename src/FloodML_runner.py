@@ -509,7 +509,11 @@ class FloodML_Runner:
                                     num_static_attr=len(training_data.list_static_attributes_names),
                                     embedding_size=10,
                                     image_size=training_data.max_dim,
-                                    d_model=512)
+                                    d_model=self.intermediate_dim_transformer,
+                                    num_layers=self.num_layers_transformer,
+                                    num_heads=self.num_heads_transformer,
+                                    dropout=self.dropout_rate,
+                                    sequence_length=self.sequence_length)
         else:
             raise Exception(f"model with name {self.model_name} is not recognized")
         return model

@@ -41,16 +41,19 @@ class PositionalEncoding(nn.Module):
 
 
 class Transformer_CNN(nn.Module):
-    def __init__(self, sequence_length_spatial, num_dynamic_attr, num_static_attr, embedding_size, image_size, d_model):
+    def __init__(self, sequence_length_spatial, num_dynamic_attr, num_static_attr,
+                 embedding_size, image_size, d_model, sequence_length,
+                 dropout, num_heads, num_layers):
         super(Transformer_CNN, self).__init__()
         self.vit = VIT(d_model=d_model, image_size=image_size)
         self.fc_1 = nn.Linear((num_dynamic_attr + embedding_size), d_model)
-        self.encoder = Encoder(n_layers=6, n_head=8, d_model=d_model, d_inner=d_model)
+        self.encoder = Encoder(n_layers=num_layers, n_head=num_heads, d_model=d_model, d_inner=d_model)
         self.fc_2 = nn.Linear(d_model, 1)
         self.num_static_attr = num_static_attr
         self.num_dynamic_attr = num_dynamic_attr
         self.embedding_size = embedding_size
         self.image_size = image_size
+        self.dropout = torch.nn.Dropout(dropout)
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
     def forward(self, non_spatial_input, spatial_input):
@@ -64,7 +67,7 @@ class Transformer_CNN(nn.Module):
         spatial_input = spatial_input.reshape(batch_size, seq_length, -1)
         non_spatial_input = self.fc_1(non_spatial_input)
         enc_out = self.encoder(non_spatial_input, spatial_input)
-        return self.fc_2(enc_out)[:, -1, :]
+        return self.fc_2(self.dropout(enc_out))[:, -1, :]
 
 
 class EncoderLayer(nn.Module):
