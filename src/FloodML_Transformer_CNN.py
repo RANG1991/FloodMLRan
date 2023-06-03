@@ -28,11 +28,11 @@ class Transformer_CNN(nn.Module):
         self.num_channels = num_channels
         input_size = 4
         self.embedding_size = 10
+        self.input_image_size = image_input_size
         self.num_static_attr = num_static_attributes
         self.num_dynamic_attr = num_dynamic_attributes
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size)
-        self.dropout = nn.Dropout(p=self.dropout_rate)
         self.fc_1 = nn.Linear(num_dynamic_attributes + self.embedding_size + input_size, intermediate_dim)
         self.positional_encoding = PositionalEncoding(intermediate_dim, sequence_length)
         encoder_layer = nn.TransformerEncoderLayer(d_model=intermediate_dim, nhead=num_heads, batch_first=True)
@@ -58,7 +58,8 @@ class Transformer_CNN(nn.Module):
         x_s = self.embedding(x_s)
         x_non_spatial = torch.cat([x_d, x_s], axis=2)
         batch_size, time_steps, _ = x_non_spatial.size()
-        c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.image_width, self.image_height)
+        c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.input_image_size[0],
+                                 self.input_image_size[1])
         # CNN.plot_as_image(c_in)
         # self.number_of_images_counter += (batch_size * time_steps)
         # CNN part
