@@ -59,10 +59,10 @@ class EncoderLayer(nn.Module):
         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, drop_prob=dropout)
 
     def forward(self, enc_input_non_spatial, enc_input_spatial, slf_attn_mask=None):
-        enc_output, enc_slf_attn = self.slf_attn(enc_input_non_spatial, enc_input_spatial, enc_input_spatial,
-                                                 mask=slf_attn_mask)
+        enc_output = self.slf_attn(enc_input_non_spatial, enc_input_spatial, enc_input_spatial,
+                                   mask=slf_attn_mask)
         enc_output = self.pos_ffn(enc_output)
-        return enc_output, enc_slf_attn
+        return enc_output
 
 
 class Encoder(nn.Module):
@@ -87,7 +87,7 @@ class Encoder(nn.Module):
         enc_input_non_spatial = self.dropout(self.position_enc(enc_input_non_spatial))
         enc_input = self.layer_norm(enc_input_non_spatial)
         for enc_layer in self.layer_stack:
-            enc_input, enc_slf_attn = enc_layer(enc_input, enc_input_spatial)
+            enc_input = enc_layer(enc_input, enc_input_spatial)
         return enc_input
 
 
