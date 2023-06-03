@@ -6,8 +6,8 @@
 import torch
 from torch import nn
 
-from models.blocks.decoder_layer import DecoderLayer
-from models.embedding.transformer_embedding import TransformerEmbedding
+from Transformer.blocks.decoder_layer import DecoderLayer
+from Transformer.embedding.transformer_embedding import TransformerEmbedding
 
 
 class Decoder(nn.Module):

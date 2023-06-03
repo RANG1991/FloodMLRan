@@ -5,9 +5,9 @@
 """
 from torch import nn
 
-from models.layers.layer_norm import LayerNorm
-from models.layers.multi_head_attention import MultiHeadAttention
-from models.layers.position_wise_feed_forward import PositionwiseFeedForward
+from Transformer.layers.layer_norm import LayerNorm
+from Transformer.layers.multi_head_attention import MultiHeadAttention
+from Transformer.layers.position_wise_feed_forward import PositionwiseFeedForward
 
 
 class EncoderLayer(nn.Module):
@@ -26,15 +26,15 @@ class EncoderLayer(nn.Module):
         # 1. compute self attention
         _x = x
         x = self.attention(q=x, k=x, v=x, mask=s_mask)
-        
+
         # 2. add and norm
         x = self.dropout1(x)
         x = self.norm1(x + _x)
-        
+
         # 3. positionwise feed forward network
         _x = x
         x = self.ffn(x)
-      
+
         # 4. add and norm
         x = self.dropout2(x)
         x = self.norm2(x + _x)

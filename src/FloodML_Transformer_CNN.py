@@ -1,7 +1,8 @@
 import torch
 from torch import nn
 import math
-from Transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
+from Transformer.layers.multi_head_attention import MultiHeadAttention
+from Transformer.layers.position_wise_feed_forward import PositionwiseFeedForward
 from transformers import ViTConfig, ViTModel
 from FloodML_Transformer_Encoder import PositionalEncoding
 
@@ -36,8 +37,6 @@ class Transformer_CNN(nn.Module):
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
     def forward(self, non_spatial_input, spatial_input):
-        # non_spatial_input = non_spatial_input.permute((1, 0, 2))
-        # spatial_input = spatial_input.permute((1, 0, 2))
         x_d = non_spatial_input[:, :, :self.num_dynamic_attr]
         x_s = non_spatial_input[:, :, -self.num_static_attr:]
         x_s = self.embedding(x_s)
@@ -56,8 +55,8 @@ class EncoderLayer(nn.Module):
 
     def __init__(self, d_model, d_inner, n_head, d_k, d_v, dropout=0.1):
         super(EncoderLayer, self).__init__()
-        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
-        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, dropout=dropout)
+        self.slf_attn = MultiHeadAttention(d_model, n_head)
+        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, drop_prob=dropout)
 
     def forward(self, enc_input_non_spatial, enc_input_spatial, slf_attn_mask=None):
         enc_output, enc_slf_attn = self.slf_attn(enc_input_non_spatial, enc_input_spatial, enc_input_spatial,
