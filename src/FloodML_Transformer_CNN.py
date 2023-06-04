@@ -34,7 +34,7 @@ class Transformer_CNN(nn.Module):
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size)
         self.fc_1 = nn.Linear(num_dynamic_attributes + self.embedding_size + input_size, intermediate_dim)
-        self.positional_encoding = PositionalEncoding(intermediate_dim, sequence_length)
+        self.positional_encoding = PositionalEncoding(intermediate_dim, sequence_length + 1)
         encoder_layer = nn.TransformerEncoderLayer(d_model=intermediate_dim, nhead=num_heads, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.fc_2 = nn.Linear(intermediate_dim, 1)

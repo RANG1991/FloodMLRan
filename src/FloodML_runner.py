@@ -508,7 +508,7 @@ class FloodML_Runner:
             model = Transformer_CNN(image_input_size=(training_data.max_dim, training_data.max_dim),
                                     num_static_attributes=len(training_data.list_static_attributes_names),
                                     num_dynamic_attributes=len(training_data.list_dynamic_attributes_names),
-                                    sequence_length=self.sequence_length,
+                                    sequence_length=self.sequence_length_spatial,
                                     intermediate_dim=self.intermediate_dim_transformer,
                                     dropout=self.dropout_rate,
                                     num_heads=self.num_heads_transformer,
