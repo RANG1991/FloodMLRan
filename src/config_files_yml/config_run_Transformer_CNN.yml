@@ -1,4 +1,4 @@
-batch_size: 256
+batch_size: 64
 checkpoint_path:
 create_new_files: true
 dataset: CAMELS
