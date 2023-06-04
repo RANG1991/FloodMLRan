@@ -2,13 +2,13 @@ batch_size: 64
 checkpoint_path:
 create_new_files: true
 dataset: CAMELS
-debug: true
+debug: false
 dropout_rate: 0.4
 learning_rate: 5e-05
 limit_size_above_1000: true
 load_checkpoint: false
-mode: validation
 model: Transformer_CNN
+mode: validation
 num_basins:
 num_epochs: 15
 num_hidden_units: 256
