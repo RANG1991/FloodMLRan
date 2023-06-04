@@ -1,6 +1,6 @@
 batch_size: 64
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
 debug: false
 dropout_rate: 0.4
