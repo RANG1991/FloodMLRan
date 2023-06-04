@@ -38,11 +38,11 @@ class Transformer_CNN(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(d_model=intermediate_dim, nhead=num_heads, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.fc_2 = nn.Linear(intermediate_dim, 1)
-        exponential_decay = torch.exp(torch.tensor([-1 * (sequence_length - i) / 25 for i in range(sequence_length)]))
-        exponential_decay = exponential_decay.unsqueeze(0).unsqueeze(-1).repeat(1, 1, intermediate_dim)
+        # exponential_decay = torch.exp(torch.tensor([-1 * (sequence_length - i) / 25 for i in range(sequence_length)]))
+        # exponential_decay = exponential_decay.unsqueeze(0).unsqueeze(-1).repeat(1, 1, intermediate_dim)
         self.dropout = torch.nn.Dropout(dropout)
         self.intermediate_dim = intermediate_dim
-        self.register_buffer('exponential_decay', exponential_decay)
+        # self.register_buffer('exponential_decay', exponential_decay)
         # self.fc_3 = nn.Linear(16, 1)
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
