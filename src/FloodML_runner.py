@@ -522,7 +522,19 @@ class FloodML_Runner:
                   preds_obs_dicts_ranks_queue, training_data, test_data):
         # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
         print(f"running with optimizer: {self.optim_name}")
+        starting_epoch = 0
         model = self.prepare_model(training_data=training_data)
+        if self.optim_name.lower() == "sgd":
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate * world_size, momentum=0.9)
+        elif self.optim_name.lower() == "adam":
+            optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate * world_size, weight_decay=0.05)
+        else:
+            raise Exception(f"No such optimizer with name: {self.optim_name}")
+        if self.load_checkpoint:
+            checkpoint = torch.load(self.checkpoint_path)
+            model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            starting_epoch = checkpoint['epoch']
         if world_size > 1:
             torch.cuda.set_device(rank)
             model = model.to(device="cuda")
@@ -530,19 +542,7 @@ class FloodML_Runner:
             model = DDP(model, device_ids=[rank], find_unused_parameters=False)
         else:
             model = model.to(device="cuda")
-        if self.optim_name.lower() == "sgd":
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate * world_size, momentum=0.9)
-        elif self.optim_name.lower() == "adam":
-            optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate * world_size, weight_decay=0.05)
-        else:
-            raise Exception(f"No such optimizer with name: {self.optim_name}")
-        starting_epoch = 0
         best_median_nse = None
-        if self.load_checkpoint:
-            checkpoint = torch.load(self.checkpoint_path)
-            model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            starting_epoch = checkpoint['epoch']
         if world_size <= 1 and rank == 0 and self.run_sweeps:
             wandb.watch(model)
         if world_size > 1:
