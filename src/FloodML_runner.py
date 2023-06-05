@@ -1042,7 +1042,7 @@ def main():
 
 
 if __name__ == "__main__":
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     args = read_arguments_from_yaml()
     if args["run_sweeps"]:
         print("running with sweeps")
