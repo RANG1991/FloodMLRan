@@ -154,10 +154,10 @@ class FloodML_Runner:
         self.train_stations_list = all_stations_list_sorted[:]
         self.val_stations_list = all_stations_list_sorted[:]
         self.run_sweeps = run_sweeps
-        attr_self = dict(sorted(vars(self).items()))
-        attr_self.pop("train_stations_list")
-        attr_self.pop("val_stations_list")
-        print(f"running with parameters: {json.dumps(attr_self, indent=4)}")
+        self.attr_self = dict(sorted(vars(self).items()))
+        self.attr_self.pop("train_stations_list")
+        self.attr_self.pop("val_stations_list")
+        print(f"running with parameters: {json.dumps(self.attr_self, indent=4)}")
 
     def train_epoch(self, model, optimizer, loader, loss_func, epoch, device):
         # set model to train mode (important for dropout)
@@ -611,11 +611,30 @@ class FloodML_Runner:
                     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
                     suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(self.num_basins,
                                                                                   self.limit_size_above_1000)
+                    params_dict = {k: self.attr_self[k] for k in ("batch_size",
+                                                                  "dataset",
+                                                                  "dropout_rate",
+                                                                  "learning_rate",
+                                                                  "limit_size_above_1000",
+                                                                  "model",
+                                                                  "num_basins",
+                                                                  "num_hidden_units",
+                                                                  "optim",
+                                                                  "sequence_length",
+                                                                  "sequence_length_spatial",
+                                                                  "use_all_static_attr",
+                                                                  "train_start_date",
+                                                                  "train_end_date",
+                                                                  "use_random_noise_in_spatial_data",
+                                                                  "use_zeros_in_spatial_data",
+                                                                  "only_precip",
+                                                                  "run_with_radar_data")}
                     torch.save({
                         'epoch': (i + 1),
                         'model_state_dict': model_state_dict,
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss_on_training_epoch,
+                        "params_dict": params_dict,
                     }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}_{suffix_checkpoint_file_name}.pt")
                 if self.profile_code:
                     p.step()
