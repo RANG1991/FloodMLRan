@@ -47,6 +47,25 @@ K_VALUE_CROSS_VALIDATION = 2
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
+PARAMS_NAMES_TO_CHECK = ("batch_size",
+                         "dataset",
+                         "dropout_rate",
+                         "learning_rate",
+                         "limit_size_above_1000",
+                         "model",
+                         "num_basins",
+                         "num_hidden_units",
+                         "optim",
+                         "sequence_length",
+                         "sequence_length_spatial",
+                         "use_all_static_attr",
+                         "train_start_date",
+                         "train_end_date",
+                         "use_random_noise_in_spatial_data",
+                         "use_zeros_in_spatial_data",
+                         "only_precip",
+                         "run_with_radar_data")
+
 
 class FloodML_Runner:
 
@@ -154,6 +173,7 @@ class FloodML_Runner:
         self.train_stations_list = all_stations_list_sorted[:]
         self.val_stations_list = all_stations_list_sorted[:]
         self.run_sweeps = run_sweeps
+        self.params_names_to_check = PARAMS_NAMES_TO_CHECK
         self.attr_self = dict(sorted(vars(self).items()))
         self.attr_self.pop("train_stations_list")
         self.attr_self.pop("val_stations_list")
@@ -530,7 +550,7 @@ class FloodML_Runner:
             optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate * world_size, weight_decay=0.05)
         else:
             raise Exception(f"No such optimizer with name: {self.optim_name}")
-        if self.load_checkpoint:
+        if self.load_checkpoint and self.checkpoint_path:
             checkpoint = torch.load(self.checkpoint_path)
             model.load_state_dict(checkpoint['model_state_dict'], strict=False)
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -611,24 +631,7 @@ class FloodML_Runner:
                     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
                     suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(self.num_basins,
                                                                                   self.limit_size_above_1000)
-                    params_dict = {k: self.attr_self[k] for k in ("batch_size",
-                                                                  "dataset",
-                                                                  "dropout_rate",
-                                                                  "learning_rate",
-                                                                  "limit_size_above_1000",
-                                                                  "model",
-                                                                  "num_basins",
-                                                                  "num_hidden_units",
-                                                                  "optim",
-                                                                  "sequence_length",
-                                                                  "sequence_length_spatial",
-                                                                  "use_all_static_attr",
-                                                                  "train_start_date",
-                                                                  "train_end_date",
-                                                                  "use_random_noise_in_spatial_data",
-                                                                  "use_zeros_in_spatial_data",
-                                                                  "only_precip",
-                                                                  "run_with_radar_data")}
+                    params_dict = {k: self.attr_self[k] for k in self.params_names_to_check}
                     torch.save({
                         'epoch': (i + 1),
                         'model_state_dict': model_state_dict,
@@ -925,10 +928,19 @@ def main():
         if len(list_of_files) == 0:
             raise FileNotFoundError('can\'t find checkpoint file name with pattern: '
                                     f'{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
-        latest_file = \
-            max(list_of_files, key=lambda file_name:
+        list_of_files_sorted_by_creation_date = \
+            sorted(list_of_files, key=lambda file_name:
             int(Path(file_name).name.replace(f"{model_name_for_finding_checkpoint}_epoch_number_", "")
-                .replace(f"_{suffix_checkpoint_file_name}.pt", "")))
+                .replace(f"_{suffix_checkpoint_file_name}.pt", "")), reverse=True)[:]
+        params_to_check = {k: args for k in PARAMS_NAMES_TO_CHECK}
+        latest_file = None
+        for file_name in list_of_files_sorted_by_creation_date:
+            checkpoint = torch.load(file_name)
+            if "params_dict" in checkpoint.keys():
+                params_dict = checkpoint["params_dict"]
+                if params_dict == params_to_check:
+                    latest_file = file_name
+                    break
         print(f"loading checkpoint from file: {latest_file}")
         args["checkpoint_path"] = latest_file
     if args["dataset"] == "CAMELS":
