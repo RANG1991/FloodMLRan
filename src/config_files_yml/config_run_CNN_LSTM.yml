@@ -17,7 +17,7 @@ num_workers_data_loader: 1
 optim: Adam
 print_tqdm_to_console: true
 profile_code: false
-run_sweeps: false
+run_sweeps: true
 save_checkpoint: true
 sequence_length: 60
 sequence_length_spatial: 305
