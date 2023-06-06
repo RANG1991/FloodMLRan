@@ -29,6 +29,7 @@ class Transformer_VIT(nn.Module):
         self.encoder = Encoder(n_layers=num_layers, n_head=num_heads, d_model=d_model, d_inner=d_model,
                                sequence_length=sequence_length)
         self.fc_2 = nn.Linear(d_model, 1)
+        self.sequence_length_spatial = sequence_length_spatial
         self.num_static_attr = num_static_attr
         self.num_dynamic_attr = num_dynamic_attr
         self.embedding_size = embedding_size
@@ -86,8 +87,11 @@ class Encoder(nn.Module):
             enc_input_non_spatial *= self.d_model ** 0.5
         enc_input_non_spatial = self.dropout(self.position_enc(enc_input_non_spatial))
         enc_input = self.layer_norm(enc_input_non_spatial)
-        for enc_layer in self.layer_stack:
-            enc_input = enc_layer(enc_input, enc_input_spatial)
+        for ind, enc_layer in enumerate(self.layer_stack):
+            if ind > 0:
+                enc_input = enc_layer(enc_input, enc_input)
+            else:
+                enc_input = enc_layer(enc_input, enc_input_spatial)
         return enc_input
 
 

@@ -543,6 +543,17 @@ class FloodML_Runner:
                                     num_heads=self.num_heads_transformer,
                                     num_layers=self.num_layers_transformer,
                                     num_channels=1)
+        elif self.model_name.lower() == "transformer_VIT":
+            model = Transformer_VIT(sequence_length=self.sequence_length,
+                                    sequence_length_spatial=self.sequence_length_spatial,
+                                    dropout=self.dropout_rate,
+                                    num_heads=self.num_heads_transformer,
+                                    num_layers=self.num_layers_transformer,
+                                    d_model=self.intermediate_dim_transformer,
+                                    image_size=training_data.max_dim,
+                                    num_static_attr=len(training_data.list_static_attributes_names),
+                                    num_dynamic_attr=len(training_data.list_dynamic_attributes_names),
+                                    embedding_size=10)
         else:
             raise Exception(f"model with name {self.model_name} is not recognized")
         return model
