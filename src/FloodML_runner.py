@@ -40,6 +40,7 @@ from collections import OrderedDict
 import json
 import math
 import gc
+from copy import deepcopy
 
 matplotlib.use("AGG")
 
@@ -89,6 +90,7 @@ class FloodML_Runner:
                  intermediate_dim_transformer,
                  num_heads_transformer,
                  num_layers_transformer,
+                 params_dict,
                  mode="validation",
                  optim_name="Adam",
                  dropout_rate=0.4,
@@ -173,10 +175,10 @@ class FloodML_Runner:
         self.train_stations_list = all_stations_list_sorted[:]
         self.val_stations_list = all_stations_list_sorted[:]
         self.run_sweeps = run_sweeps
-        self.params_names_to_check = PARAMS_NAMES_TO_CHECK
         self.attr_self = dict(sorted(vars(self).items()))
         self.attr_self.pop("train_stations_list")
         self.attr_self.pop("val_stations_list")
+        self.params_dict = deepcopy(params_dict)
         print(f"running with parameters: {json.dumps(self.attr_self, indent=4)}")
 
     def train_epoch(self, model, optimizer, loader, loss_func, epoch, device):
@@ -219,6 +221,13 @@ class FloodML_Runner:
             pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
         print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}", flush=True)
         return running_loss / (len(loader))
+
+    @staticmethod
+    def convert_optimizer_tensor_to_cuda(optimizer, device_name):
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(device_name)
 
     def eval_model(self, model, loader, preds_obs_dicts_ranks_queue, device, epoch) -> Tuple[
         torch.Tensor, torch.Tensor]:
@@ -560,8 +569,10 @@ class FloodML_Runner:
             model = model.to(device="cuda")
             setup(rank, world_size)
             model = DDP(model, device_ids=[rank], find_unused_parameters=False)
+            self.convert_optimizer_tensor_to_cuda(optimizer, f"cuda:{rank}")
         else:
             model = model.to(device="cuda")
+            self.convert_optimizer_tensor_to_cuda(optimizer, "cuda")
         best_median_nse = None
         if world_size <= 1 and rank == 0 and self.run_sweeps:
             wandb.watch(model)
@@ -631,13 +642,12 @@ class FloodML_Runner:
                     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
                     suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(self.num_basins,
                                                                                   self.limit_size_above_1000)
-                    params_dict = {k: self.attr_self[k] for k in self.params_names_to_check}
                     torch.save({
                         'epoch': (i + 1),
                         'model_state_dict': model_state_dict,
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss_on_training_epoch,
-                        "params_dict": params_dict,
+                        "params_dict": self.params_dict,
                     }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}_{suffix_checkpoint_file_name}.pt")
                 if self.profile_code:
                     p.step()
@@ -932,7 +942,7 @@ def main():
             sorted(list_of_files, key=lambda file_name:
             int(Path(file_name).name.replace(f"{model_name_for_finding_checkpoint}_epoch_number_", "")
                 .replace(f"_{suffix_checkpoint_file_name}.pt", "")), reverse=True)[:]
-        params_to_check = {k: args for k in PARAMS_NAMES_TO_CHECK}
+        params_to_check = {k: args[k] for k in PARAMS_NAMES_TO_CHECK}
         latest_file = None
         for file_name in list_of_files_sorted_by_creation_date:
             checkpoint = torch.load(file_name)
@@ -943,6 +953,7 @@ def main():
                     break
         print(f"loading checkpoint from file: {latest_file}")
         args["checkpoint_path"] = latest_file
+    params_dict_from_args = {k: args[k] for k in PARAMS_NAMES_TO_CHECK}
     if args["dataset"] == "CAMELS":
         runner = FloodML_Runner(
             model_name=args["model"],
@@ -958,6 +969,7 @@ def main():
             dynamic_data_folder_spatial=CAMELS_dataset.DYNAMIC_DATA_FOLDER_SPATIAL_CAMELS,
             static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
+            params_dict=params_dict_from_args,
             optim_name=args["optim"],
             num_epochs=args["num_epochs"],
             num_workers_data_loader=args["num_workers_data_loader"],
@@ -1005,6 +1017,7 @@ def main():
             static_data_folder=ERA5_dataset.STATIC_DATA_FOLDER,
             discharge_data_folder=ERA5_dataset.DISCHARGE_DATA_FOLDER_CARAVAN,
             dynamic_data_folder_spatial=ERA5_dataset.DYNAMIC_DATA_FOLDER_SPATIAL,
+            params_dict=params_dict_from_args,
             optim_name=args["optim"],
             num_epochs=args["num_epochs"],
             num_workers_data_loader=args["num_workers_data_loader"],

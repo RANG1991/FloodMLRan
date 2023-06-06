@@ -1,15 +1,15 @@
 batch_size: 256
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
 debug: false
 dropout_rate: 0.4
 learning_rate: 5e-04
 limit_size_above_1000: true
-load_checkpoint: false
+load_checkpoint: true
 model: CNN_LSTM
 mode: validation
-num_basins: 10
+num_basins:
 num_epochs: 20
 num_hidden_units: 256
 num_processes_ddp: 3
@@ -17,7 +17,7 @@ num_workers_data_loader: 1
 optim: Adam
 print_tqdm_to_console: true
 profile_code: false
-run_sweeps: true
+run_sweeps: false
 save_checkpoint: true
 sequence_length: 60
 sequence_length_spatial: 305
