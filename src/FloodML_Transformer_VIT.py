@@ -27,7 +27,8 @@ class Transformer_VIT(nn.Module):
         self.vit = VIT(d_model=d_model, image_size=image_size)
         self.fc_1 = nn.Linear((num_dynamic_attr + embedding_size), d_model)
         self.encoder = Encoder(n_layers=num_layers, n_head=num_heads, d_model=d_model, d_inner=d_model,
-                               sequence_length=sequence_length)
+                               sequence_length=sequence_length, sequence_length_spatial=sequence_length_spatial,
+                               dropout=dropout)
         self.fc_2 = nn.Linear(d_model, 1)
         self.sequence_length_spatial = sequence_length_spatial
         self.num_static_attr = num_static_attr
@@ -69,11 +70,12 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     """ A encoder model with self attention mechanism. """
 
-    def __init__(self, n_layers, n_head, d_model, d_inner, dropout=0.1, sequence_length=270, scale_emb=False):
+    def __init__(self, n_layers, n_head, d_model, d_inner, dropout, sequence_length_spatial, sequence_length,
+                 scale_emb=False):
         super(Encoder, self).__init__()
         # the nn.Embedding creates a lookup table that can retrieve a word embedding using an index in the table
         # d_word_vec should be equal to d_model (?) - for example 512
-        self.position_enc = PositionalEncoding(d_model, max_len=sequence_length + 1)
+        self.position_enc = PositionalEncoding(d_model, max_len=sequence_length + sequence_length_spatial + 1)
         self.dropout = nn.Dropout(p=dropout)
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner, n_head, d_model // n_head, d_model // n_head, dropout=dropout)
