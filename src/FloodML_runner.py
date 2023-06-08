@@ -946,9 +946,9 @@ def main():
         suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"])
         list_of_files = glob.glob(
             f'../checkpoints/{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
-        if len(list_of_files) == 0:
-            raise FileNotFoundError('can\'t find checkpoint file name with pattern: '
-                                    f'{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
+        # if len(list_of_files) == 0:
+        #     raise FileNotFoundError('can\'t find checkpoint file name with pattern: '
+        #                             f'{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
         list_of_files_sorted_by_creation_date = \
             sorted(list_of_files, key=lambda file_name:
             int(Path(file_name).name.replace(f"{model_name_for_finding_checkpoint}_epoch_number_", "")
