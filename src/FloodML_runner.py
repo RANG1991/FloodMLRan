@@ -955,13 +955,16 @@ def main():
                 .replace(f"_{suffix_checkpoint_file_name}.pt", "")), reverse=True)[:]
         params_to_check = {k: args[k] for k in PARAMS_NAMES_TO_CHECK}
         latest_file = None
+        min_loss = None
         for file_name in list_of_files_sorted_by_creation_date:
             checkpoint = torch.load(file_name)
             if "params_dict" in checkpoint.keys():
                 params_dict = checkpoint["params_dict"]
                 if params_dict == params_to_check:
-                    latest_file = file_name
-                    break
+                    loss = checkpoint["loss"]
+                    if min_loss is None or loss < min_loss:
+                        min_loss = loss
+                        latest_file = file_name
         print(f"loading checkpoint from file: {latest_file}")
         args["checkpoint_path"] = latest_file
     params_dict_from_args = {k: args[k] for k in PARAMS_NAMES_TO_CHECK}

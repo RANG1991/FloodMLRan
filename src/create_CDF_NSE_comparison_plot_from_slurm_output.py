@@ -125,7 +125,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-17358355.out", "slurm-17472310.out", "slurm-17473635.out"]
+    input_file_names = ["slurm-17475381.out", "slurm-17472310.out"]
     input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
@@ -148,6 +148,8 @@ def plot_NSE_CDF_graphs_my_code():
                         continue
                     print(f"number of basins of model with name: {model_name} "
                           f"and run number: {run_number} is: {len(basin_tuple)}")
+                    if len(basin_tuple) != 135:
+                        continue
                     plot_CDF_NSE_basins(dict_all_files[(model_name, run_number, basin_tuple, params_dict)], params_dict,
                                         model_name=model_name,
                                         num_basins=len(basin_tuple))
