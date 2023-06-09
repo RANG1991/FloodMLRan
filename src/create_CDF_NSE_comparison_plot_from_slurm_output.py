@@ -110,8 +110,8 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
                 new_model_name = match_model_name_string.group(1)
                 if new_model_name != model_name:
                     model_name = new_model_name
-                    epoch_num = 1
-                    models_basins_nse_dict[(new_model_name, run_number, epoch_num, params_tuple)] = {}
+                epoch_num = 1
+                models_basins_nse_dict[(model_name, run_number, epoch_num, params_tuple)] = {}
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
@@ -120,12 +120,12 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
             match_best_nse_so_far_string = re.search("best median NSE so far: (.*?)\n", row)
             if match_best_nse_so_far_string:
                 epoch_num += 1
-                models_basins_nse_dict[(new_model_name, run_number, epoch_num, params_tuple)] = {}
+                models_basins_nse_dict[(model_name, run_number, epoch_num, params_tuple)] = {}
     return models_basins_nse_dict
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-17476300.out", "slurm-17472310.out"]
+    input_file_names = ["slurm-17476300.out", "slurm-17476442.out"]
     input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
@@ -155,7 +155,7 @@ def plot_NSE_CDF_graphs_my_code():
                                         num_basins=len(basin_tuple))
     if plot_title != "":
         plt.title(plot_title)
-    plt.legend()
+    plt.legend(loc='upper left')
     plt.grid()
     plt.savefig(plot_title)
     plt.clf()
