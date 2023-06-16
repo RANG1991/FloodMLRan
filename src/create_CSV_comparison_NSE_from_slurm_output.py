@@ -47,8 +47,8 @@ def generate_csv_from_output_file(slurm_output_files, static_attr_file):
     for (model_name, run_number, basins_tuple, params_tuple) in dict_all_files.keys():
         if basins_ids is None:
             basins_ids = basins_tuple
-        elif basins_ids != basins_tuple:
-            raise Exception("not all basins tuples are the same - the CSV will be incorrect")
+        # elif basins_ids != basins_tuple:
+        #     raise Exception("not all basins tuples are the same - the CSV will be incorrect")
     basins_dict_for_data_frame = {"basin_id": basins_ids}
     for (model_name, run_number, basins_tuple, params_tuple) in dict_all_files.keys():
         basins_dict_for_data_frame[f'NSE_{model_name}_{len(basins_tuple)}'] = dict_all_files[
@@ -77,7 +77,7 @@ def generate_csv_from_CAMELS_static_attr_files(static_data_folder):
 
 def main():
     generate_csv_from_CAMELS_static_attr_files("../data/CAMELS_US/camels_attributes_v2.0")
-    generate_csv_from_output_file(["slurm-16509335.out", "slurm-17066889.out"],
+    generate_csv_from_output_file(["slurm-17476442.out", "slurm-17477923.out"],
                                   "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 

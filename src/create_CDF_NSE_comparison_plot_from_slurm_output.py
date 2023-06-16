@@ -51,6 +51,8 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict, calc_average_
                     list_nse = np.array(list_nse)
                     median_nse = statistics.median(list_nse)
                     basins_tuple = tuple(list_basin_ids)
+                    if len(basins_tuple) != 135:
+                        continue
                     if (model_name, run_number, basins_tuple,
                         params_dict) not in model_name_and_basins_tuple_to_best_nse.keys():
                         model_name_and_basins_tuple_to_best_nse[

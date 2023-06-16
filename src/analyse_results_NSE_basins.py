@@ -33,8 +33,9 @@ def fit_clf_analysis(csv_results_file_with_static_attr, clf):
 def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
     clf = DecisionTreeClassifier(random_state=0, max_depth=3)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
+    plt.figure(figsize=(14, 10))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1],
-                   class_names=["0", "1"])
+                   class_names=["0", "1"], fontsize=12)
     plt.savefig("decision_tree.png")
 
 
@@ -83,11 +84,11 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
 
 def main():
     plt.rc('font', size=12)
-    analyse_results_by_decision_tree("16509335_17066889.csv")
-    analyse_results_feat_importance_by_logistic_regression("16509335_17066889.csv")
-    analyse_results_feat_importance_by_decision_tree("16509335_17066889.csv")
-    analyse_results_feat_importance_by_random_forest("16509335_17066889.csv")
-    analyse_results_feat_importance_by_permutation("16509335_17066889.csv")
+    analyse_results_by_decision_tree("17476442_17477923.csv")
+    analyse_results_feat_importance_by_logistic_regression("17476442_17477923.csv")
+    analyse_results_feat_importance_by_decision_tree("17476442_17477923.csv")
+    analyse_results_feat_importance_by_random_forest("17476442_17477923.csv")
+    analyse_results_feat_importance_by_permutation("17476442_17477923.csv")
 
 
 if __name__ == "__main__":
