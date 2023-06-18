@@ -676,7 +676,8 @@ class FloodML_Runner:
                 if self.run_sweeps:
                     wandb.log({"training loss": loss_on_training_epoch})
                 training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
-                validation_loss_single_pass_queue.put((i + 1), loss_on_validation_epoch)
+                if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):
+                    validation_loss_single_pass_queue.put(((i + 1), loss_on_validation_epoch))
                 preds_obs_dict_per_basin = {}
                 num_obs_preds = 0
                 print("start converting the observations and predictions queue to dictionary", flush=True)
