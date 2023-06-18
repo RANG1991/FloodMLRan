@@ -229,8 +229,7 @@ class FloodML_Runner:
                 if isinstance(v, torch.Tensor):
                     state[k] = v.to(device_name)
 
-    def eval_model(self, model, loader, preds_obs_dicts_ranks_queue, device, epoch) -> Tuple[
-        torch.Tensor, torch.Tensor]:
+    def eval_model(self, model, loader, preds_obs_dicts_ranks_queue, loss_func, device, epoch):
         torch.cuda.empty_cache()
         preds_obs_dict_per_basin = {}
         # set model to eval mode (important for dropout)
@@ -241,9 +240,10 @@ class FloodML_Runner:
             pbar = tqdm(loader, file=open('../tqdm_progress.txt', 'a'))
         pbar.set_description(f"Epoch {epoch}")
         # in inference mode, we don't need to store intermediate steps for back-prop
+        running_loss = 0.0
         with torch.no_grad():
             # request mini-batch of data from the loader
-            for _, station_id_batch, xs_non_spatial, xs_spatial, ys, dates in pbar:
+            for stds, station_id_batch, xs_non_spatial, xs_spatial, ys, dates in pbar:
                 # push data to GPU (if available)
                 xs_non_spatial, ys = xs_non_spatial.to(device), ys.to(device)
                 # get model predictions
@@ -265,6 +265,8 @@ class FloodML_Runner:
                                                        len(loader.dataset.list_dynamic_attributes_names):])
                 else:
                     y_hat = model(xs_non_spatial).squeeze()
+                loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
+                running_loss += loss.item()
                 pred_actual = (
                         (y_hat * loader.dataset.y_std) + loader.dataset.y_mean)
                 pred_expected = (
@@ -279,7 +281,8 @@ class FloodML_Runner:
                     preds_obs_dicts_ranks_queue.put((station_id, dates[i],
                                                      (pred_expected[i].clone().item(), pred_actual[i].item())))
                 gc.collect()
-        return preds_obs_dict_per_basin
+        print(f"Loss on the entire validation epoch: {running_loss / (len(loader)):.4f}", flush=True)
+        return running_loss / (len(loader))
 
     def start_run_wrapper(self):
         print(f"number of workers using for data loader is: {self.num_workers_data_loader}")
@@ -290,6 +293,7 @@ class FloodML_Runner:
         if not self.debug:
             ctx = mp.get_context('spawn')
             training_loss_single_pass_queue = ctx.Queue()
+            validation_loss_single_pass_queue = ctx.Queue()
             nse_last_pass_queue = ctx.Queue()
             preds_obs_dicts_ranks_queue = ctx.Queue()
             os.environ['MASTER_ADDR'] = "localhost"
@@ -300,24 +304,30 @@ class FloodML_Runner:
             mp.spawn(self.start_run,
                      args=(self.num_processes_ddp,
                            training_loss_single_pass_queue,
+                           validation_loss_single_pass_queue,
                            nse_last_pass_queue,
                            preds_obs_dicts_ranks_queue, training_data, test_data),
                      nprocs=self.num_processes_ddp,
                      join=True)
         else:
             training_loss_single_pass_queue = queue.Queue()
+            validation_loss_single_pass_queue = queue.Queue()
             nse_last_pass_queue = queue.Queue()
             preds_obs_dicts_ranks_queue = queue.Queue()
             self.start_run(0,
                            1,
                            training_loss_single_pass_queue=training_loss_single_pass_queue,
+                           validation_loss_single_pass_queue=validation_loss_single_pass_queue,
                            preds_obs_dicts_ranks_queue=preds_obs_dicts_ranks_queue,
                            nse_last_pass_queue=nse_last_pass_queue,
                            training_data=training_data, test_data=test_data)
         training_loss_list_single_pass = []
+        validation_loss_list_single_pass = []
         nse_list_last_epoch = []
         while not training_loss_single_pass_queue.empty():
             training_loss_list_single_pass.append(training_loss_single_pass_queue.get()[1])
+        while not validation_loss_single_pass_queue.empty():
+            validation_loss_list_single_pass.append(validation_loss_single_pass_queue.get()[1])
         while not nse_last_pass_queue.empty():
             nse_list_last_epoch.append(nse_last_pass_queue.get())
         if len(nse_list_last_epoch) > 0:
@@ -333,13 +343,12 @@ class FloodML_Runner:
             f"{self.num_hidden_units}"
         )
         plt.plot(training_loss_list_single_pass, label="training")
+        plt.plot(validation_loss_list_single_pass, label="validation")
         plt.legend(loc="upper left")
         plt.savefig(
-            f"../data/results/training_loss_in_{self.num_epochs}_with_parameters: "
-            f"{str(self.dropout_rate).replace('.', '_')};"
-            f"{self.sequence_length};"
-            f"{self.num_hidden_units}"
-        )
+            f"../data/results/training_and_validation_loss_in_{self.num_epochs}_of_model_{self.model_name}"
+            f"_with_parameters: {str(self.dropout_rate).replace('.', '_')}; {self.sequence_length};"
+            f"{self.num_hidden_units}")
         plt.close()
         return nse_list_last_epoch
 
@@ -558,8 +567,8 @@ class FloodML_Runner:
             raise Exception(f"model with name {self.model_name} is not recognized")
         return model
 
-    def start_run(self, rank, world_size, training_loss_single_pass_queue, nse_last_pass_queue,
-                  preds_obs_dicts_ranks_queue, training_data, test_data):
+    def start_run(self, rank, world_size, training_loss_single_pass_queue, validation_loss_single_pass_queue,
+                  nse_last_pass_queue, preds_obs_dicts_ranks_queue, training_data, test_data):
         # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
         print(f"running with optimizer: {self.optim_name}")
         starting_epoch = 0
@@ -633,11 +642,13 @@ class FloodML_Runner:
             if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):
                 if world_size > 1:
                     test_dataloader.sampler.set_epoch(i)
-                    _ = self.eval_model(model.module, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda",
-                                        epoch=(i + 1))
+                    loss_on_validation_epoch = self.eval_model(model.module, test_dataloader,
+                                                               preds_obs_dicts_ranks_queue, calc_nse_star,
+                                                               device="cuda", epoch=(i + 1))
                 else:
-                    _ = self.eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue, device="cuda",
-                                        epoch=(i + 1))
+                    loss_on_validation_epoch = self.eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue,
+                                                               calc_nse_star,
+                                                               device="cuda", epoch=(i + 1))
             print("finished evaluating the model", flush=True)
             if world_size > 1:
                 dist.barrier()
@@ -665,6 +676,7 @@ class FloodML_Runner:
                 if self.run_sweeps:
                     wandb.log({"training loss": loss_on_training_epoch})
                 training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
+                validation_loss_single_pass_queue.put((i + 1), loss_on_validation_epoch)
                 preds_obs_dict_per_basin = {}
                 num_obs_preds = 0
                 print("start converting the observations and predictions queue to dictionary", flush=True)

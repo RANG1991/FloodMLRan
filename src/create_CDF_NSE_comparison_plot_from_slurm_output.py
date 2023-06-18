@@ -79,7 +79,7 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict, calc_average_
                 nse_lists = model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)]
                 if len(nse_lists) > 0:
                     nse_lists_concat = np.vstack(nse_lists)
-                    model_name_and_params_dict_to_avg_nse[(model_name_in_list, params_dict_in_list)] = np.mean(
+                    model_name_and_params_dict_to_avg_nse[(model_name_in_list, params_dict_in_list)] = np.max(
                         nse_lists_concat, axis=0)
         return model_name_and_params_dict_to_avg_nse
     else:
@@ -132,7 +132,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    calc_average_runs_in_model = True
+    calc_average_runs_in_model = False
     input_file_names = ["slurm-17476442.out", "slurm-17477923.out"]
     input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
@@ -148,7 +148,7 @@ def plot_NSE_CDF_graphs_my_code():
         input_files_names_formatted = "_".join(
             [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
         plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
-        figure(figsize=(30, 28))
+        figure(figsize=(20, 16))
         for model_name in model_names:
             for run_number in run_numbers:
                 for basin_tuple in all_basins_tuples:
