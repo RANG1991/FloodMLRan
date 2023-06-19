@@ -10,6 +10,28 @@ from statsmodels.tsa.stattools import adfuller
 import CAMELS_dataset
 
 
+def plot_training_and_validation_losses(slurm_output_file):
+    file_name = slurm_output_file.name.replace('slurm-', '').replace('.out', '')
+    training_loss_list = []
+    validation_loss_list = []
+    with open(slurm_output_file, "r", encoding="utf-8") as f:
+        for row in f:
+            match_loss_training = re.search(r"Loss on the entire training epoch: (\d+\.\d+)", row)
+            if match_loss_training:
+                loss = float(match_loss_training.group(1))
+                training_loss_list.append(loss)
+            match_loss_validation = re.search(r"Loss on the entire validation epoch: (\d+\.\d+)", row)
+            if match_loss_validation:
+                loss = float(match_loss_validation.group(1))
+                validation_loss_list.append(loss)
+    plt.title(f"training_and_validation_loss_of_{file_name}")
+    plt.plot(training_loss_list[::3], label="training")
+    plt.plot(validation_loss_list[::3], label="validation")
+    plt.legend(loc="upper left")
+    plt.savefig(f"training_and_validation_loss_of_{file_name}")
+    plt.close()
+
+
 def calc_intersection_station_ids_files(file_1, file_2):
     with open(file_1) as f1:
         station_ids_files_1 = set([station_id.strip() for station_id in f1.readlines()])
@@ -119,7 +141,7 @@ def check_stationary():
 
 
 def main():
-    check_stationary()
+    plot_training_and_validation_losses(Path("../slurm_output_files/slurm-17535614.out"))
 
 
 if __name__ == "__main__":

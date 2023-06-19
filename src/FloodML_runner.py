@@ -229,6 +229,22 @@ class FloodML_Runner:
                 if isinstance(v, torch.Tensor):
                     state[k] = v.to(device_name)
 
+    def plot_training_and_validation_loss(self, training_loss_list_single_pass, validation_loss_list_single_pass):
+        plt.title(
+            f"loss in {self.num_epochs} epochs for the parameters: "
+            f"{self.dropout_rate};"
+            f"{self.sequence_length};"
+            f"{self.num_hidden_units}"
+        )
+        plt.plot(training_loss_list_single_pass, label="training")
+        plt.plot(validation_loss_list_single_pass, label="validation")
+        plt.legend(loc="upper left")
+        plt.savefig(
+            f"../data/results/training_and_validation_loss_in_{self.num_epochs}_of_model_{self.model_name}"
+            f"_with_parameters: {str(self.dropout_rate).replace('.', '_')}; {self.sequence_length};"
+            f"{self.num_hidden_units}")
+        plt.close()
+
     def eval_model(self, model, loader, preds_obs_dicts_ranks_queue, loss_func, device, epoch):
         torch.cuda.empty_cache()
         preds_obs_dict_per_basin = {}
@@ -336,20 +352,7 @@ class FloodML_Runner:
                 f"num_hidden_units={self.num_hidden_units} num_epochs={self.num_epochs}, median NSE is: "
                 f"{statistics.median(nse_list_last_epoch)}", flush=True
             )
-        plt.title(
-            f"loss in {self.num_epochs} epochs for the parameters: "
-            f"{self.dropout_rate};"
-            f"{self.sequence_length};"
-            f"{self.num_hidden_units}"
-        )
-        plt.plot(training_loss_list_single_pass, label="training")
-        plt.plot(validation_loss_list_single_pass, label="validation")
-        plt.legend(loc="upper left")
-        plt.savefig(
-            f"../data/results/training_and_validation_loss_in_{self.num_epochs}_of_model_{self.model_name}"
-            f"_with_parameters: {str(self.dropout_rate).replace('.', '_')}; {self.sequence_length};"
-            f"{self.num_hidden_units}")
-        plt.close()
+        self.plot_training_and_validation_loss(training_loss_list_single_pass, validation_loss_list_single_pass)
         return nse_list_last_epoch
 
     def prepare_datasets(self):
