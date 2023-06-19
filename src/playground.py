@@ -15,18 +15,25 @@ def plot_training_and_validation_losses(slurm_output_file):
     training_loss_list = []
     validation_loss_list = []
     with open(slurm_output_file, "r", encoding="utf-8") as f:
+        new_epoch_train = True
+        new_epoch_validation = True
         for row in f:
             match_loss_training = re.search(r"Loss on the entire training epoch: (\d+\.\d+)", row)
-            if match_loss_training:
+            if match_loss_training and new_epoch_train:
                 loss = float(match_loss_training.group(1))
                 training_loss_list.append(loss)
+                new_epoch_train = False
             match_loss_validation = re.search(r"Loss on the entire validation epoch: (\d+\.\d+)", row)
-            if match_loss_validation:
+            if match_loss_validation and new_epoch_validation:
                 loss = float(match_loss_validation.group(1))
                 validation_loss_list.append(loss)
+                new_epoch_validation = False
+            if re.search("finished calculating the NSE per basin", row):
+                new_epoch_train = True
+                new_epoch_validation = True
     plt.title(f"training_and_validation_loss_of_{file_name}")
-    plt.plot(training_loss_list[::3], label="training")
-    plt.plot(validation_loss_list[::3], label="validation")
+    plt.plot(training_loss_list, label="training")
+    plt.plot(validation_loss_list, label="validation")
     plt.legend(loc="upper left")
     plt.savefig(f"training_and_validation_loss_of_{file_name}")
     plt.close()
