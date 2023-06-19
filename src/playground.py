@@ -72,14 +72,18 @@ def fix_wrong_aligned_images_files_CAMELS(basin_id=-1):
         spatial_files = sorted(Path(
             f"/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/CAMELS_all_data/").rglob("precip24_spatial_*.nc"))
     for station_data_file_spatial in spatial_files:
-        # fix spatial file
-        ds_ncf = nc.Dataset(station_data_file_spatial, 'r+')
-        # ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds_ncf))
-        X_data_spatial = np.asarray(ds_ncf["precipitation"])
-        X_data_spatial = np.fliplr(X_data_spatial)
-        plt.imsave("check.png", X_data_spatial.sum(axis=0))
-        ds_ncf["precipitation"][:] = X_data_spatial
-        ds_ncf.close()
+        print(f"processing: {station_data_file_spatial.name}")
+        try:
+            # fix spatial file
+            ds_ncf = nc.Dataset(station_data_file_spatial, 'r+')
+            # ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds_ncf))
+            X_data_spatial = np.asarray(ds_ncf["precipitation"])
+            X_data_spatial = np.fliplr(X_data_spatial)
+            # plt.imsave("check.png", X_data_spatial.sum(axis=0))
+            ds_ncf["precipitation"][:] = X_data_spatial
+            ds_ncf.close()
+        except Exception as e:
+            print(e)
 
 
 def fix_wrong_aligned_images_files_radar(basin_id=-1):
