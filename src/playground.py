@@ -64,6 +64,24 @@ def rename_checkpoint_files(checkpoint_files_folder):
         os.rename(checkpoint_file, checkpoint_file.parent / new_checkpoint_file_name)
 
 
+def fix_wrong_aligned_images_files_CAMELS(basin_id=-1):
+    if basin_id != -1:
+        spatial_files = Path(
+            f"/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/CAMELS_all_data/precip24_spatial_{basin_id}.nc")
+    else:
+        spatial_files = sorted(Path(
+            f"/sci/labs/efratmorin/ranga/FloodMLRan/data/CAMELS_US/radar_all_data/").rglob("precip24_spatial_*.nc"))
+    for station_data_file_spatial, in spatial_files:
+        # fix spatial file
+        ds_ncf = nc.Dataset(station_data_file_spatial, 'r+')
+        # ds = xr.open_dataset(xr.backends.NetCDF4DataStore(ds_ncf))
+        X_data_spatial = np.asarray(ds_ncf["precipitation"])
+        X_data_spatial = np.flipud(X_data_spatial)
+        plt.imsave("check.png", X_data_spatial.sum(axis=0))
+        ds_ncf["precipitation"][:] = X_data_spatial
+        ds_ncf.close()
+
+
 def fix_wrong_aligned_images_files_radar(basin_id=-1):
     if basin_id != -1:
         spatial_files = Path(
@@ -148,7 +166,7 @@ def check_stationary():
 
 
 def main():
-    plot_training_and_validation_losses(Path("../slurm_output_files/slurm-17535614.out"))
+    fix_wrong_aligned_images_files_CAMELS("01644000")
 
 
 if __name__ == "__main__":

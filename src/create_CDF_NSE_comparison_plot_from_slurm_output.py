@@ -132,8 +132,8 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    calc_average_runs_in_model = False
-    input_file_names = ["slurm-17476442.out", "slurm-17477923.out"]
+    calc_average_runs_in_model = True
+    input_file_names = ["slurm-17476442.out", "slurm-17477923.out", "slurm-17535614.out"]
     input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in input_file_names]
     dict_all_files = {}
     for input_file_path in input_file_paths:
