@@ -183,7 +183,7 @@ def check_stationary():
 
 
 def main():
-    plot_training_and_validation_losses(Path("../slurm_output_files/slurm-17535614.out"))
+    plot_training_and_validation_losses(Path("../slurm_output_files/slurm-17630097.out"))
 
 
 if __name__ == "__main__":
