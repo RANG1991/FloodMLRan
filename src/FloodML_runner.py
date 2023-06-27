@@ -308,10 +308,10 @@ class FloodML_Runner:
         test_data.set_sequence_length(self.sequence_length)
         if not self.debug:
             ctx = mp.get_context('spawn')
-            training_loss_single_pass_queue = ctx.Queue()
-            validation_loss_single_pass_queue = ctx.Queue()
-            nse_last_pass_queue = ctx.Queue()
-            preds_obs_dicts_ranks_queue = ctx.Queue()
+            training_loss_single_pass_queue = ctx.Queue(2000)
+            validation_loss_single_pass_queue = ctx.Queue(2000)
+            nse_last_pass_queue = ctx.Queue(2000)
+            preds_obs_dicts_ranks_queue = ctx.Queue(2000)
             os.environ['MASTER_ADDR'] = "localhost"
             if is_port_in_use(10005):
                 os.environ['MASTER_PORT'] = "10006"
