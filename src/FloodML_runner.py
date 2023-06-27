@@ -707,6 +707,7 @@ class FloodML_Runner:
                 print(f"best median NSE so far: {best_median_nse}", flush=True)
             if world_size > 1:
                 dist.barrier()
+        print("after barrier")
         if rank == 0 and self.profile_code:
             p.stop()
         if world_size > 1:
