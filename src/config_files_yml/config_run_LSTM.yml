@@ -9,7 +9,7 @@ limit_size_above_1000: true
 load_checkpoint: false
 model: LSTM
 mode: validation
-num_basins:
+num_basins: 10
 num_epochs: 20
 num_hidden_units: 256
 num_processes_ddp: 3
