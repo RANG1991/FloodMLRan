@@ -10,7 +10,7 @@ load_checkpoint: false
 model: CNN_LSTM
 mode: validation
 num_basins:
-num_epochs: 20
+num_epochs: 30
 num_hidden_units: 256
 num_processes_ddp: 3
 num_workers_data_loader: 1
