@@ -134,7 +134,7 @@ def create_class_activation_maps_explainable(checkpoint_path):
         use_only_precip_feature=False)
     model = model.to(device="cuda")
     dataset = create_CAMELS_dataset()
-    _, _, xs_non_spatial, xs_spatial, _, _ = dataset[100]
+    _, _, xs_non_spatial, xs_spatial, _, _ = dataset[1000]
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model_state_dict'], strict=False)
     model.eval()
@@ -143,11 +143,13 @@ def create_class_activation_maps_explainable(checkpoint_path):
     activation_map = cam_extractor(0, out.item())
     plt.axis('off')
     plt.tight_layout()
-    image_precip = xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0)
-    image_activation = FloodML_Base_Dataset.crop_or_pad_precip_spatial(
-        activation_map[0].cpu().numpy().mean(axis=0)[None, ...], max_width=36, max_height=36).squeeze(0)
-    opacity = 0.9
-    overlay = ((1 - opacity) * image_precip + opacity * image_activation)
+    cmap_jet = cm.get_cmap("jet")
+    cmap_bgr = cm.get_cmap("brg")
+    image_precip = 255 * cmap_bgr(xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0))[:, :, :3]
+    image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36), interpolation=cv2.INTER_CUBIC)
+    image_activation = 255 * cmap_jet(image_activation)[:, :, :3]
+    opacity = 0.5
+    overlay = ((1 - opacity) * image_precip + opacity * image_activation).astype(np.uint8)
     plt.imsave("./check.png", overlay)
 
 
