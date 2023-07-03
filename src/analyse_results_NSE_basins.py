@@ -9,12 +9,14 @@ import CAMELS_dataset
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.inspection import permutation_importance
 from alibi.explainers import ALE, plot_ale
-from pytorch_grad_cam import GradCAM, HiResCAM, ScoreCAM, GradCAMPlusPlus, AblationCAM, XGradCAM, EigenCAM, FullGrad
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam.utils.image import show_cam_on_image
+from torchcam.methods import SmoothGradCAMpp
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
 import torch
 import os
+from PIL import Image
+from matplotlib import cm
+import cv2
+from FloodML_Base_Dataset import FloodML_Base_Dataset
 
 
 def create_accumulated_local_effects(clf, df_results):
@@ -113,7 +115,7 @@ def create_CAMELS_dataset():
         use_all_static_attr=False,
         limit_size_above_1000=True,
         num_basins=None,
-        use_only_precip_feature=True,
+        use_only_precip_feature=False,
         run_with_radar_data=False
     )
     return camels_dataset
@@ -121,28 +123,32 @@ def create_CAMELS_dataset():
 
 def create_class_activation_maps_explainable(checkpoint_path):
     model = TWO_LSTM_CNN_LSTM(
-        input_dim=28,
-        image_height=37, image_width=37,
+        input_dim=32,
+        image_height=36, image_width=36,
         hidden_dim=256,
         sequence_length_conv_lstm=185,
         in_cnn_channels=1,
         dropout=0.4,
         num_static_attributes=27,
-        num_dynamic_attributes=1,
-        use_only_precip_feature=True)
+        num_dynamic_attributes=5,
+        use_only_precip_feature=False)
     model = model.to(device="cuda")
     dataset = create_CAMELS_dataset()
-    _, _, xs_non_spatial, xs_spatial, _, _ = dataset[0]
+    _, _, xs_non_spatial, xs_spatial, _, _ = dataset[100]
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model_state_dict'], strict=False)
     model.eval()
-    target_layers = [model.layer4[-1]]
-    input_tensor = (xs_non_spatial, xs_spatial)
-    cam = GradCAM(model=model, target_layers=target_layers, use_cuda=True)
-    # targets = [ClassifierOutputTarget(281)]
-    # grayscale_cam = cam(input_tensor=input_tensor, targets=targets)
-    # grayscale_cam = grayscale_cam[0, :]
-    # visualization = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+    cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn, input_shape=(1, 36, 36))
+    out = model(xs_non_spatial.unsqueeze(0).cuda(), xs_spatial.unsqueeze(0).cuda())
+    activation_map = cam_extractor(0, out.item())
+    plt.axis('off')
+    plt.tight_layout()
+    image_precip = xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0)
+    image_activation = FloodML_Base_Dataset.crop_or_pad_precip_spatial(
+        activation_map[0].cpu().numpy().mean(axis=0)[None, ...], max_width=36, max_height=36).squeeze(0)
+    opacity = 0.9
+    overlay = ((1 - opacity) * image_precip + opacity * image_activation)
+    plt.imsave("./check.png", overlay)
 
 
 def main():
