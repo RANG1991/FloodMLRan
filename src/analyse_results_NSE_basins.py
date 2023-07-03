@@ -14,6 +14,7 @@ from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
 import torch
+import os
 
 
 def create_accumulated_local_effects(clf, df_results):
@@ -133,7 +134,7 @@ def create_class_activation_maps_explainable(checkpoint_path):
     _, _, xs_non_spatial, xs_spatial, _, _ = dataset[0]
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-    model = model.to("cuda")
+    model = model.cuda()
     model.eval()
     target_layers = [model.layer4[-1]]
     input_tensor = (xs_non_spatial, xs_spatial)
@@ -156,4 +157,5 @@ def main():
 
 
 if __name__ == "__main__":
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     main()
