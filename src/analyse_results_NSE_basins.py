@@ -130,11 +130,11 @@ def create_class_activation_maps_explainable(checkpoint_path):
         num_static_attributes=27,
         num_dynamic_attributes=1,
         use_only_precip_feature=True)
+    model = model.to(device="cuda")
     dataset = create_CAMELS_dataset()
     _, _, xs_non_spatial, xs_spatial, _, _ = dataset[0]
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-    model = model.cuda()
     model.eval()
     target_layers = [model.layer4[-1]]
     input_tensor = (xs_non_spatial, xs_spatial)
