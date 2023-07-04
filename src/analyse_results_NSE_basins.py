@@ -145,13 +145,15 @@ def create_class_activation_maps_explainable(checkpoint_path):
     plt.tight_layout()
     cmap_image_precip = cm.get_cmap("binary")
     cmap_image_activation = cm.get_cmap("jet")
-    image_precip = xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0)
-    image_precip = 255 * cmap_image_precip(image_precip)[:, :, :3]
-    image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36), interpolation=cv2.INTER_CUBIC)
-    image_activation = 255 * cmap_image_activation(
-        ((image_activation - image_activation.min()) / (image_activation.max() - image_activation.min())))[:, :, :3]
+    image_precip = (255 * (xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0))).astype(np.uint8)
+    _, _ = cv2.findContours(image_precip, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    image_precip = cmap_image_precip(image_precip)[:, :, :3]
+    image_activation = (255 * cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36),
+                                         interpolation=cv2.INTER_CUBIC)).astype(np.uint8)
+    image_activation = (cmap_image_activation(
+        ((image_activation - image_activation.min()) / (image_activation.max() - image_activation.min())))[:, :, :3])
     opacity = 0.7
-    overlay = (opacity * image_precip + (1 - opacity) * image_activation).astype(np.uint8)
+    overlay = (opacity * image_precip + (1 - opacity) * image_activation)
     plt.imsave("./check.png", overlay)
 
 
