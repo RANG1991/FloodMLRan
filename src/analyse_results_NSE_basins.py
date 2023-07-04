@@ -143,13 +143,15 @@ def create_class_activation_maps_explainable(checkpoint_path):
     activation_map = cam_extractor(0, out.item())
     plt.axis('off')
     plt.tight_layout()
-    cmap_jet = cm.get_cmap("binary")
-    cmap_bgr = cm.get_cmap("jet")
-    image_precip = 255 * cmap_bgr(xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0))[:, :, :3]
+    cmap_image_precip = cm.get_cmap("binary")
+    cmap_image_activation = cm.get_cmap("jet")
+    image_precip = xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0)
+    image_precip = 255 * cmap_image_precip(image_precip)[:, :, :3]
     image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36), interpolation=cv2.INTER_CUBIC)
-    image_activation = 255 * cmap_jet(image_activation)[:, :, :3]
-    opacity = 1
-    overlay = ((1 - opacity) * image_precip + opacity * image_activation).astype(np.uint8)
+    image_activation = 255 * cmap_image_activation(
+        ((image_activation - image_activation.min()) / (image_activation.max() - image_activation.min())))[:, :, :3]
+    opacity = 0.7
+    overlay = (opacity * image_precip + (1 - opacity) * image_activation).astype(np.uint8)
     plt.imsave("./check.png", overlay)
 
 
