@@ -134,27 +134,38 @@ def create_class_activation_maps_explainable(checkpoint_path):
         use_only_precip_feature=False)
     model = model.to(device="cuda")
     dataset = create_CAMELS_dataset()
-    _, _, xs_non_spatial, xs_spatial, _, _ = dataset[10000]
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-    model.eval()
-    cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn, input_shape=(1, 36, 36))
-    out = model(xs_non_spatial.unsqueeze(0).cuda(), xs_spatial.unsqueeze(0).cuda())
-    activation_map = cam_extractor(0, out.item())
-    plt.axis('off')
-    plt.tight_layout()
-    cmap_image_precip = cm.get_cmap("binary")
-    cmap_image_activation = cm.get_cmap("jet")
-    image_precip = (255 * (xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0))).astype(np.uint8)
-    _, _ = cv2.findContours(image_precip, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    image_precip = cmap_image_precip(image_precip)[:, :, :3]
-    image_activation = (255 * cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36),
-                                         interpolation=cv2.INTER_CUBIC)).astype(np.uint8)
-    image_activation = (cmap_image_activation(
-        ((image_activation - image_activation.min()) / (image_activation.max() - image_activation.min())))[:, :, :3])
-    opacity = 0.7
-    overlay = (opacity * image_precip + (1 - opacity) * image_activation)
-    plt.imsave("./check.png", overlay)
+    lookup_table = dataset.lookup_table
+    dataset_length = len(dataset)
+    curr_basin_id = -1
+    basin_id_to_first_ind = {}
+    for ind in range(dataset_length):
+        basin_id = lookup_table[ind]
+        if basin_id != curr_basin_id:
+            basin_id_to_first_ind[basin_id] = ind
+    for basin_id in basin_id_to_first_ind.keys():
+        _, _, xs_non_spatial, xs_spatial, _, _ = dataset[basin_id_to_first_ind[basin_id]]
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+        model.eval()
+        cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn, input_shape=(1, 36, 36))
+        out = model(xs_non_spatial.unsqueeze(0).cuda(), xs_spatial.unsqueeze(0).cuda())
+        activation_map = cam_extractor(0, out.item())
+        plt.axis('off')
+        plt.tight_layout()
+        cmap_image_precip = cm.get_cmap("binary")
+        cmap_image_activation = cm.get_cmap("jet")
+        image_precip = (255 * (xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0))).astype(
+            np.uint8)
+        _, _ = cv2.findContours(image_precip, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        image_precip = cmap_image_precip(image_precip)[:, :, :3]
+        image_activation = (255 * cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36),
+                                             interpolation=cv2.INTER_CUBIC)).astype(np.uint8)
+        image_activation = (cmap_image_activation(
+            ((image_activation - image_activation.min()) / (image_activation.max() - image_activation.min())))[:, :,
+                            :3])
+        opacity = 0.7
+        overlay = (opacity * image_precip + (1 - opacity) * image_activation)
+        plt.imsave(f"./heta_map_basin_{basin_id}.png", overlay)
 
 
 def main():
