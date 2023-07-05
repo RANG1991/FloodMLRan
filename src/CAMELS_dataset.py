@@ -421,8 +421,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         del y_data
                         continue
                     X_data_spatial_list = []
-                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim // 4,
-                                                                     self.max_dim // 4)
+                    if self.use_super_resolution:
+                        X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim // 4,
+                                                                         self.max_dim // 4)
                     for i in range(X_data_spatial.shape[0]):
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
                         if self.use_random_noise_spatial:
