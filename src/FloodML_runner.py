@@ -477,7 +477,8 @@ class FloodML_Runner:
                 use_only_precip_feature=self.use_only_precip_feature,
                 run_with_radar_data=self.run_with_radar_data,
                 use_random_noise_spatial=self.use_random_noise_spatial,
-                use_zeros_spatial=self.use_zeros_spatial
+                use_zeros_spatial=self.use_zeros_spatial,
+                use_super_resolution=self.use_super_resolution,
             )
         else:
             raise Exception(f"wrong dataset type: {self.dataset_name}")
