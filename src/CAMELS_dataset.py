@@ -105,13 +105,15 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             use_only_precip_feature=False,
             run_with_radar_data=False,
             use_random_noise_spatial=False,
-            use_zeros_spatial=False
+            use_zeros_spatial=False,
+            use_super_resolution=False,
     ):
         self.discharge_data_folder = discharge_data_folder
         self.use_only_precip_feature = use_only_precip_feature
         self.run_with_radar_data = run_with_radar_data
         self.use_random_noise_spatial = use_random_noise_spatial
         self.use_zeros_spatial = use_zeros_spatial
+        self.use_super_resolution = use_super_resolution
         if run_with_radar_data:
             dynamic_data_folder_spatial = DYNAMIC_DATA_FOLDER_SPATIAL_RADAR
         if use_only_precip_feature:
@@ -366,10 +368,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
     def read_all_dynamic_attributes(self):
         if os.path.exists(
-                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}_SR") \
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") \
                 and not self.create_new_files:
             obj_text = codecs.open(
-                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}_SR",
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'r',
                 encoding='utf-8').read()
             json_obj = json.loads(obj_text)
@@ -428,12 +430,13 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                                 np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
                         elif self.use_zeros_spatial:
                             X_data_spatial_list.append(np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
-                        else:
-                            # X_data_spatial_list.append(np.expand_dims(
-                            #     np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
-                            #                        interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
+                        elif self.use_super_resolution:
                             X_data_spatial_list.append(
                                 np.expand_dims(sr.upsample(X_data_spatial[i, :, :].squeeze()), axis=0))
+                        else:
+                            X_data_spatial_list.append(np.expand_dims(
+                                np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                                                   interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
                     X_data_spatial = np.concatenate(X_data_spatial_list)
                     gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).mean(
                         axis=0)
@@ -499,7 +502,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             std_x_spatial = None
             cumm_m_x_spatial = None
         with codecs.open(
-                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}_SR",
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
                 'w', encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),

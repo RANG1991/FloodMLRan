@@ -36,3 +36,4 @@ use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 only_precip: false
 run_with_radar_data: false
+use_super_resolution: false
