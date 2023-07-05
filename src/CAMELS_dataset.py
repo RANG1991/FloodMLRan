@@ -441,7 +441,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     X_data_spatial = np.concatenate(X_data_spatial_list)
                     gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).mean(
                         axis=0)
-                    plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_SR_precip.png",
+                    plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
                                gray_image)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
