@@ -214,8 +214,9 @@ class FloodML_Base_Dataset(Dataset):
                     dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
                                        "x_data_spatial": current_x_data_spatial,
                                        "list_dates": current_list_dates}
-                with open(f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl",
-                          'wb') as f:
+                with open(
+                        f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}_SR.pkl",
+                        'wb') as f:
                     pickle.dump(dict_curr_basin, f)
         dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
         list_stations_current_run = '\n'.join([station_id for station_id in self.all_stations_ids])
@@ -283,7 +284,7 @@ class FloodML_Base_Dataset(Dataset):
 
     def __getitem__(self, index) -> T_co:
         basin_id, inner_ind = self.lookup_table[index]
-        with open(f"{self.folder_with_basins_pickles}/{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl",
+        with open(f"{self.folder_with_basins_pickles}/{basin_id}_{self.stage}{self.suffix_pickle_file}_SR.pkl",
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
         X_data_tensor_spatial = torch.tensor([])

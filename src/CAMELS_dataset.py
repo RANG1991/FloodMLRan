@@ -366,10 +366,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
 
     def read_all_dynamic_attributes(self):
         if os.path.exists(
-                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") \
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}_SR") \
                 and not self.create_new_files:
             obj_text = codecs.open(
-                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}_SR",
                 'r',
                 encoding='utf-8').read()
             json_obj = json.loads(obj_text)
@@ -397,6 +397,10 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         pbar.set_description(f"processing basins - {self.stage}")
         num_exist_stations = 0
         num_not_in_list_stations = 0
+        sr = cv2.dnn_superres.DnnSuperResImpl_create()
+        path = "./LapSRN_x4.pb"
+        sr.readModel(path)
+        sr.setModel("lapsrn", 4)
         for station_id in pbar:
             if self.check_is_valid_station_id(station_id, create_new_files=self.create_new_files):
                 if (self.model_name.lower() == "conv_lstm" or
@@ -415,8 +419,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         del y_data
                         continue
                     X_data_spatial_list = []
-                    # X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim // 4,
-                    #                                                  self.max_dim // 4)
+                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim // 4,
+                                                                     self.max_dim // 4)
                     for i in range(X_data_spatial.shape[0]):
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
                         if self.use_random_noise_spatial:
@@ -425,13 +429,15 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         elif self.use_zeros_spatial:
                             X_data_spatial_list.append(np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
                         else:
-                            X_data_spatial_list.append(np.expand_dims(
-                                np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
-                                                   interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
+                            # X_data_spatial_list.append(np.expand_dims(
+                            #     np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                            #                        interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
+                            X_data_spatial_list.append(
+                                np.expand_dims(sr.upsample(X_data_spatial[i, :, :].squeeze()), axis=0))
                     X_data_spatial = np.concatenate(X_data_spatial_list)
                     gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).mean(
                         axis=0)
-                    plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
+                    plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_SR_precip.png",
                                gray_image)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
@@ -493,9 +499,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             std_x_spatial = None
             cumm_m_x_spatial = None
         with codecs.open(
-                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
-                'w',
-                encoding='utf-8') as json_file:
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}_SR",
+                'w', encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
