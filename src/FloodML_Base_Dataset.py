@@ -142,7 +142,10 @@ class FloodML_Base_Dataset(Dataset):
         self.max_width = max_width
         self.max_height = max_height
         self.max_dim = max([self.max_height, self.max_width])
-        self.max_dim = (self.max_dim // 4) * 4
+        if not self.use_super_resolution:
+            self.max_dim = (self.max_dim // 4) * 4
+        else:
+            self.max_dim = self.max_dim * 4
         self.cls_token_spatial = torch.randn(size=(1, self.max_dim * self.max_dim), requires_grad=False)
         # self.max_dim = 32
         (dict_station_id_to_data,
