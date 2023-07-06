@@ -309,6 +309,7 @@ class FloodML_Runner:
         training_data, test_data = self.prepare_datasets()
         training_data.set_sequence_length(self.sequence_length)
         test_data.set_sequence_length(self.sequence_length)
+        dist_url = f"file:///sci/labs/efratmorin/ranga/FloodMLRan/DDP/DDP_FILE_{np.random.randint(10000)}"
         if not self.debug:
             ctx = mp.get_context('spawn')
             training_loss_single_pass_queue = ctx.Queue()
@@ -325,7 +326,7 @@ class FloodML_Runner:
                            training_loss_single_pass_queue,
                            validation_loss_single_pass_queue,
                            nse_last_pass_queue,
-                           preds_obs_dicts_ranks_queue, training_data, test_data),
+                           preds_obs_dicts_ranks_queue, training_data, test_data, dist_url),
                      nprocs=self.num_processes_ddp,
                      join=True)
         else:
@@ -339,7 +340,7 @@ class FloodML_Runner:
                            validation_loss_single_pass_queue=validation_loss_single_pass_queue,
                            preds_obs_dicts_ranks_queue=preds_obs_dicts_ranks_queue,
                            nse_last_pass_queue=nse_last_pass_queue,
-                           training_data=training_data, test_data=test_data)
+                           training_data=training_data, test_data=test_data, dist_url=dist_url)
         training_loss_list_single_pass = []
         validation_loss_list_single_pass = []
         nse_list_last_epoch = []
@@ -576,7 +577,7 @@ class FloodML_Runner:
         return model
 
     def start_run(self, rank, world_size, training_loss_single_pass_queue, validation_loss_single_pass_queue,
-                  nse_last_pass_queue, preds_obs_dicts_ranks_queue, training_data, test_data):
+                  nse_last_pass_queue, preds_obs_dicts_ranks_queue, training_data, test_data, dist_url):
         # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
         print(f"running with optimizer: {self.optim_name}")
         starting_epoch = 0
@@ -595,7 +596,7 @@ class FloodML_Runner:
         if world_size > 1:
             torch.cuda.set_device(rank)
             model = model.to(device="cuda")
-            setup(rank, world_size)
+            setup(rank, world_size, dist_url)
             model = DDP(model, device_ids=[rank], find_unused_parameters=False)
             self.convert_optimizer_tensor_to_cuda(optimizer, f"cuda:{rank}")
         else:
@@ -881,10 +882,13 @@ def is_port_in_use(port):
         return s.connect_ex(('localhost', port)) == 0
 
 
-def setup(rank, world_size):
-    dist.init_process_group(backend="nccl", rank=rank, world_size=world_size,
-                            init_method=f"file:///sci/labs/efratmorin/ranga/FloodMLRan"
-                                        f"/DDP/DDP_FILE_{np.random.randint(10000)}")
+def setup(rank, world_size, dist_url):
+    dist.init_process_group(backend="nccl",
+                            rank=rank,
+                            world_size=world_size,
+                            init_method=dist_url)
+    if rank == 0 and os.path.exists(dist_url):
+        os.remove(dist_url)
 
 
 def cleanup():
@@ -1095,6 +1099,7 @@ def main():
 
 if __name__ == "__main__":
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    torch.multiprocessing.set_start_method('spawn')
     args = read_arguments_from_yaml()
     if args["run_sweeps"]:
         print("running with sweeps")
