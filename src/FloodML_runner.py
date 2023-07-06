@@ -315,11 +315,11 @@ class FloodML_Runner:
             validation_loss_single_pass_queue = ctx.Queue()
             nse_last_pass_queue = ctx.Queue()
             preds_obs_dicts_ranks_queue = ctx.Queue()
-            os.environ['MASTER_ADDR'] = "localhost"
-            if is_port_in_use(10005):
-                os.environ['MASTER_PORT'] = "10006"
-            else:
-                os.environ['MASTER_PORT'] = "10005"
+            # os.environ['MASTER_ADDR'] = "localhost"
+            # if is_port_in_use(10005):
+            #     os.environ['MASTER_PORT'] = "10006"
+            # else:
+            #     os.environ['MASTER_PORT'] = "10005"
             mp.spawn(self.start_run,
                      args=(self.num_processes_ddp,
                            training_loss_single_pass_queue,
