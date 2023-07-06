@@ -883,7 +883,7 @@ def is_port_in_use(port):
 
 def setup(rank, world_size):
     dist.init_process_group(backend="nccl", rank=rank, world_size=world_size,
-                            init_method=f"file:///cs/labs/efratmorin/ranga/FloodMLRan"
+                            init_method=f"file:///sci/labs/efratmorin/ranga/FloodMLRan"
                                         f"/DDP/DDP_FILE_{np.random.randint(10000)}")
 
 
