@@ -311,7 +311,7 @@ class FloodML_Runner:
         test_data.set_sequence_length(self.sequence_length)
         dist_url = f"file:///sci/labs/efratmorin/ranga/FloodMLRan/DDP/DDP_FILE_{np.random.randint(10000)}"
         if not self.debug:
-            ctx = mp.get_context('spawn')
+            # ctx = mp.get_context('spawn')
             training_loss_single_pass_queue = ctx.Queue()
             validation_loss_single_pass_queue = ctx.Queue()
             nse_last_pass_queue = ctx.Queue()
