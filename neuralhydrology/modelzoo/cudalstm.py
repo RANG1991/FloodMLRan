@@ -65,7 +65,8 @@ class CudaLSTM(BaseModel):
         """
         # possibly pass dynamic and static inputs through embedding layers, then concatenate them
         x_d = self.embedding_net(data)
-        print(x_d.permute((1, 0, 2))[0])
+        # print(x_d.permute((1, 0, 2))[0])
+
         lstm_output, (h_n, c_n) = self.lstm(input=x_d)
 
         # reshape to [batch_size, seq, n_hiddens]
