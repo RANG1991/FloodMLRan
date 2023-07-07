@@ -21,6 +21,7 @@ from shapely.geometry import Point
 from shapely.geometry import Polygon
 from geopandas import GeoDataFrame
 import geopandas as gpd
+from shapely.geometry import box
 
 
 def print_locations_on_world_map(df_locations, color, use_map_axis):
@@ -40,8 +41,9 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     df_results_label_is_zero = df_results[df_results["label"] == 0]
     df_results_label_is_one = df_results[df_results["label"] == 1]
     world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-    usa = world[world.name == 'United States of America']
-    usa = usa[usa.continent == "North America"]
+    usa = world[world.name == "United States of America"]
+    polygon = box(-127, -85, 175, 85)
+    usa = gpd.clip(usa, polygon)
     use_map_axis = usa.plot(figsize=(20, 12))
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
