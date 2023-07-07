@@ -185,9 +185,6 @@ def create_class_activation_maps_explainable(checkpoint_path):
         plt.tight_layout()
         image_basin = cv2.imread(f"/sci/labs/efratmorin/ranga/FloodMLRan"
                                  f"/data/basin_check_precip_images/img_{basin_id}_precip.png")
-        # visualization = overlay_mask(to_pil_image(image_basin[:3, :, :]),
-        #                              to_pil_image(activation_map, mode='F'),
-        #                              alpha=0.5)
         cmap_image_precip = plt.get_cmap("binary")
         cmap_image_activation = plt.get_cmap("jet")
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
