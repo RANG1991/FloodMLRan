@@ -17,6 +17,33 @@ from PIL import Image
 from matplotlib import cm
 import cv2
 from FloodML_Base_Dataset import FloodML_Base_Dataset
+from shapely.geometry import Point
+from shapely.geometry import Polygon
+from geopandas import GeoDataFrame
+import geopandas as gpd
+
+
+def print_locations_on_world_map(df_locations, color, world_map_axis):
+    lon_array = df_locations["gauge_lon"]
+    lat_array = df_locations["gauge_lat"]
+    df_lat_lon_basins = {"Longitude": lon_array,
+                         "Latitude": lat_array}
+    df_lat_lon_basins = pd.DataFrame.from_dict(df_lat_lon_basins)
+    geometry = [Point(xy) for xy in zip(df_lat_lon_basins['Longitude'], df_lat_lon_basins['Latitude'])]
+    gdf = GeoDataFrame(df_lat_lon_basins, geometry=geometry)
+    gdf.plot(ax=world_map_axis, marker='o', color=color, markersize=8)
+
+
+def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
+    df_results = pd.read_csv(csv_results_file_with_static_attr)
+    df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
+    df_results_label_is_zero = df_results[df_results["label"] == 0]
+    df_results_label_is_one = df_results[df_results["label"] == 1]
+    world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+    world_map_axis = world.plot(figsize=(20, 12))
+    print_locations_on_world_map(df_results_label_is_zero, "red", world_map_axis)
+    print_locations_on_world_map(df_results_label_is_one, "yellow", world_map_axis)
+    plt.savefig(f"plot_lat_lon.png")
 
 
 def create_accumulated_local_effects(clf, df_results):
@@ -170,8 +197,9 @@ def create_class_activation_maps_explainable(checkpoint_path):
 
 
 def main():
-    create_class_activation_maps_explainable(
-        "/sci/labs/efratmorin/ranga/FloodMLRan/checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
+    plot_lon_lat_on_world_map("17775252_17782018_17828539.csv")
+    # create_class_activation_maps_explainable(
+    #     "/sci/labs/efratmorin/ranga/FloodMLRan/checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     # plt.rc('font', size=12)
     # analyse_results_by_decision_tree("17476442_17477923.csv")
     # analyse_results_feat_importance_by_logistic_regression("17476442_17477923.csv")
@@ -181,5 +209,5 @@ def main():
 
 
 if __name__ == "__main__":
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     main()
