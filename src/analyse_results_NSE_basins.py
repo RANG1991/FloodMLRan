@@ -23,7 +23,7 @@ from geopandas import GeoDataFrame
 import geopandas as gpd
 
 
-def print_locations_on_world_map(df_locations, color, world_map_axis):
+def print_locations_on_world_map(df_locations, color, use_map_axis):
     lon_array = df_locations["gauge_lon"]
     lat_array = df_locations["gauge_lat"]
     df_lat_lon_basins = {"Longitude": lon_array,
@@ -31,7 +31,7 @@ def print_locations_on_world_map(df_locations, color, world_map_axis):
     df_lat_lon_basins = pd.DataFrame.from_dict(df_lat_lon_basins)
     geometry = [Point(xy) for xy in zip(df_lat_lon_basins['Longitude'], df_lat_lon_basins['Latitude'])]
     gdf = GeoDataFrame(df_lat_lon_basins, geometry=geometry)
-    gdf.plot(ax=world_map_axis, marker='o', color=color, markersize=8)
+    gdf.plot(ax=use_map_axis, marker='o', color=color, markersize=8)
 
 
 def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
@@ -40,9 +40,11 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     df_results_label_is_zero = df_results[df_results["label"] == 0]
     df_results_label_is_one = df_results[df_results["label"] == 1]
     world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-    world_map_axis = world.plot(figsize=(20, 12))
-    print_locations_on_world_map(df_results_label_is_zero, "red", world_map_axis)
-    print_locations_on_world_map(df_results_label_is_one, "yellow", world_map_axis)
+    usa = world[world.name == 'United States of America']
+    usa = usa[usa.continent == "North America"]
+    use_map_axis = usa.plot(figsize=(20, 12))
+    print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
+    print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
     plt.savefig(f"plot_lat_lon.png")
 
 
