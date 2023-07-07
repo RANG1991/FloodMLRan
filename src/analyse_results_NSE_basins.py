@@ -32,7 +32,7 @@ def print_locations_on_world_map(df_locations, color, use_map_axis):
     df_lat_lon_basins = pd.DataFrame.from_dict(df_lat_lon_basins)
     geometry = [Point(xy) for xy in zip(df_lat_lon_basins['Longitude'], df_lat_lon_basins['Latitude'])]
     gdf = GeoDataFrame(df_lat_lon_basins, geometry=geometry)
-    gdf.plot(ax=use_map_axis, marker='o', color=color, markersize=8)
+    gdf.plot(ax=use_map_axis, marker='o', color=color, markersize=20)
 
 
 def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
