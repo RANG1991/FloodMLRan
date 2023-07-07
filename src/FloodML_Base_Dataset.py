@@ -79,8 +79,7 @@ class FloodML_Base_Dataset(Dataset):
         self.folder_with_basins_pickles = f"{main_folder}/pickled_basins_data"
         self.list_stations_static = []
         self.suffix_pickle_file = "_spatial" if "cnn" in model_name.lower() or "conv" in model_name.lower() else ""
-        self.suffix_pickle_file = self.suffix_pickle_file + "_SR" \
-            # if self.use_super_resolution else self.suffix_pickle_file
+        self.suffix_pickle_file = self.suffix_pickle_file + "_SR" if self.use_super_resolution else self.suffix_pickle_file
 
         self.x_mean_per_basin_dict = self.read_pickle_if_exists(
             f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}")
