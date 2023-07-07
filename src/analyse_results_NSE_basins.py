@@ -163,9 +163,10 @@ def create_class_activation_maps_explainable(checkpoint_path):
         num_static_attributes=27,
         num_dynamic_attributes=5,
         use_only_precip_feature=False)
-    model = model.to(device="cuda")
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+    model = model.to(device=("cuda" if torch.cuda.is_available() else "cpu"))
+    checkpoint = torch.load(checkpoint_path,
+                            map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn, input_shape=(1, 36, 36))
     dataset = create_CAMELS_dataset()
@@ -197,13 +198,15 @@ def create_class_activation_maps_explainable(checkpoint_path):
                             :3])
         opacity = 0.7
         overlay = (opacity * image_precip + (1 - opacity) * image_activation)
-        plt.imsave(f"./heat_maps/heat_map_basin_{basin_id}.png", overlay)
+        image_basin = Image.open(
+            f"/sci/labs/efratmorin/ranga/FloodMLRan/data/basin_check_precip_images/img_{basin_id}_precip.png")
+        plt.imsave(f"./heat_maps/heat_map_basin_{basin_id}.png", np.hstack([overlay, image_basin]))
 
 
 def main():
-    plot_lon_lat_on_world_map("17775252_17782018_17828539.csv")
-    # create_class_activation_maps_explainable(
-    #     "/sci/labs/efratmorin/ranga/FloodMLRan/checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
+    # plot_lon_lat_on_world_map("17775252_17782018_17828539.csv")
+    create_class_activation_maps_explainable(
+        "/sci/labs/efratmorin/ranga/FloodMLRan/checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     # plt.rc('font', size=12)
     # analyse_results_by_decision_tree("17476442_17477923.csv")
     # analyse_results_feat_importance_by_logistic_regression("17476442_17477923.csv")
@@ -213,5 +216,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     main()
