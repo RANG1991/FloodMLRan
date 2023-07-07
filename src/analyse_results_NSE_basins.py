@@ -22,6 +22,7 @@ from shapely.geometry import Polygon
 from geopandas import GeoDataFrame
 import geopandas as gpd
 from shapely.geometry import box
+from pytorch_grad_cam.utils.image import show_cam_on_image
 
 
 def print_locations_on_world_map(df_locations, color, use_map_axis):
@@ -153,6 +154,7 @@ def create_CAMELS_dataset():
 
 
 def create_class_activation_maps_explainable(checkpoint_path):
+    device = "cpu"
     model = TWO_LSTM_CNN_LSTM(
         input_dim=32,
         image_height=36, image_width=36,
@@ -163,9 +165,8 @@ def create_class_activation_maps_explainable(checkpoint_path):
         num_static_attributes=27,
         num_dynamic_attributes=5,
         use_only_precip_feature=False)
-    model = model.to(device=("cuda" if torch.cuda.is_available() else "cpu"))
-    checkpoint = torch.load(checkpoint_path,
-                            map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    model = model.to(device=device)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn, input_shape=(1, 36, 36))
@@ -180,27 +181,30 @@ def create_class_activation_maps_explainable(checkpoint_path):
             basin_id_to_first_ind[basin_id] = ind
             curr_basin_id = basin_id
     for basin_id in basin_id_to_first_ind.keys():
+        print(f"in basin: {basin_id}")
         _, _, xs_non_spatial, xs_spatial, _, _ = dataset[basin_id_to_first_ind[basin_id]]
-        out = model(xs_non_spatial.unsqueeze(0).cuda(), xs_spatial.unsqueeze(0).cuda())
+        out = model(xs_non_spatial.unsqueeze(0).to(device), xs_spatial.unsqueeze(0).to(device))
         activation_map = cam_extractor(0, out.item())
         plt.axis('off')
         plt.tight_layout()
-        cmap_image_precip = cm.get_cmap("binary")
-        cmap_image_activation = cm.get_cmap("jet")
-        image_precip = (255 * (xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0))).astype(
-            np.uint8)
-        _, _ = cv2.findContours(image_precip, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        image_precip = cmap_image_precip(image_precip)[:, :, :3]
-        image_activation = (255 * cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36),
-                                             interpolation=cv2.INTER_CUBIC)).astype(np.uint8)
-        image_activation = (cmap_image_activation(
-            ((image_activation - image_activation.min()) / (image_activation.max() - image_activation.min())))[:, :,
-                            :3])
-        opacity = 0.7
-        overlay = (opacity * image_precip + (1 - opacity) * image_activation)
+        visualization = show_cam_on_image(xs_spatial.cpu().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0),
+                                          activation_map, use_rgb=False)
+        # cmap_image_precip = cm.get_cmap("binary")
+        # cmap_image_activation = cm.get_cmap("jet")
+        # image_precip = (255 * (xs_spatial.cpu().numpy().reshape(xs_spatial.shape[0], 36, 36).mean(axis=0))).astype(
+        #     np.uint8)
+        # _, _ = cv2.findContours(image_precip, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        # image_precip = cmap_image_precip(image_precip)[:, :, :3]
+        # image_activation = (255 * cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36),
+        #                                      interpolation=cv2.INTER_CUBIC)).astype(np.uint8)
+        # image_activation = (cmap_image_activation(
+        #     ((image_activation - image_activation.min()) / (image_activation.max() - image_activation.min())))[:, :,
+        #                     :3])
+        # opacity = 0.7
+        # overlay = (opacity * image_precip + (1 - opacity) * image_activation)
         image_basin = Image.open(
             f"/sci/labs/efratmorin/ranga/FloodMLRan/data/basin_check_precip_images/img_{basin_id}_precip.png")
-        plt.imsave(f"./heat_maps/heat_map_basin_{basin_id}.png", np.hstack([overlay, image_basin]))
+        plt.imsave(f"./heat_maps/heat_map_basin_{basin_id}.png", np.hstack([visualization, image_basin]))
 
 
 def main():
