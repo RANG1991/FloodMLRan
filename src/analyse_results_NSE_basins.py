@@ -205,11 +205,11 @@ def create_class_activation_maps_explainable(checkpoint_path):
     list_images_row = []
     list_rows = []
     num_images_in_row = 10
-    for i in range((len(list_all_images) // num_images_in_row) * num_images_in_row):
-        if i % num_images_in_row == 0 and i > 0:
+    for i in range(len(list_all_images)):
+        list_images_row.append(list_all_images[i])
+        if i % num_images_in_row == (num_images_in_row - 1) or (i == len(list_all_images) - 1):
             list_rows.append(np.hstack(list_images_row))
             list_images_row = []
-        list_images_row.append(list_all_images[i])
     white_image = 255 * np.ones((50, 50, 3))
     white_image_with_margin = cv2.copyMakeBorder(white_image, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
                                                  value=(255, 255, 255))
