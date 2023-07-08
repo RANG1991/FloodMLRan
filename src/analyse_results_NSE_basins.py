@@ -210,6 +210,12 @@ def create_class_activation_maps_explainable(checkpoint_path):
             list_rows.append(np.hstack(list_images_row))
             list_images_row = []
         list_images_row.append(list_all_images[i])
+    white_image = 255 * np.ones((50, 50, 3))
+    white_image_with_margin = cv2.copyMakeBorder(white_image, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
+                                                 value=(255, 255, 255))
+    num_white_images_to_fill = len(list_all_images) % num_images_in_row
+    white_images_to_fill = np.hstack([white_image_with_margin for _ in range(num_white_images_to_fill * 2)])
+    list_rows[-1] = np.hstack([list_rows[-1], white_images_to_fill])
     cv2.imwrite(f"./heat_maps/heat_map_all_basins.png", np.vstack(list_rows))
 
 
