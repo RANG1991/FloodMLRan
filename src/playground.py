@@ -182,8 +182,34 @@ def check_stationary():
             print('\t%s: %.3f' % (key, value))
 
 
+def create_iowa_map():
+    import pandas as pd
+    import geopandas as gpd
+    import plotly.graph_objects as go
+
+    df_sample = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/minoritymajority.csv')
+    df_sample_r = df_sample[df_sample['STNAME'] == 'Iowa']
+    df_sample_r['FIPS'] = df_sample_r['FIPS'].astype('str')
+    url = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json'
+    geo_counties = gpd.read_file(url)
+    geo_df = geo_counties.merge(df_sample_r, left_on='id', right_on='FIPS')
+    geo_df = geo_df.set_index('id')
+    fig = go.Figure(go.Choroplethmapbox(geojson=geo_df.__geo_interface__,
+                                        locations=geo_df.index,
+                                        z=geo_df['TOT_POP'],
+                                        colorscale="Viridis",
+                                        marker_opacity=0.5,
+                                        marker_line_width=0.5
+                                        ))
+    fig.update_layout(mapbox_style="carto-positron",
+                      mapbox_zoom=5,
+                      mapbox_center={"lat": 42.032974, "lon": -93.581543})
+    fig.update_layout(height=600, margin={"r": 0, "t": 20, "l": 0, "b": 0})
+    fig.write_image("iowa_map.png")
+
+
 def main():
-    plot_training_and_validation_losses(Path("../slurm_output_files/slurm-17630097.out"))
+    create_iowa_map()
 
 
 if __name__ == "__main__":

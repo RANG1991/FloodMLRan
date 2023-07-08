@@ -186,20 +186,21 @@ def create_class_activation_maps_explainable(checkpoint_path):
         plt.tight_layout()
         image_basin = cv2.imread(f"/sci/labs/efratmorin/ranga/FloodMLRan"
                                  f"/data/basin_check_precip_images/img_{basin_id}_precip.png")
-        # image_basin = cv2.resize(image_basin, (256, 256), interpolation=cv2.INTER_CUBIC)
+        image_basin = cv2.resize(image_basin, (50, 50), interpolation=cv2.INTER_CUBIC)
         cmap_image_precip = plt.get_cmap("binary")
         cmap_image_activation = plt.get_cmap("jet")
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
-        image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (36, 36),
+        image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (50, 50),
                                       interpolation=cv2.INTER_CUBIC)
         # image_activation = ((image_activation - image_activation.min())
         #                     / (image_activation.max() - image_activation.min()))
         image_activation = (255 * (cmap_image_activation(image_activation)[:, :, :3])).astype(np.uint8)
         opacity = 0.7
         overlay = (opacity * image_basin + (1 - opacity) * image_activation)
-        image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=255)
+        image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
+                                                     value=(255, 255, 255))
         image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
-                                                          value=255)
+                                                          value=(255, 255, 255))
         list_all_images.append(np.hstack([image_basin_with_margin, image_activation_with_margin]))
     list_images_row = []
     list_rows = []
