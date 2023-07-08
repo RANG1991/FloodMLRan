@@ -203,8 +203,9 @@ def create_class_activation_maps_explainable(checkpoint_path):
         list_all_images.append(np.hstack([image_basin_with_margin, image_activation_with_margin]))
     list_images_row = []
     list_rows = []
-    for i in range(len(list_all_images)):
-        if (i + 1) % 4 == 0:
+    num_images_in_row = 10
+    for i in range((len(list_all_images) // num_images_in_row) * num_images_in_row):
+        if i % num_images_in_row == 0 and i > 0:
             list_rows.append(np.hstack(list_images_row))
             list_images_row = []
         list_images_row.append(list_all_images[i])
