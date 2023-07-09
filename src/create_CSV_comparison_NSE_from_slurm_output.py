@@ -3,8 +3,7 @@ import pandas as pd
 from pathlib import Path
 import functools
 from ERA5_dataset import Dataset_ERA5
-from create_CDF_NSE_comparison_plot_from_slurm_output import calc_best_nse_per_model_and_num_basins, \
-    create_dict_basin_id_to_NSE_my_code
+from create_CDF_NSE_comparison_plot_from_slurm_output import calc_dicts_from_all_runs_and_all_files
 
 
 def generate_box_plots(df_res):
@@ -35,13 +34,8 @@ def generate_box_plots(df_res):
 
 def generate_csv_from_output_file(slurm_output_files, static_attr_file):
     input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in slurm_output_files]
-    dict_all_runs_from_all_files = {}
-    dict_avg_runs_from_all_files = {}
-    for input_file_path in input_file_paths:
-        d = create_dict_basin_id_to_NSE_my_code(f"{input_file_path}")
-        dict_all_runs, dict_avg_runs = calc_best_nse_per_model_and_num_basins(d)
-        dict_all_runs_from_all_files.update(dict_all_runs)
-        dict_avg_runs_from_all_files.update(dict_avg_runs)
+    dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
+        input_file_paths)
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     output_file_name = Path(input_files_names_formatted).stem
@@ -54,6 +48,8 @@ def generate_csv_from_output_file(slurm_output_files, static_attr_file):
     #     raise Exception("not all basins tuples are the same - the CSV will be incorrect")
     basins_dict_for_data_frame = {"basin_id": basins_ids}
     for (model_name, params_tuple) in dict_avg_runs_from_all_files.keys():
+        if len(dict_all_runs_from_all_files[(model_name, params_tuple)]) != 135:
+            continue
         basins_dict_for_data_frame[f'NSE_{model_name}_135'] = dict_avg_runs_from_all_files[(model_name, params_tuple)]
     df_nse = pd.DataFrame(basins_dict_for_data_frame)
     df_static_attrib = pd.read_csv(static_attr_file, dtype={"gauge_id": str})
@@ -79,8 +75,9 @@ def generate_csv_from_CAMELS_static_attr_files(static_data_folder):
 
 def main():
     generate_csv_from_CAMELS_static_attr_files("../data/CAMELS_US/camels_attributes_v2.0")
-    generate_csv_from_output_file(["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out"],
-                                  "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
+    generate_csv_from_output_file(
+        ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out"],
+        "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 
 if __name__ == "__main__":

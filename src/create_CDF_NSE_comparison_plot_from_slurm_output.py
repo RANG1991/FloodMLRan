@@ -127,10 +127,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
     return models_basins_nse_dict
 
 
-def plot_NSE_CDF_graphs_my_code():
-    # "slurm-17828539.out"
-    input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out"]
-    input_file_paths = [Path(f"../slurm_output_files/{file_name}").resolve() for file_name in input_file_names]
+def calc_dicts_from_all_runs_and_all_files(input_file_paths):
     dict_all_runs_from_all_files = {}
     dict_avg_runs_from_all_files = {}
     for input_file_path in input_file_paths:
@@ -146,7 +143,15 @@ def plot_NSE_CDF_graphs_my_code():
         list_of_nse_lists_for_one_model = dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)]
         dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)] = np.mean(
             np.vstack(list_of_nse_lists_for_one_model), axis=0)
+    return dict_all_runs_from_all_files, dict_avg_runs_from_all_files
 
+
+def plot_NSE_CDF_graphs_my_code():
+    # "slurm-17828539.out"
+    input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out"]
+    input_file_paths = [Path(f"../slurm_output_files/{file_name}").resolve() for file_name in input_file_names]
+    dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
+        input_file_paths)
     all_basins_tuples = set([basin_tuple for _, _, basin_tuple, _ in dict_all_runs_from_all_files.keys()])
     model_names = set([model_name for model_name, _, _, _ in dict_all_runs_from_all_files.keys()])
     run_numbers = set([run_number for _, run_number, _, _ in dict_all_runs_from_all_files.keys()])
