@@ -19,6 +19,7 @@ from geopandas import GeoDataFrame
 import geopandas as gpd
 from shapely.geometry import box
 from matplotlib import colormaps as cm
+from sklearn.preprocessing import StandardScaler
 
 
 def print_locations_on_world_map(df_locations, color, use_map_axis):
@@ -47,7 +48,8 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     plt.savefig(f"plot_lat_lon.png")
 
 
-def create_accumulated_local_effects(clf, df_results):
+def create_accumulated_local_effects(csv_results_file_with_static_attr, clf):
+    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf, False)
     fun_clf = (lambda x: clf.predict_proba(x)[:, 1])
     ale_clf = ALE(fun_clf, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES, target_names=["label"])
     exp_clf = ale_clf.explain(df_results.to_numpy()[:, :-1])
@@ -55,19 +57,23 @@ def create_accumulated_local_effects(clf, df_results):
     plt.savefig("ALE.png")
 
 
-def fit_clf_analysis(csv_results_file_with_static_attr, clf):
+def fit_clf_analysis(csv_results_file_with_static_attr, clf, scale_data=True):
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna()
     df_results = df_results[CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["label"]]
-    clf.fit(df_results.to_numpy()[:, :-1], df_results["label"])
+    X_train = df_results.to_numpy()[:, :-1]
+    if scale_data:
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+    clf.fit(X_train, df_results["label"])
     return clf, df_results
 
 
 def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=3)
+    clf = DecisionTreeClassifier(random_state=0, max_depth=5)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     plt.figure(figsize=(14, 10))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1],
@@ -76,7 +82,7 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
 
 
 def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_static_attr):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=3)
+    clf = DecisionTreeClassifier(random_state=0, max_depth=5)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
@@ -88,8 +94,8 @@ def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_stati
 def analyse_results_feat_importance_by_logistic_regression(csv_results_file_with_static_attr):
     clf = LogisticRegression(max_iter=10000)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
-    create_accumulated_local_effects(clf, df_results)
     importance = clf.coef_[0]
+    create_accumulated_local_effects(csv_results_file_with_static_attr, clf)
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
@@ -97,7 +103,7 @@ def analyse_results_feat_importance_by_logistic_regression(csv_results_file_with
 
 
 def analyse_results_feat_importance_by_random_forest(csv_results_file_with_static_attr):
-    clf = RandomForestClassifier()
+    clf = RandomForestClassifier(random_state=0, max_depth=5)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
