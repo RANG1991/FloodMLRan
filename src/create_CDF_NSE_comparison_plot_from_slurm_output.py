@@ -67,7 +67,7 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
                                 (model_name, run_number, basins_tuple, params_dict)] = list_nse
                             print(f"best epoch until now is: {epoch_num}")
     model_name_and_params_dict_to_nse_lists = {}
-    model_name_and_params_dict_to_avg_nse = {}
+    model_name_and_params_dict_to_sum_nse = {}
     for model_name_in_list in model_names:
         for params_dict_in_list in params_dicts:
             model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)] = []
@@ -80,12 +80,13 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
             nse_lists = model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)]
             if len(nse_lists) > 0:
                 nse_lists_concat = np.vstack(nse_lists)
-                model_name_and_params_dict_to_avg_nse[(model_name_in_list, params_dict_in_list)] = np.mean(
+                model_name_and_params_dict_to_sum_nse[(model_name_in_list, params_dict_in_list)] = np.sum(
                     nse_lists_concat, axis=0)
-    return model_name_and_basins_tuple_to_best_nse, model_name_and_params_dict_to_avg_nse
+    return model_name_and_basins_tuple_to_best_nse, model_name_and_params_dict_to_sum_nse
 
 
 def create_dict_basin_id_to_NSE_my_code(logs_filename):
+    slurm_process_id = logs_filename.name.replace('slurm-', '').replace('.out', '')
     models_basins_nse_dict = {}
     model_name = "empty_model_name"
     run_number = 0
@@ -109,7 +110,8 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
                 if new_run_number != run_number:
                     run_number = new_run_number
                     epoch_num = 1
-                    models_basins_nse_dict[(model_name, new_run_number, epoch_num, params_tuple)] = {}
+                    models_basins_nse_dict[
+                        (model_name, f"{new_run_number}_{slurm_process_id}", epoch_num, params_tuple)] = {}
                     print(f"run number: {run_number}")
             match_model_name_string = re.search("running with model: (.*?)\n", row)
             if match_model_name_string:
@@ -117,30 +119,40 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
                 if new_model_name != model_name:
                     model_name = new_model_name
                 epoch_num = 1
-                models_basins_nse_dict[(model_name, run_number, epoch_num, params_tuple)] = {}
+                models_basins_nse_dict[(model_name, f"{run_number}_{slurm_process_id}", epoch_num, params_tuple)] = {}
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
                 basin_nse = float(match_nse_string.group(2))
-                models_basins_nse_dict[(model_name, run_number, epoch_num, params_tuple)][basin_id] = basin_nse
+                models_basins_nse_dict[(model_name, f"{run_number}_{slurm_process_id}", epoch_num, params_tuple)][
+                    basin_id] = basin_nse
             match_best_nse_so_far_string = re.search("best median NSE so far: (.*?)\n", row)
             if match_best_nse_so_far_string:
                 epoch_num += 1
-                models_basins_nse_dict[(model_name, run_number, epoch_num, params_tuple)] = {}
+                models_basins_nse_dict[(model_name, f"{run_number}_{slurm_process_id}", epoch_num, params_tuple)] = {}
     return models_basins_nse_dict
 
 
 def plot_NSE_CDF_graphs_my_code():
     # "slurm-17828539.out"
     input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out"]
-    input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in input_file_names]
+    input_file_paths = [Path(f"../slurm_output_files/{file_name}").resolve() for file_name in input_file_names]
     dict_all_runs_from_all_files = {}
     dict_avg_runs_from_all_files = {}
     for input_file_path in input_file_paths:
-        d = create_dict_basin_id_to_NSE_my_code(f"{input_file_path}")
-        dict_all_runs, dict_avg_runs = calc_best_nse_per_model_and_num_basins(d)
-        dict_all_runs_from_all_files.update(dict_all_runs)
-        dict_avg_runs_from_all_files.update(dict_avg_runs)
+        d = create_dict_basin_id_to_NSE_my_code(input_file_path)
+        dict_all_runs_single_file, dict_sum_runs_single_file = calc_best_nse_per_model_and_num_basins(d)
+        dict_all_runs_from_all_files.update(dict_all_runs_single_file)
+        for (model_name_in_list, params_dict_in_list) in dict_sum_runs_single_file.keys():
+            if (model_name_in_list, params_dict_in_list) not in dict_avg_runs_from_all_files.keys():
+                dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)] = []
+            dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)].append(
+                dict_sum_runs_single_file[(model_name_in_list, params_dict_in_list)])
+    for (model_name_in_list, params_dict_in_list) in dict_avg_runs_from_all_files.keys():
+        list_of_nse_lists_for_one_model = dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)]
+        dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)] = np.mean(
+            np.vstack(list_of_nse_lists_for_one_model), axis=0)
+
     all_basins_tuples = set([basin_tuple for _, _, basin_tuple, _ in dict_all_runs_from_all_files.keys()])
     model_names = set([model_name for model_name, _, _, _ in dict_all_runs_from_all_files.keys()])
     run_numbers = set([run_number for _, run_number, _, _ in dict_all_runs_from_all_files.keys()])
