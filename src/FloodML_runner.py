@@ -172,7 +172,7 @@ class FloodML_Runner:
         self.use_random_noise_spatial = use_random_noise_spatial
         self.use_zeros_spatial = use_zeros_spatial
         self.use_super_resolution = use_super_resolution
-        self.use_large_size = self.use_large_size
+        self.use_large_size = use_large_size
         if dataset_name.lower() == "caravan":
             all_stations_list_sorted = sorted(open("../data/spatial_basins_list.txt").read().splitlines())
         else:
