@@ -126,8 +126,11 @@ def analyse_results_feat_importance_by_random_forest(csv_results_file_with_stati
     plt.savefig("analysis_random_forest.png")
 
 
-def get_clf_from_clf_name():
-    
+def get_clf_from_clf_name(clf_name):
+    if clf_name == "decision_tree":
+    elif clf_name == "random_forest":
+    elif clf_name == "logistic_regression":
+    elif clf_name == "KNN_cls":
 
 
 def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_attr, clf_name):
