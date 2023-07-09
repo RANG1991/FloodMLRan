@@ -20,6 +20,7 @@ import geopandas as gpd
 from shapely.geometry import box
 from matplotlib import colormaps as cm
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
 
 
 def print_locations_on_world_map(df_locations, color, use_map_axis):
@@ -35,6 +36,9 @@ def print_locations_on_world_map(df_locations, color, use_map_axis):
 
 def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     df_results = pd.read_csv(csv_results_file_with_static_attr)
+    df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
+    df_results = df_results.fillna(df_results.mean())
+    print(df_results.corr())
     df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
     df_results_label_is_zero = df_results[df_results["label"] == 0]
     df_results_label_is_one = df_results[df_results["label"] == 1]
@@ -50,7 +54,7 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
 
 def create_accumulated_local_effects(csv_results_file_with_static_attr, clf):
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf, False)
-    fun_clf = (lambda x: clf.predict_proba(x)[:, 1])
+    fun_clf = (lambda x: clf.predict(x))
     ale_clf = ALE(fun_clf, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES, target_names=["label"])
     exp_clf = ale_clf.explain(df_results.to_numpy()[:, :-1])
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
@@ -70,6 +74,8 @@ def fit_clf_analysis(csv_results_file_with_static_attr, clf, scale_data=True):
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
+    score = accuracy_score(clf.predict(X_train), df_results["label"])
+    print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     return clf, df_results
 
 
@@ -140,7 +146,7 @@ def create_CAMELS_dataset():
         validation_end_date="30/09/1992",
         test_start_date="01/10/1992",
         test_end_date="30/09/1997",
-        stage="train",
+        stage="validation",
         model_name="CNN_LSTM",
         sequence_length_spatial=185,
         create_new_files=False,
@@ -228,8 +234,7 @@ def create_class_activation_maps_explainable(checkpoint_path):
 
 def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148.csv")
-    # create_class_activation_maps_explainable(
-    #     "/sci/labs/efratmorin/ranga/FloodMLRan/checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
+    # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
     analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
     analyse_results_feat_importance_by_logistic_regression("17775252_17782018_17828539_17832148.csv")
