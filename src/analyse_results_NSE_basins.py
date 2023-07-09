@@ -62,7 +62,8 @@ def fit_clf_analysis(csv_results_file_with_static_attr, clf, scale_data=True):
     df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
-    df_results = df_results.select_dtypes(include=[np.number]).dropna()
+    df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
+    df_results = df_results.fillna(df_results.mean())
     df_results = df_results[CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["label"]]
     X_train = df_results.to_numpy()[:, :-1]
     if scale_data:
@@ -73,7 +74,7 @@ def fit_clf_analysis(csv_results_file_with_static_attr, clf, scale_data=True):
 
 
 def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=5)
+    clf = DecisionTreeClassifier(random_state=0, max_depth=1)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     plt.figure(figsize=(14, 10))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1],
@@ -82,7 +83,7 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
 
 
 def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_static_attr):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=5)
+    clf = DecisionTreeClassifier(random_state=0, max_depth=1)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
@@ -103,7 +104,7 @@ def analyse_results_feat_importance_by_logistic_regression(csv_results_file_with
 
 
 def analyse_results_feat_importance_by_random_forest(csv_results_file_with_static_attr):
-    clf = RandomForestClassifier(random_state=0, max_depth=5)
+    clf = RandomForestClassifier(random_state=0, max_depth=1)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.feature_importances_
     plt.figure(figsize=(25, 20))
