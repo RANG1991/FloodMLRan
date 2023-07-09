@@ -67,7 +67,6 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
                                 (model_name, run_number, basins_tuple, params_dict)] = list_nse
                             print(f"best epoch until now is: {epoch_num}")
     model_name_and_params_dict_to_nse_lists = {}
-    model_name_and_params_dict_to_sum_nse = {}
     for model_name_in_list in model_names:
         for params_dict_in_list in params_dicts:
             model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)] = []
@@ -77,12 +76,7 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
                     model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)].append(
                         model_name_and_basins_tuple_to_best_nse[
                             (model_name_in_list, run_number, basins_tuple, params_dict_in_dict)])
-            nse_lists = model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)]
-            if len(nse_lists) > 0:
-                nse_lists_concat = np.vstack(nse_lists)
-                model_name_and_params_dict_to_sum_nse[(model_name_in_list, params_dict_in_list)] = np.sum(
-                    nse_lists_concat, axis=0)
-    return model_name_and_basins_tuple_to_best_nse, model_name_and_params_dict_to_sum_nse
+    return model_name_and_basins_tuple_to_best_nse, model_name_and_params_dict_to_nse_lists
 
 
 def create_dict_basin_id_to_NSE_my_code(logs_filename):
@@ -141,13 +135,13 @@ def plot_NSE_CDF_graphs_my_code():
     dict_avg_runs_from_all_files = {}
     for input_file_path in input_file_paths:
         d = create_dict_basin_id_to_NSE_my_code(input_file_path)
-        dict_all_runs_single_file, dict_sum_runs_single_file = calc_best_nse_per_model_and_num_basins(d)
+        dict_all_runs_single_file, dict_nse_list_per_run_single_file = calc_best_nse_per_model_and_num_basins(d)
         dict_all_runs_from_all_files.update(dict_all_runs_single_file)
-        for (model_name_in_list, params_dict_in_list) in dict_sum_runs_single_file.keys():
+        for (model_name_in_list, params_dict_in_list) in dict_nse_list_per_run_single_file.keys():
             if (model_name_in_list, params_dict_in_list) not in dict_avg_runs_from_all_files.keys():
                 dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)] = []
             dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)].append(
-                dict_sum_runs_single_file[(model_name_in_list, params_dict_in_list)])
+                dict_nse_list_per_run_single_file[(model_name_in_list, params_dict_in_list)])
     for (model_name_in_list, params_dict_in_list) in dict_avg_runs_from_all_files.keys():
         list_of_nse_lists_for_one_model = dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)]
         dict_avg_runs_from_all_files[(model_name_in_list, params_dict_in_list)] = np.mean(
