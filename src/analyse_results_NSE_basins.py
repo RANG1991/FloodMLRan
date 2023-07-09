@@ -95,51 +95,42 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
     plt.savefig("decision_tree.png")
 
 
-def analyse_results_feat_importance_by_decision_tree(csv_results_file_with_static_attr):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=1)
-    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
-    importance = clf.feature_importances_
-    plt.figure(figsize=(25, 20))
-    plt.xticks(rotation=90)
-    plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig("analysis_decision_tree.png")
-
-
-def analyse_results_feat_importance_by_logistic_regression(csv_results_file_with_static_attr):
-    clf = LogisticRegression(max_iter=10000)
-    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
-    importance = clf.coef_[0]
-    create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf)
-    plt.figure(figsize=(25, 20))
-    plt.xticks(rotation=90)
-    plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig("analysis_logistic_regression.png")
-
-
-def analyse_results_feat_importance_by_random_forest(csv_results_file_with_static_attr):
-    clf = RandomForestClassifier(random_state=0, max_depth=1)
-    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
-    importance = clf.feature_importances_
-    plt.figure(figsize=(25, 20))
-    plt.xticks(rotation=90)
-    plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig("analysis_random_forest.png")
-
-
 def get_clf_from_clf_name(clf_name):
     if clf_name == "decision_tree":
+        clf = DecisionTreeClassifier(random_state=0, max_depth=1)
     elif clf_name == "random_forest":
+        clf = RandomForestClassifier(random_state=0, max_depth=1)
     elif clf_name == "logistic_regression":
+        clf = LogisticRegression(max_iter=10000)
     elif clf_name == "KNN_cls":
+        clf = KNeighborsClassifier()
+    else:
+        raise Exception(f"unknown cls name: {clf_name}")
+    return clf
+
+
+def get_feature_importance_from_trained_clf(clf, clf_name, df_results):
+    if clf_name == "decision_tree":
+        importance = clf.feature_importances_
+    elif clf_name == "random_forest":
+        importance = clf.feature_importances_
+    elif clf_name == "logistic_regression":
+        importance = clf.coef_[0]
+    elif clf_name == "KNN_cls":
+        results = permutation_importance(clf, df_results.iloc[:, :-1].to_numpy(),
+                                         df_results.iloc[:, -1].to_numpy(),
+                                         scoring='accuracy')
+        importance = results.importances_mean
+    else:
+        raise Exception(f"unknown cls name: {clf_name}")
+    return importance
 
 
 def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_attr, clf_name):
-    clf = KNeighborsClassifier()
+    clf = get_clf_from_clf_name(clf_name)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf)
-    results = permutation_importance(clf, df_results.iloc[:, :-1].to_numpy(), df_results.iloc[:, -1].to_numpy(),
-                                     scoring='accuracy')
-    importance = results.importances_mean
+
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
@@ -251,10 +242,7 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
-    # analyse_results_feat_importance_by_logistic_regression("17775252_17782018_17828539_17832148.csv")
     # analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
-    # analyse_results_feat_importance_by_decision_tree("17775252_17782018_17828539_17832148.csv")
-    # analyse_results_feat_importance_by_random_forest("17775252_17782018_17828539_17832148.csv")
     analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv")
 
 
