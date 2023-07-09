@@ -23,6 +23,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 import shap
 
+gpd.options.use_pygeos = True
+
 
 def print_locations_on_world_map(df_locations, color, use_map_axis):
     lon_array = df_locations["gauge_lon"]
@@ -53,8 +55,8 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     plt.savefig(f"plot_lat_lon.png")
 
 
-def create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf):
-    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf, False)
+def create_accumulated_local_effects_and_shap_values(df_results, clf):
+    clf.fit(df_results.to_numpy()[:, :-1], df_results["label"])
     ale_clf = ALE(clf.predict, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"], target_names=["label"])
     exp_clf = ale_clf.explain(df_results.to_numpy()[:, :-1])
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
@@ -68,26 +70,24 @@ def create_accumulated_local_effects_and_shap_values(csv_results_file_with_stati
     plt.savefig("shap.png")
 
 
-def fit_clf_analysis(df_results, clf, scale_data=True):
+def process_df_results(df_results):
     df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
     df_results = df_results[CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"] + ["label"]]
+    return df_results
+
+
+def analyse_results_by_decision_tree(df_results):
+    clf = DecisionTreeClassifier(random_state=0, max_depth=1)
     X_train = df_results.to_numpy()[:, :-1]
-    if scale_data:
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
     score = accuracy_score(clf.predict(X_train), df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
-    return clf, df_results
-
-
-def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=1)
-    clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     plt.figure(figsize=(14, 10))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1],
                    class_names=["0", "1"], fontsize=12)
@@ -109,6 +109,10 @@ def get_clf_from_clf_name(clf_name):
 
 
 def get_feature_importance_from_trained_clf(clf, clf_name, df_results):
+    X_train = df_results.to_numpy()[:, :-1]
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    clf.fit(X_train, df_results["label"])
     if clf_name == "decision_tree":
         importance = clf.feature_importances_
     elif clf_name == "random_forest":
@@ -142,11 +146,12 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
         _, _, xs_non_spatial, xs_spatial, _, _ = dataset[basin_id_to_first_ind[basin_id]]
         basin_id_to_std[basin_id] = xs_non_spatial.std().item()
     clf = get_clf_from_clf_name(clf_name)
-    df_std = pd.DataFrame.from_dict(basin_id_to_std, columns=["basin_id", "std"])
+    df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
+    df_std["basin_id"] = df_std["basin_id"].astype(int)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
-    df_results = df_results.merge(df_std, by="basin_id")
-    clf, df_results = fit_clf_analysis(df_results, clf)
-    create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf)
+    df_results = df_results.merge(df_std, how='inner', on="basin_id")
+    df_results = process_df_results(df_results)
+    create_accumulated_local_effects_and_shap_values(df_results, clf)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results)
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
@@ -169,7 +174,7 @@ def create_CAMELS_dataset():
         validation_end_date="30/09/1992",
         test_start_date="01/10/1992",
         test_end_date="30/09/1997",
-        stage="validation",
+        stage="train",
         model_name="CNN_LSTM",
         sequence_length_spatial=185,
         create_new_files=False,
