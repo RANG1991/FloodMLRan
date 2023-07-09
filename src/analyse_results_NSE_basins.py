@@ -134,17 +134,24 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
     lookup_table = dataset.lookup_table
     dataset_length = len(dataset)
     curr_basin_id = -1
-    basin_id_to_first_ind = {}
+    basin_id_to_indices = {}
     for ind in range(dataset_length):
         basin_id, _ = lookup_table[ind]
         if basin_id != curr_basin_id:
-            basin_id_to_first_ind[basin_id] = ind
+            if curr_basin_id != -1:
+                basin_id_to_indices[basin_id] = (curr_basin_id, ind)
             curr_basin_id = basin_id
     basin_id_to_std = {}
-    for basin_id in basin_id_to_first_ind.keys():
+    for basin_id in basin_id_to_indices.keys():
         print(f"in basin: {basin_id}")
-        _, _, xs_non_spatial, xs_spatial, _, _ = dataset[basin_id_to_first_ind[basin_id]]
-        basin_id_to_std[basin_id] = xs_non_spatial.mean(dim=0).std().item()
+        start_ind = basin_id_to_indices[basin_id][0]
+        end_ind = basin_id_to_indices[basin_id][1]
+        list_x_basin = []
+        for ind in range(start_ind, end_ind):
+            _, _, xs_non_spatial, xs_spatial, _, _ = dataset[ind]
+            list_x_basin.append(xs_spatial)
+        x_all_spatial = torch.cat(list_x_basin)
+        basin_id_to_std[basin_id] = x_all_spatial.mean(dim=0).std().item()
     clf = get_clf_from_clf_name(clf_name)
     df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
     df_std["basin_id"] = df_std["basin_id"].astype(int)
