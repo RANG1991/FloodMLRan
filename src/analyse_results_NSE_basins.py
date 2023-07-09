@@ -21,6 +21,7 @@ from shapely.geometry import box
 from matplotlib import colormaps as cm
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
+import shap
 
 
 def print_locations_on_world_map(df_locations, color, use_map_axis):
@@ -52,13 +53,19 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     plt.savefig(f"plot_lat_lon.png")
 
 
-def create_accumulated_local_effects(csv_results_file_with_static_attr, clf):
+def create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf):
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf, False)
-    fun_clf = (lambda x: clf.predict(x))
-    ale_clf = ALE(fun_clf, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES, target_names=["label"])
+    ale_clf = ALE(clf.predict, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES, target_names=["label"])
     exp_clf = ale_clf.explain(df_results.to_numpy()[:, :-1])
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
     plt.savefig("ALE.png")
+    plt.clf()
+    explainer = shap.Explainer(clf.predict, df_results.to_numpy()[:, :-1],
+                               feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES)
+    shap_values = explainer(df_results.to_numpy()[:, :-1])
+    shap.summary_plot(shap_values, plot_type='violin')
+    # shap.plots.bar(shap_values[0])
+    plt.savefig("shap.png")
 
 
 def fit_clf_analysis(csv_results_file_with_static_attr, clf, scale_data=True):
@@ -102,7 +109,7 @@ def analyse_results_feat_importance_by_logistic_regression(csv_results_file_with
     clf = LogisticRegression(max_iter=10000)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     importance = clf.coef_[0]
-    create_accumulated_local_effects(csv_results_file_with_static_attr, clf)
+    create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf)
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
@@ -119,9 +126,14 @@ def analyse_results_feat_importance_by_random_forest(csv_results_file_with_stati
     plt.savefig("analysis_random_forest.png")
 
 
-def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_attr):
+def get_clf_from_clf_name():
+    
+
+
+def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_attr, clf_name):
     clf = KNeighborsClassifier()
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
+    create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf)
     results = permutation_importance(clf, df_results.iloc[:, :-1].to_numpy(), df_results.iloc[:, -1].to_numpy(),
                                      scoring='accuracy')
     importance = results.importances_mean
@@ -236,10 +248,10 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
-    analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
-    analyse_results_feat_importance_by_logistic_regression("17775252_17782018_17828539_17832148.csv")
-    analyse_results_feat_importance_by_decision_tree("17775252_17782018_17828539_17832148.csv")
-    analyse_results_feat_importance_by_random_forest("17775252_17782018_17828539_17832148.csv")
+    # analyse_results_feat_importance_by_logistic_regression("17775252_17782018_17828539_17832148.csv")
+    # analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
+    # analyse_results_feat_importance_by_decision_tree("17775252_17782018_17828539_17832148.csv")
+    # analyse_results_feat_importance_by_random_forest("17775252_17782018_17828539_17832148.csv")
     analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv")
 
 
