@@ -107,6 +107,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             use_random_noise_spatial=False,
             use_zeros_spatial=False,
             use_super_resolution=False,
+            use_large_size=False,
     ):
         self.discharge_data_folder = discharge_data_folder
         self.use_only_precip_feature = use_only_precip_feature
@@ -114,6 +115,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         self.use_random_noise_spatial = use_random_noise_spatial
         self.use_zeros_spatial = use_zeros_spatial
         self.use_super_resolution = use_super_resolution
+        self.use_large_size = use_large_size
         if run_with_radar_data:
             dynamic_data_folder_spatial = DYNAMIC_DATA_FOLDER_SPATIAL_RADAR
         if use_only_precip_feature:
@@ -144,7 +146,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             create_new_files,
             limit_size_above_1000,
             use_all_static_attr,
-            num_basins)
+            num_basins,
+            use_super_resolution,
+            use_large_size)
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_stations_ids
@@ -443,7 +447,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         axis=0)
                     plt.imsave(
                         f"../data/basin_check_precip_images/img_{station_id}"
-                        f"_precip{'_SR' if self.use_super_resolution else ''}.png", gray_image)
+                        f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png",
+                        gray_image)
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
                         del X_data_spatial

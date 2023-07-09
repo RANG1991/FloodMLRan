@@ -6,7 +6,7 @@ debug: false
 dropout_rate: 0.4
 learning_rate: 5e-04
 limit_size_above_1000: true
-load_checkpoint: false
+load_checkpoint: true
 model: CNN_LSTM
 mode: validation
 num_basins:
@@ -37,3 +37,4 @@ use_zeros_in_spatial_data: false
 only_precip: false
 run_with_radar_data: false
 use_super_resolution: false
+use_large_size: true

@@ -72,15 +72,21 @@ class FloodML_Base_Dataset(Dataset):
                  create_new_files=False,
                  limit_size_above_1000=False,
                  use_all_static_attr=False,
-                 num_basins=None):
+                 num_basins=None,
+                 use_super_resolution=False,
+                 use_large_size=False):
         self.main_folder = main_folder
         self.limit_size_above_1000 = limit_size_above_1000
         self.use_all_static_attr = use_all_static_attr
+        self.use_super_resolution = use_super_resolution
+        self.use_large_size = use_large_size
         self.folder_with_basins_pickles = f"{main_folder}/pickled_basins_data"
         self.list_stations_static = []
         self.suffix_pickle_file = "_spatial" if "cnn" in model_name.lower() or "conv" in model_name.lower() else ""
-        self.suffix_pickle_file = self.suffix_pickle_file + "_SR" if self.use_super_resolution else self.suffix_pickle_file
-
+        if self.use_super_resolution:
+            self.suffix_pickle_file = self.suffix_pickle_file + "_SR"
+        elif self.use_large_size:
+            self.suffix_pickle_file = self.suffix_pickle_file + "_large"
         self.x_mean_per_basin_dict = self.read_pickle_if_exists(
             f"{self.folder_with_basins_pickles}/x_mean_dict.pkl{self.suffix_pickle_file}")
         self.x_std_per_basin_dict = self.read_pickle_if_exists(
@@ -142,10 +148,10 @@ class FloodML_Base_Dataset(Dataset):
         self.max_width = max_width
         self.max_height = max_height
         self.max_dim = max([self.max_height, self.max_width])
-        if not self.use_super_resolution:
-            self.max_dim = (self.max_dim // 4) * 4
-        else:
+        if self.use_super_resolution or self.use_large_size:
             self.max_dim = self.max_dim * 4
+        else:
+            self.max_dim = (self.max_dim // 4) * 4
         self.cls_token_spatial = torch.randn(size=(1, self.max_dim * self.max_dim), requires_grad=False)
         # self.max_dim = 32
         (dict_station_id_to_data,

@@ -118,6 +118,7 @@ class FloodML_Runner:
                  use_random_noise_spatial=False,
                  use_zeros_spatial=False,
                  use_super_resolution=False,
+                 use_large_size=False,
                  ):
         self.static_attributes_names = static_attributes_names
         self.dynamic_attributes_names = dynamic_attributes_names
@@ -171,6 +172,7 @@ class FloodML_Runner:
         self.use_random_noise_spatial = use_random_noise_spatial
         self.use_zeros_spatial = use_zeros_spatial
         self.use_super_resolution = use_super_resolution
+        self.use_large_size = self.use_large_size
         if dataset_name.lower() == "caravan":
             all_stations_list_sorted = sorted(open("../data/spatial_basins_list.txt").read().splitlines())
         else:
@@ -446,6 +448,7 @@ class FloodML_Runner:
                 use_random_noise_spatial=self.use_random_noise_spatial,
                 use_zeros_spatial=self.use_zeros_spatial,
                 use_super_resolution=self.use_super_resolution,
+                use_large_size=self.use_large_size,
             )
             test_data = CAMELS_dataset.Dataset_CAMELS(
                 main_folder=CAMELS_dataset.MAIN_FOLDER,
@@ -480,6 +483,7 @@ class FloodML_Runner:
                 use_random_noise_spatial=self.use_random_noise_spatial,
                 use_zeros_spatial=self.use_zeros_spatial,
                 use_super_resolution=self.use_super_resolution,
+                use_large_size=self.use_large_size,
             )
         else:
             raise Exception(f"wrong dataset type: {self.dataset_name}")
@@ -672,7 +676,8 @@ class FloodML_Runner:
                     curr_datetime = datetime.now()
                     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
                     suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(self.num_basins,
-                                                                                  self.limit_size_above_1000)
+                                                                                  self.limit_size_above_1000,
+                                                                                  self.use_large_size)
                     torch.save({
                         'epoch': (i + 1),
                         'model_state_dict': model_state_dict,
@@ -921,13 +926,16 @@ def read_arguments_from_yaml():
     return args
 
 
-def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000):
+def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000, use_large_size):
+    suffix = ""
+    if use_large_size:
+        suffix = "_large"
     if num_basins is not None:
-        return f"{str(num_basins)}_basins"
+        return f"{str(num_basins)}_basins{suffix}"
     if limit_size_above_1000:
-        return "size_above_1000"
+        return f"size_above_1000{suffix}"
     if num_basins is None:
-        return "all_basins"
+        return f"all_basins{suffix}"
 
 
 def cosine_lr_schedule(optimizer, epoch, max_epoch, init_lr, min_lr):
@@ -971,7 +979,8 @@ def main():
         model_name_for_finding_checkpoint = args["model"]
         if model_name_for_finding_checkpoint == "CNN_LSTM":
             model_name_for_finding_checkpoint = "TWO_LSTM_CNN_LSTM"
-        suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"])
+        suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"],
+                                                                      args["use_large_size"])
         list_of_files = glob.glob(
             f'../checkpoints/{model_name_for_finding_checkpoint}_epoch_number_*_{suffix_checkpoint_file_name}.pt')
         # if len(list_of_files) == 0:
@@ -1044,6 +1053,7 @@ def main():
             use_random_noise_spatial=args["use_random_noise_in_spatial_data"],
             use_zeros_spatial=args["use_zeros_in_spatial_data"],
             use_super_resolution=args["use_super_resolution"],
+            use_large_size=args["use_large_size"],
         )
     elif args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
@@ -1090,7 +1100,8 @@ def main():
             mode=args["mode"],
             run_with_radar_data=args["run_with_radar_data"],
             use_random_noise_spatial=args["use_random_noise_in_spatial_data"],
-            use_zeros_spatial=args["use_zeros_in_spatial_data"]
+            use_zeros_spatial=args["use_zeros_in_spatial_data"],
+            use_large_size=args["use_large_size"],
         )
     else:
         raise Exception(f"wrong dataset name: {args['dataset']}")
