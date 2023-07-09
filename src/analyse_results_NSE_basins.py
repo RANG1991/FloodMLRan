@@ -220,15 +220,15 @@ def create_class_activation_maps_explainable(checkpoint_path):
 
 
 def main():
-    # plot_lon_lat_on_world_map("17775252_17782018_17828539.csv")
-    create_class_activation_maps_explainable(
-        "/sci/labs/efratmorin/ranga/FloodMLRan/checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    # plt.rc('font', size=12)
-    # analyse_results_by_decision_tree("17476442_17477923.csv")
-    # analyse_results_feat_importance_by_logistic_regression("17476442_17477923.csv")
-    # analyse_results_feat_importance_by_decision_tree("17476442_17477923.csv")
-    # analyse_results_feat_importance_by_random_forest("17476442_17477923.csv")
-    # analyse_results_feat_importance_by_permutation("17476442_17477923.csv")
+    plot_lon_lat_on_world_map("17775252_17782018_17828539.csv")
+    # create_class_activation_maps_explainable(
+    #     "/sci/labs/efratmorin/ranga/FloodMLRan/checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
+    plt.rc('font', size=12)
+    analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
+    analyse_results_feat_importance_by_logistic_regression("17775252_17782018_17828539_17832148.csv")
+    analyse_results_feat_importance_by_decision_tree("17775252_17782018_17828539_17832148.csv")
+    analyse_results_feat_importance_by_random_forest("17775252_17782018_17828539_17832148.csv")
+    analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv")
 
 
 if __name__ == "__main__":

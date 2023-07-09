@@ -48,7 +48,7 @@ def generate_csv_from_output_file(slurm_output_files, static_attr_file):
     #     raise Exception("not all basins tuples are the same - the CSV will be incorrect")
     basins_dict_for_data_frame = {"basin_id": basins_ids}
     for (model_name, params_tuple) in dict_avg_runs_from_all_files.keys():
-        if len(dict_all_runs_from_all_files[(model_name, params_tuple)]) != 135:
+        if len(dict_avg_runs_from_all_files[(model_name, params_tuple)]) != 135:
             continue
         basins_dict_for_data_frame[f'NSE_{model_name}_135'] = dict_avg_runs_from_all_files[(model_name, params_tuple)]
     df_nse = pd.DataFrame(basins_dict_for_data_frame)
