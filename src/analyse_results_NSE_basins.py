@@ -144,12 +144,13 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
     for basin_id in basin_id_to_first_ind.keys():
         print(f"in basin: {basin_id}")
         _, _, xs_non_spatial, xs_spatial, _, _ = dataset[basin_id_to_first_ind[basin_id]]
-        basin_id_to_std[basin_id] = xs_non_spatial.std().item()
+        basin_id_to_std[basin_id] = xs_non_spatial.mean(dim=0).std().item()
     clf = get_clf_from_clf_name(clf_name)
     df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
     df_std["basin_id"] = df_std["basin_id"].astype(int)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     df_results = df_results.merge(df_std, how='inner', on="basin_id")
+    df_results.to_csv("check.csv")
     df_results = process_df_results(df_results)
     create_accumulated_local_effects_and_shap_values(df_results, clf)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results)
