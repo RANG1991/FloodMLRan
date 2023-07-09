@@ -148,7 +148,7 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
             x_spatial = dict_curr_basin["x_data_spatial"]
-            basin_id_to_std[basin_id] = x_spatial.mean(dim=0).std().item()
+            basin_id_to_std[basin_id] = x_spatial.mean(axis=0).std().item()
     clf = get_clf_from_clf_name(clf_name)
     df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
     df_std["basin_id"] = df_std["basin_id"].astype(int)
