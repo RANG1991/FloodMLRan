@@ -97,9 +97,9 @@ def analyse_results_by_decision_tree(csv_results_file_with_static_attr):
 
 def get_clf_from_clf_name(clf_name):
     if clf_name == "decision_tree":
-        clf = DecisionTreeClassifier(random_state=0, max_depth=1)
+        clf = DecisionTreeClassifier(random_state=0, max_depth=7)
     elif clf_name == "random_forest":
-        clf = RandomForestClassifier(random_state=0, max_depth=1)
+        clf = RandomForestClassifier(random_state=0, max_depth=7)
     elif clf_name == "logistic_regression":
         clf = LogisticRegression(max_iter=10000)
     elif clf_name == "KNN_cls":
@@ -130,11 +130,11 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
     clf = get_clf_from_clf_name(clf_name)
     clf, df_results = fit_clf_analysis(csv_results_file_with_static_attr, clf)
     create_accumulated_local_effects_and_shap_values(csv_results_file_with_static_attr, clf)
-
+    importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results)
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig("analysis_permutation.png")
+    plt.savefig(f"feature_importance_{clf_name}.png")
 
 
 def create_CAMELS_dataset():
@@ -243,7 +243,7 @@ def main():
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
     # analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
-    analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv")
+    analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv", "decision_tree")
 
 
 if __name__ == "__main__":
