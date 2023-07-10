@@ -53,7 +53,7 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     use_map_axis = usa.plot(figsize=(20, 12))
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
-    plt.savefig(f"plot_lat_lon.png")
+    plt.savefig(f"analysis_images/plot_lat_lon.png")
 
 
 def create_accumulated_local_effects_and_shap_values(df_results, clf):
@@ -66,14 +66,14 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf):
     ale_clf = ALE(clf.predict, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"], target_names=["label"])
     exp_clf = ale_clf.explain(X_train)
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
-    plt.savefig("ALE.png")
+    plt.savefig("analysis_images/ALE.png")
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train,
                                feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"])
     shap_values = explainer(X_train)
     shap.summary_plot(shap_values, plot_type='violin')
     # shap.plots.bar(shap_values[0])
-    plt.savefig("shap.png")
+    plt.savefig("analysis_images/shap.png")
 
 
 def process_df_results(df_results):
@@ -97,7 +97,7 @@ def analyse_results_by_decision_tree(df_results):
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     plt.figure(figsize=(25, 20))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1], fontsize=12)
-    plt.savefig("decision_tree.png")
+    plt.savefig("analysis_images/decision_tree.png")
 
 
 def get_clf_from_clf_name(clf_name):
@@ -160,7 +160,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name):
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     df_results = df_results.merge(df_std, how='inner', on="basin_id")
     df_results = process_df_results(df_results)
-    df_results.to_csv("check.csv")
+    df_results.to_csv("analysis_images/check.csv")
     analyse_results_by_decision_tree(df_results)
     print(df_results.corr()[["label", "aridity"]])
     create_accumulated_local_effects_and_shap_values(df_results, clf)
