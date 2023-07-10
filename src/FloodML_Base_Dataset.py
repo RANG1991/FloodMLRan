@@ -368,12 +368,12 @@ class FloodML_Base_Dataset(Dataset):
             if self.model_name.lower() in ["cnn_lstm", "transformer_cnn"]:
                 for ind in range(
                         len(dict_station_id_to_data[key][
-                                "x_data"]) - self.sequence_length - self.sequence_length_spatial):
+                                "x_data"]) - self.sequence_length - self.sequence_length_spatial + 1):
                     lookup_table_basins[length_of_dataset] = (key, ind)
                     length_of_dataset += 1
             else:
                 for ind in range(
-                        len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
+                        len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length + 1):
                     lookup_table_basins[length_of_dataset] = (key, ind)
                     length_of_dataset += 1
         return length_of_dataset, lookup_table_basins
