@@ -1,12 +1,12 @@
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeRegressor
 import numpy as np
 from sklearn import tree
 from matplotlib import pyplot as plt
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 import CAMELS_dataset
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn.inspection import permutation_importance
 from alibi.explainers import ALE, plot_ale
 from torchcam.methods import SmoothGradCAMpp
@@ -61,7 +61,7 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf):
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
-    score = accuracy_score(clf.predict(X_train), df_results["label"])
+    score = clf.score(X_train, df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     ale_clf = ALE(clf.predict, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"], target_names=["label"])
     exp_clf = ale_clf.explain(X_train)
@@ -77,8 +77,8 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf):
 
 
 def process_df_results(df_results):
-    df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
-    df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.008]
+    df_results["label"] = df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']
+    # df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.01]
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
@@ -88,28 +88,27 @@ def process_df_results(df_results):
 
 
 def analyse_results_by_decision_tree(df_results):
-    clf = DecisionTreeClassifier(random_state=0, max_depth=1)
+    clf = DecisionTreeRegressor(random_state=0, max_depth=7)
     X_train = df_results.to_numpy()[:, :-1]
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
-    score = accuracy_score(clf.predict(X_train), df_results["label"])
+    score = clf.score(X_train, df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
-    plt.figure(figsize=(14, 10))
-    tree.plot_tree(clf, feature_names=df_results.columns[:-1],
-                   class_names=["0", "1"], fontsize=12)
+    plt.figure(figsize=(25, 20))
+    tree.plot_tree(clf, feature_names=df_results.columns[:-1], fontsize=12)
     plt.savefig("decision_tree.png")
 
 
 def get_clf_from_clf_name(clf_name):
     if clf_name == "decision_tree":
-        clf = DecisionTreeClassifier(random_state=0, max_depth=7)
+        clf = DecisionTreeRegressor(random_state=0, max_depth=7)
     elif clf_name == "random_forest":
-        clf = RandomForestClassifier(random_state=0, max_depth=7)
-    elif clf_name == "logistic_regression":
-        clf = LogisticRegression(max_iter=10000)
-    elif clf_name == "KNN_cls":
-        clf = KNeighborsClassifier()
+        clf = RandomForestRegressor(random_state=0, max_depth=7)
+    elif clf_name == "linear_regression":
+        clf = LinearRegression(max_iter=10000)
+    elif clf_name == "KNN":
+        clf = KNeighborsRegressor()
     else:
         raise Exception(f"unknown cls name: {clf_name}")
     return clf
@@ -124,7 +123,7 @@ def get_feature_importance_from_trained_clf(clf, clf_name, df_results):
         importance = clf.feature_importances_
     elif clf_name == "random_forest":
         importance = clf.feature_importances_
-    elif clf_name == "logistic_regression":
+    elif clf_name == "linear_regression":
         importance = clf.coef_[0]
     elif clf_name == "KNN_cls":
         results = permutation_importance(clf, df_results.iloc[:, :-1].to_numpy(),
@@ -136,7 +135,7 @@ def get_feature_importance_from_trained_clf(clf, clf_name, df_results):
     return importance
 
 
-def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_attr, clf_name):
+def analyse_features(csv_results_file_with_static_attr, clf_name):
     dataset = create_CAMELS_dataset()
     lookup_table = dataset.lookup_table
     dataset_length = len(dataset)
@@ -160,8 +159,9 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
     df_std["basin_id"] = df_std["basin_id"].astype(int)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     df_results = df_results.merge(df_std, how='inner', on="basin_id")
-    df_results.to_csv("check.csv")
     df_results = process_df_results(df_results)
+    df_results.to_csv("check.csv")
+    analyse_results_by_decision_tree(df_results)
     print(df_results.corr()[["label", "aridity"]])
     create_accumulated_local_effects_and_shap_values(df_results, clf)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results)
@@ -276,8 +276,7 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
-    # analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
-    analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv", "random_forest")
+    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest")
 
 
 if __name__ == "__main__":
