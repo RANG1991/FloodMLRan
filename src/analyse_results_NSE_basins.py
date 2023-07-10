@@ -58,6 +58,8 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
 
 def create_accumulated_local_effects_and_shap_values(df_results, clf):
     clf.fit(df_results.to_numpy()[:, :-1], df_results["label"])
+    score = accuracy_score(clf.predict(df_results.to_numpy()[:, :-1]), df_results["label"])
+    print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     ale_clf = ALE(clf.predict, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"], target_names=["label"])
     exp_clf = ale_clf.explain(df_results.to_numpy()[:, :-1])
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
@@ -156,6 +158,7 @@ def analyse_results_feat_importance_by_permutation(csv_results_file_with_static_
     df_results = df_results.merge(df_std, how='inner', on="basin_id")
     df_results.to_csv("check.csv")
     df_results = process_df_results(df_results)
+    print(df_results.corr()[["label", "aridity"]])
     create_accumulated_local_effects_and_shap_values(df_results, clf)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results)
     plt.figure(figsize=(25, 20))
@@ -270,7 +273,7 @@ def main():
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
     # analyse_results_by_decision_tree("17775252_17782018_17828539_17832148.csv")
-    analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv", "logistic_regression")
+    analyse_results_feat_importance_by_permutation("17775252_17782018_17828539_17832148.csv", "random_forest")
 
 
 if __name__ == "__main__":

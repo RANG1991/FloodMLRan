@@ -1,4 +1,4 @@
-batch_size: 256
+batch_size: 32
 checkpoint_path:
 create_new_files: true
 dataset: CAMELS
@@ -10,7 +10,7 @@ load_checkpoint: true
 model: CNN_LSTM
 mode: validation
 num_basins:
-num_epochs: 30
+num_epochs: 15
 num_hidden_units: 256
 num_processes_ddp: 3
 num_workers_data_loader: 1
@@ -31,7 +31,7 @@ test_end_date: "30/09/1999"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
-num_runs: 4
+num_runs: 1
 use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 only_precip: false
