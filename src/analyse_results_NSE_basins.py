@@ -71,8 +71,8 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_feat
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
     shap_values = explainer(X_train)
-    shap.summary_plot(shap_values, plot_type='violin')
-    # shap.plots.bar(shap_values[0])
+    # shap.summary_plot(shap_values, plot_type='violin')
+    shap.plots.bar(shap_values)
     plt.savefig("analysis_images/shap.png")
 
 
@@ -160,7 +160,7 @@ def create_dataframe_of_std_spatial():
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
             x_spatial = dict_curr_basin["x_data_spatial"]
-            basin_id_to_std[basin_id] = x_spatial.std(axis=1).mean().item()
+            basin_id_to_std[basin_id] = x_spatial[:, x_spatial.sum(axis=0) > 0].std(axis=1).mean().item()
     df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
     df_std["basin_id"] = df_std["basin_id"].astype(int)
     return df_std
@@ -289,7 +289,7 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
-    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest", with_std=False)
+    analyse_features("17775252_17782018_17828539_17832148.csv", "decision_tree", with_std=True)
 
 
 if __name__ == "__main__":
