@@ -19,7 +19,7 @@ from geopandas import GeoDataFrame
 import geopandas as gpd
 from shapely.geometry import box
 from matplotlib import colormaps as cm
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score
 import shap
 import pickle
@@ -57,17 +57,20 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
 
 
 def create_accumulated_local_effects_and_shap_values(df_results, clf):
-    clf.fit(df_results.to_numpy()[:, :-1], df_results["label"])
-    score = accuracy_score(clf.predict(df_results.to_numpy()[:, :-1]), df_results["label"])
+    X_train = df_results.to_numpy()[:, :-1]
+    scaler = MinMaxScaler()
+    X_train = scaler.fit_transform(X_train)
+    clf.fit(X_train, df_results["label"])
+    score = accuracy_score(clf.predict(X_train), df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     ale_clf = ALE(clf.predict, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"], target_names=["label"])
-    exp_clf = ale_clf.explain(df_results.to_numpy()[:, :-1])
+    exp_clf = ale_clf.explain(X_train)
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
     plt.savefig("ALE.png")
     plt.clf()
-    explainer = shap.Explainer(clf.predict, df_results.to_numpy()[:, :-1],
+    explainer = shap.Explainer(clf.predict, X_train,
                                feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"])
-    shap_values = explainer(df_results.to_numpy()[:, :-1])
+    shap_values = explainer(X_train)
     shap.summary_plot(shap_values, plot_type='violin')
     # shap.plots.bar(shap_values[0])
     plt.savefig("shap.png")
@@ -75,6 +78,7 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf):
 
 def process_df_results(df_results):
     df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
+    df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.008]
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
@@ -86,7 +90,7 @@ def process_df_results(df_results):
 def analyse_results_by_decision_tree(df_results):
     clf = DecisionTreeClassifier(random_state=0, max_depth=1)
     X_train = df_results.to_numpy()[:, :-1]
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
     score = accuracy_score(clf.predict(X_train), df_results["label"])
@@ -113,7 +117,7 @@ def get_clf_from_clf_name(clf_name):
 
 def get_feature_importance_from_trained_clf(clf, clf_name, df_results):
     X_train = df_results.to_numpy()[:, :-1]
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
     if clf_name == "decision_tree":
