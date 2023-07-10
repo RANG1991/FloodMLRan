@@ -276,7 +276,7 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
-    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest")
+    analyse_features("17775252_17782018_17828539_17832148.csv", "linear_regression")
 
 
 if __name__ == "__main__":
