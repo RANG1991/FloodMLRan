@@ -168,7 +168,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name):
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig(f"feature_importance_{clf_name}.png")
+    plt.savefig(f"analysis_images/feature_importance_{clf_name}.png")
 
 
 def create_CAMELS_dataset():
