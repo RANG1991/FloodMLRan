@@ -56,42 +56,46 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     plt.savefig(f"analysis_images/plot_lat_lon.png")
 
 
-def create_accumulated_local_effects_and_shap_values(df_results, clf):
+def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_features=True):
     X_train = df_results.to_numpy()[:, :-1]
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X_train)
+    if scale_features:
+        scaler = MinMaxScaler()
+        X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
     score = clf.score(X_train, df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
-    ale_clf = ALE(clf.predict, feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"], target_names=["label"])
+    ale_clf = ALE(clf.predict, feature_names=df_results.columns[:-1], target_names=["label"])
     exp_clf = ale_clf.explain(X_train)
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
     plt.savefig("analysis_images/ALE.png")
     plt.clf()
-    explainer = shap.Explainer(clf.predict, X_train,
-                               feature_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"])
+    explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
     shap_values = explainer(X_train)
     shap.summary_plot(shap_values, plot_type='violin')
     # shap.plots.bar(shap_values[0])
     plt.savefig("analysis_images/shap.png")
 
 
-def process_df_results(df_results):
+def process_df_results(df_results, with_std=True):
     df_results["label"] = df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']
     # df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.01]
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
-    df_results = df_results[CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"] + ["label"]]
+    if with_std:
+        df_results = df_results[CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["std"] + ["label"]]
+    else:
+        df_results = df_results[CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["label"]]
     return df_results
 
 
-def analyse_results_by_decision_tree(df_results):
+def analyse_results_by_decision_tree(df_results, scale_features=True):
     clf = DecisionTreeRegressor(random_state=0, max_depth=7)
     X_train = df_results.to_numpy()[:, :-1]
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X_train)
+    if scale_features:
+        scaler = MinMaxScaler()
+        X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
     score = clf.score(X_train, df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
@@ -101,23 +105,26 @@ def analyse_results_by_decision_tree(df_results):
 
 
 def get_clf_from_clf_name(clf_name):
+    scale_features = False
     if clf_name == "decision_tree":
         clf = DecisionTreeRegressor(random_state=0, max_depth=7)
     elif clf_name == "random_forest":
         clf = RandomForestRegressor(random_state=0, max_depth=7)
     elif clf_name == "linear_regression":
-        clf = LinearRegression(max_iter=10000)
+        clf = LinearRegression()
+        scale_features = True
     elif clf_name == "KNN":
         clf = KNeighborsRegressor()
     else:
         raise Exception(f"unknown cls name: {clf_name}")
-    return clf
+    return clf, scale_features
 
 
-def get_feature_importance_from_trained_clf(clf, clf_name, df_results):
+def get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_features=True):
     X_train = df_results.to_numpy()[:, :-1]
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X_train)
+    if scale_features:
+        scaler = MinMaxScaler()
+        X_train = scaler.fit_transform(X_train)
     clf.fit(X_train, df_results["label"])
     if clf_name == "decision_tree":
         importance = clf.feature_importances_
@@ -135,7 +142,7 @@ def get_feature_importance_from_trained_clf(clf, clf_name, df_results):
     return importance
 
 
-def analyse_features(csv_results_file_with_static_attr, clf_name):
+def create_dataframe_of_std_spatial():
     dataset = create_CAMELS_dataset()
     lookup_table = dataset.lookup_table
     dataset_length = len(dataset)
@@ -153,18 +160,24 @@ def analyse_features(csv_results_file_with_static_attr, clf_name):
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
             x_spatial = dict_curr_basin["x_data_spatial"]
-            basin_id_to_std[basin_id] = x_spatial.mean(axis=0).std().item()
-    clf = get_clf_from_clf_name(clf_name)
+            basin_id_to_std[basin_id] = x_spatial.std(axis=1).mean().item()
     df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
     df_std["basin_id"] = df_std["basin_id"].astype(int)
+    return df_std
+
+
+def analyse_features(csv_results_file_with_static_attr, clf_name, with_std=True):
+    clf, scale_features = get_clf_from_clf_name(clf_name)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
-    df_results = df_results.merge(df_std, how='inner', on="basin_id")
-    df_results = process_df_results(df_results)
+    if with_std:
+        df_std = create_dataframe_of_std_spatial()
+        df_results = df_results.merge(df_std, how='inner', on="basin_id")
+    df_results = process_df_results(df_results, with_std=with_std)
     df_results.to_csv("analysis_images/check.csv")
-    analyse_results_by_decision_tree(df_results)
-    print(df_results.corr()[["label", "aridity"]])
-    create_accumulated_local_effects_and_shap_values(df_results, clf)
-    importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results)
+    analyse_results_by_decision_tree(df_results, scale_features=scale_features)
+    print(df_results.corr()[["label", "p_seasonality"]])
+    create_accumulated_local_effects_and_shap_values(df_results, clf, scale_features=scale_features)
+    importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_features=scale_features)
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
@@ -276,7 +289,7 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     plt.rc('font', size=12)
-    analyse_features("17775252_17782018_17828539_17832148.csv", "linear_regression")
+    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest", with_std=False)
 
 
 if __name__ == "__main__":
