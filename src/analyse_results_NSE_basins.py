@@ -71,8 +71,8 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_feat
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
     shap_values = explainer(X_train)
-    # shap.summary_plot(shap_values, plot_type='violin')
-    shap.plots.bar(shap_values)
+    shap.summary_plot(shap_values, plot_type='violin')
+    # shap.plots.bar(shap_values)
     plt.savefig("analysis_images/shap.png")
 
 
