@@ -32,7 +32,7 @@ class CNN(nn.Module):
                             kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
             torch.nn.BatchNorm2d(self.channels_out_conv_1),
             nn.ReLU(),
-            torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            # torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
             torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
                             kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
             torch.nn.BatchNorm2d(self.channels_out_conv_2),
