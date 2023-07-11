@@ -51,10 +51,12 @@ class CNN(nn.Module):
         self.size_for_fc = int(self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels))
         self.fc = nn.Linear(self.size_for_fc, output_size_cnn)
         self.relu_for_fc = nn.ReLU()
+        self.dropout = nn.Dropout(p=0.4)
 
     def forward(self, x):
         for layer in self.cnn_layers:
             x = layer(x)
+        x = self.dropout(x)
         # self.plot_as_image(x)
         x_after_cnn = x.view(-1, self.size_for_fc)
         x_after_fc = self.fc(x_after_cnn)
