@@ -33,7 +33,8 @@ def generate_box_plots(df_res):
 
 
 def generate_csv_from_output_file(slurm_output_files, static_attr_file):
-    input_file_paths = [Path("../slurm_output_files/" + file_name).resolve() for file_name in slurm_output_files]
+    input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
+                        file_name in slurm_output_files]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
         input_file_paths)
     input_files_names_formatted = "_".join(
