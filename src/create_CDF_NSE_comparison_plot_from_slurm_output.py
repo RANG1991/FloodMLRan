@@ -38,7 +38,7 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
     model_names = set([model_name for model_name, _, _, _ in models_basins_nse_dict.keys()])
     epoch_numbers = set([epoch_num for _, _, epoch_num, _ in models_basins_nse_dict.keys()])
     params_dicts = set([params_dict for _, _, _, params_dict in models_basins_nse_dict.keys()])
-    model_name_and_basins_tuple_to_best_nse = {}
+    dict_max_median_nse_list_for_each_run = {}
     for model_name in model_names:
         for run_number in run_numbers:
             for epoch_num in epoch_numbers:
@@ -56,27 +56,27 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
                     if len(basins_tuple) != 135:
                         continue
                     if (model_name, run_number, basins_tuple,
-                        params_dict) not in model_name_and_basins_tuple_to_best_nse.keys():
-                        model_name_and_basins_tuple_to_best_nse[
+                        params_dict) not in dict_max_median_nse_list_for_each_run.keys():
+                        dict_max_median_nse_list_for_each_run[
                             (model_name, run_number, basins_tuple, params_dict)] = list_nse
                     else:
                         if median_nse > statistics.median(
-                                model_name_and_basins_tuple_to_best_nse[
+                                dict_max_median_nse_list_for_each_run[
                                     (model_name, run_number, basins_tuple, params_dict)]):
-                            model_name_and_basins_tuple_to_best_nse[
+                            dict_max_median_nse_list_for_each_run[
                                 (model_name, run_number, basins_tuple, params_dict)] = list_nse
                             print(f"best epoch until now is: {epoch_num}")
-    model_name_and_params_dict_to_nse_lists = {}
+    dict_of_lists_max_median_nse_list_for_each_run = {}
     for model_name_in_list in model_names:
         for params_dict_in_list in params_dicts:
-            model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)] = []
-            for model_name_in_dict, run_number, basins_tuple, params_dict_in_dict in model_name_and_basins_tuple_to_best_nse.keys():
+            dict_of_lists_max_median_nse_list_for_each_run[(model_name_in_list, params_dict_in_list)] = []
+            for model_name_in_dict, run_number, basins_tuple, params_dict_in_dict in dict_max_median_nse_list_for_each_run.keys():
                 if model_name_in_dict == model_name_in_list and params_dict_in_dict == params_dict_in_list and len(
                         basins_tuple) == 135:
-                    model_name_and_params_dict_to_nse_lists[(model_name_in_list, params_dict_in_list)].append(
-                        model_name_and_basins_tuple_to_best_nse[
+                    dict_of_lists_max_median_nse_list_for_each_run[(model_name_in_list, params_dict_in_list)].append(
+                        dict_max_median_nse_list_for_each_run[
                             (model_name_in_list, run_number, basins_tuple, params_dict_in_dict)])
-    return model_name_and_basins_tuple_to_best_nse, model_name_and_params_dict_to_nse_lists
+    return dict_max_median_nse_list_for_each_run, dict_of_lists_max_median_nse_list_for_each_run
 
 
 def create_dict_basin_id_to_NSE_my_code(logs_filename):

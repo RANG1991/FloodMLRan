@@ -23,6 +23,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score
 import shap
 import pickle
+from scipy.stats import wilcoxon
 
 gpd.options.use_pygeos = True
 
@@ -78,6 +79,9 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_feat
 
 def process_df_results(df_results, with_std=True):
     df_results["label"] = df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']
+    d2 = np.around(df_results["label"], decimals=5)
+    res = wilcoxon(d2, alternative='greater')
+    print(res)
     # df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.01]
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
     df_results = df_results.set_index("basin_id")
@@ -231,7 +235,7 @@ def create_class_activation_maps_explainable(checkpoint_path):
     checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-    cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn.cnn_layers[4], input_shape=(16, 35, 35))
+    cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn.cnn_layers[4], input_shape=(16, 32, 32))
     dataset = create_CAMELS_dataset()
     lookup_table = dataset.lookup_table
     dataset_length = len(dataset)
@@ -286,9 +290,9 @@ def create_class_activation_maps_explainable(checkpoint_path):
 
 
 def main():
+    plt.rc('font', size=12)
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    plt.rc('font', size=12)
     analyse_features("17775252_17782018_17828539_17832148.csv", "decision_tree", with_std=False)
 
 
