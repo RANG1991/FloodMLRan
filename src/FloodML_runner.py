@@ -219,7 +219,7 @@ class FloodML_Runner:
             loss = loss_func(ys, y_hat.squeeze(0), stds.to(device).reshape(-1, 1))
             loss.backward()
             # aggregate_gradients(model, world_size)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
             optimizer.step()
             running_loss += loss.item()
             # print(f"Loss: {loss.item():.4f}")
