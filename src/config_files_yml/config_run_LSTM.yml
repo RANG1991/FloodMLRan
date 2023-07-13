@@ -4,7 +4,11 @@ create_new_files: true
 dataset: CAMELS
 debug: false
 dropout_rate: 0.4
-learning_rate: 5e-04
+learning_rates:
+  0: 5e-03
+  10: 5e-04
+  20: 5e-05
+  30: 1e-05
 limit_size_above_1000: true
 load_checkpoint: false
 model: LSTM
