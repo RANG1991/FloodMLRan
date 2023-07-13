@@ -656,6 +656,7 @@ class FloodML_Runner:
             self.num_epochs = starting_epoch + 1
         for epoch in range(starting_epoch, self.num_epochs):
             if epoch in self.learning_rates.keys():
+                print(f"setting learning rate to: {self.learning_rates[epoch]}")
                 for param_group in optimizer.param_groups:
                     param_group["lr"] = self.learning_rates[epoch] * world_size
             if world_size > 1:
@@ -1119,7 +1120,7 @@ def main():
 
 
 if __name__ == "__main__":
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     torch.backends.cudnn.enabled = False
     initialize_seed(123)
     args = read_arguments_from_yaml()
