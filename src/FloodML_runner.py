@@ -51,7 +51,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 PARAMS_NAMES_TO_CHECK = ("batch_size",
                          "dataset",
                          "dropout_rate",
-                         "learning_rate",
+                         "learning_rates",
                          "limit_size_above_1000",
                          "model",
                          "num_basins",
@@ -80,7 +80,7 @@ class FloodML_Runner:
                  dynamic_data_folder_spatial,
                  static_data_folder,
                  discharge_data_folder,
-                 learning_rate,
+                 learning_rates,
                  train_start_date,
                  train_end_date,
                  validation_start_date,
@@ -131,7 +131,7 @@ class FloodML_Runner:
         self.model_name = model_name
         self.mode = mode
         self.optim_name = optim_name
-        self.learning_rate = learning_rate
+        self.learning_rates = learning_rates
         self.train_start_date = train_start_date
         self.train_end_date = train_end_date
         self.validation_start_date = validation_start_date
@@ -226,6 +226,11 @@ class FloodML_Runner:
             pbar.set_postfix_str(f"Loss: {loss.item():.4f}")
         print(f"Loss on the entire training epoch: {running_loss / (len(loader)):.4f}", flush=True)
         return running_loss / (len(loader))
+
+    def get_current_learning_rate(self, curr_epoch_num):
+        for epoch_num in sorted(self.learning_rates.keys(), reverse=True):
+            if curr_epoch_num >= epoch_num:
+                return self.learning_rates[epoch_num] * (self.num_processes_ddp if not self.debug else 1)
 
     @staticmethod
     def convert_optimizer_tensor_to_cuda(optimizer, device_name):
@@ -585,11 +590,12 @@ class FloodML_Runner:
         # print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
         print(f"running with optimizer: {self.optim_name}")
         starting_epoch = 0
+        learning_rate = self.get_current_learning_rate(curr_epoch_num=starting_epoch)
         model = self.prepare_model(training_data=training_data)
         if self.optim_name.lower() == "sgd":
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.learning_rate * world_size, momentum=0.9)
+            optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
         elif self.optim_name.lower() == "adam":
-            optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate * world_size, weight_decay=0.05)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.05)
         else:
             raise Exception(f"No such optimizer with name: {self.optim_name}")
         if self.load_checkpoint and self.checkpoint_path:
@@ -597,6 +603,9 @@ class FloodML_Runner:
             model.load_state_dict(checkpoint['model_state_dict'], strict=False)
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             starting_epoch = checkpoint['epoch']
+            learning_rate = self.get_current_learning_rate(curr_epoch_num=starting_epoch)
+            for param_group in optimizer.param_groups:
+                param_group["lr"] = learning_rate
         if world_size > 1:
             torch.cuda.set_device(rank)
             model = model.to(device="cuda")
@@ -645,23 +654,26 @@ class FloodML_Runner:
             p.start()
         if self.num_epochs == starting_epoch:
             self.num_epochs = starting_epoch + 1
-        for i in range(starting_epoch, self.num_epochs):
+        for epoch in range(starting_epoch, self.num_epochs):
+            if epoch in self.learning_rates.keys():
+                for param_group in optimizer.param_groups:
+                    param_group["lr"] = self.learning_rates[epoch] * world_size
             if world_size > 1:
-                train_dataloader.sampler.set_epoch(i)
+                train_dataloader.sampler.set_epoch(epoch)
             # warmup_lr_schedule(optimizer, i, self.warmup_steps, self.warmup_lr, self.init_lr)
             loss_on_training_epoch = self.train_epoch(model, optimizer, train_dataloader, calc_nse_star,
-                                                      epoch=(i + 1), device="cuda")
+                                                      epoch=(epoch + 1), device="cuda")
             print("start evaluating the model", flush=True)
-            if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):
+            if (epoch % self.calc_nse_interval) == (self.calc_nse_interval - 1):
                 if world_size > 1:
-                    test_dataloader.sampler.set_epoch(i)
+                    test_dataloader.sampler.set_epoch(epoch)
                     loss_on_validation_epoch = self.eval_model(model.module, test_dataloader,
                                                                preds_obs_dicts_ranks_queue, calc_nse_star,
-                                                               device="cuda", epoch=(i + 1))
+                                                               device="cuda", epoch=(epoch + 1))
                 else:
                     loss_on_validation_epoch = self.eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue,
                                                                calc_nse_star,
-                                                               device="cuda", epoch=(i + 1))
+                                                               device="cuda", epoch=(epoch + 1))
             print("finished evaluating the model", flush=True)
             if world_size > 1:
                 dist.barrier()
@@ -679,19 +691,19 @@ class FloodML_Runner:
                                                                                   self.limit_size_above_1000,
                                                                                   self.use_large_size)
                     torch.save({
-                        'epoch': (i + 1),
+                        'epoch': (epoch + 1),
                         'model_state_dict': model_state_dict,
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss_on_training_epoch,
                         "params_dict": self.params_dict,
-                    }, f"../checkpoints/{model_name}_epoch_number_{(i + 1)}_{suffix_checkpoint_file_name}.pt")
+                    }, f"../checkpoints/{model_name}_epoch_number_{(epoch + 1)}_{suffix_checkpoint_file_name}.pt")
                 if self.profile_code:
                     p.step()
                 if self.run_sweeps:
                     wandb.log({"training loss": loss_on_training_epoch})
-                training_loss_single_pass_queue.put(((i + 1), loss_on_training_epoch))
-                if (i % self.calc_nse_interval) == (self.calc_nse_interval - 1):
-                    validation_loss_single_pass_queue.put(((i + 1), loss_on_validation_epoch))
+                training_loss_single_pass_queue.put(((epoch + 1), loss_on_training_epoch))
+                if (epoch % self.calc_nse_interval) == (self.calc_nse_interval - 1):
+                    validation_loss_single_pass_queue.put(((epoch + 1), loss_on_validation_epoch))
                 preds_obs_dict_per_basin = {}
                 num_obs_preds = 0
                 print("start converting the observations and predictions queue to dictionary", flush=True)
@@ -709,7 +721,7 @@ class FloodML_Runner:
                           f"The size of observations and predictions dictionary: {num_obs_preds}. "
                           f"The size of test dataloader: {len(test_data)}")
                 print("start calculating the NSE per basin", flush=True)
-                nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (i + 1),
+                nse_list_last_pass, median_nse = calc_validation_basins_nse(preds_obs_dict_per_basin, (epoch + 1),
                                                                             model_name, self.run_sweeps)
                 print("finished calculating the NSE per basin", flush=True)
                 [nse_last_pass_queue.put(nse_value) for nse_value in nse_list_last_pass]
@@ -1007,7 +1019,7 @@ def main():
         runner = FloodML_Runner(
             model_name=args["model"],
             dataset_name="CAMELS",
-            learning_rate=args["learning_rate"],
+            learning_rates=args["learning_rates"],
             sequence_length=args["sequence_length"],
             num_hidden_units=args["num_hidden_units"],
             dropout_rate=args["dropout_rate"],
@@ -1057,7 +1069,7 @@ def main():
         runner = FloodML_Runner(
             model_name=args["model"],
             dataset_name="CARAVAN",
-            learning_rate=args["learning_rate"],
+            learning_rates=args["learning_rates"],
             sequence_length=args["sequence_length"],
             num_hidden_units=args["num_hidden_units"],
             dropout_rate=args["dropout_rate"],
@@ -1121,7 +1133,7 @@ if __name__ == "__main__":
             'metric': {'goal': 'maximize', 'name': 'validation accuracy'},
             'parameters':
                 {
-                    'learning_rate': {'values': [5e-5, 1e-4, 5e-4]},
+                    'learning_rates': {'values': [5e-5, 1e-4, 5e-4]},
                     'sequence_length': {'values': [30, 60, 90]},
                     'num_hidden_units': {'values': [64, 128, 256]},
                     'dropout_rate': {'values': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]},
