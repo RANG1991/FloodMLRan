@@ -1,3 +1,4 @@
+import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 import re
@@ -236,6 +237,9 @@ def main():
 
 
 if __name__ == "__main__":
+    # df = pd.read_csv(r"C:\Users\galun\Desktop\submission.csv")
+    # df["Transported"] = df["Transported"] > 0.5
+    # df.to_csv(r"C:\Users\galun\Desktop\submission_1.csv")
     # d = {"dataset": "CAMELS", "optim": "Adam", "num_epochs": 10,
     # "sequence_length_spatial": 14, "num_processes_ddp": 3,
     #      "limit_size_above_1000": "True", "num_workers_data_loader": 2, "batch_size": 1024}

@@ -43,7 +43,7 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
         x_d = x_non_spatial[:, :, :self.num_dynamic_attr]
         x_s = x_non_spatial[:, :, -self.num_static_attr:]
         x_s = self.embedding(x_s)
-        x_non_spatial = torch.cat([x_d, x_s], axis=-1)
+        x_non_spatial = torch.cat([x_d, x_s], dim=-1)
         _, (h_n, c_n) = self.lstm(x_non_spatial[:, :-self.sequence_length_cnn_lstm, :])
         if self.use_only_precip_feature:
             output = self.cnn_lstm(x_non_spatial[:, -self.sequence_length_cnn_lstm:, 1:], x_spatial, h_n, c_n)
