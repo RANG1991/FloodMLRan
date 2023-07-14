@@ -298,14 +298,15 @@ class FloodML_Runner:
                 pred_expected = (
                         (ys * loader.dataset.y_std) + loader.dataset.y_mean)
                 # print(torch.cat([y_hat.cpu(), ys], dim=1))
-                for i in range(len(station_id_batch)):
-                    station_id = station_id_batch[i]
+                for ind in range(len(station_id_batch)):
+                    station_id = station_id_batch[ind]
                     if station_id not in preds_obs_dict_per_basin:
                         preds_obs_dict_per_basin[station_id] = []
                     preds_obs_dict_per_basin[station_id].append(
-                        (pred_expected[i].clone().item(), pred_actual[i].item()))
-                    preds_obs_dicts_ranks_queue.put((station_id, dates[i],
-                                                     (pred_expected[i].clone().item(), pred_actual[i].clone().item())))
+                        (pred_expected[ind].clone().item(), pred_actual[ind].item()))
+                    preds_obs_dicts_ranks_queue.put((station_id, dates[ind],
+                                                     (pred_expected[ind].clone().item(),
+                                                      pred_actual[ind].clone().item())))
                 gc.collect()
         print(f"Loss on the entire validation epoch: {running_loss / (len(loader)):.4f}", flush=True)
         return running_loss / (len(loader))
