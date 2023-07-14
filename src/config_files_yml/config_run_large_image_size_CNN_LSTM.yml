@@ -17,9 +17,9 @@ num_basins:
 num_epochs: 15
 num_hidden_units: 256
 num_processes_ddp: 3
-num_workers_data_loader: 1
+num_workers_data_loader: 2
 optim: Adam
-print_tqdm_to_console: true
+print_tqdm_to_console: false
 profile_code: false
 run_sweeps: false
 save_checkpoint: true

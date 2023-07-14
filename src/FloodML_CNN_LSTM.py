@@ -15,7 +15,7 @@ class CNN(nn.Module):
     only generates a single number!!! (single scalar)
     """
 
-    def __init__(self, num_channels, output_size_cnn, image_input_size):
+    def __init__(self, num_channels, output_size_cnn, image_input_size, large_image_size=False):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
@@ -23,18 +23,25 @@ class CNN(nn.Module):
         self.channels_out_conv_2 = 32
         self.channels_out_conv_3 = 64
         self.channels_out_conv_4 = 128
-        self.filter_size_conv = 2
-        self.stride_size_conv = 1
-        self.filter_size_pool = 2
+        if large_image_size:
+            self.filter_size_conv = 5
+            self.stride_size_conv = 1
+            self.filter_size_pool = 4
+        else:
+            self.filter_size_conv = 2
+            self.stride_size_conv = 1
+            self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
         self.cnn_layers = nn.ModuleList([
             torch.nn.Conv2d(in_channels=self.initial_num_channels, out_channels=self.channels_out_conv_1,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid",
+                            stride=self.stride_size_conv),
             torch.nn.BatchNorm2d(self.channels_out_conv_1),
             nn.ReLU(),
             torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
             torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid",
+                            stride=self.stride_size_conv),
             torch.nn.BatchNorm2d(self.channels_out_conv_2),
             nn.ReLU(),
             torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
@@ -111,7 +118,8 @@ class CNN_LSTM(nn.Module):
                  dropout_rate: float = 0.0,
                  num_layers: int = 1,
                  num_attributes=0,
-                 image_input_size=(int,)):
+                 image_input_size=(int,),
+                 large_image_size=False):
         """
         Initialize model
        :param hidden_size: Number of hidden units/LSTM cells
@@ -125,7 +133,7 @@ class CNN_LSTM(nn.Module):
         self.num_channels = num_channels
         input_size = 4
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
-                       image_input_size=image_input_size)
+                       image_input_size=image_input_size, large_image_size=large_image_size)
         self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,
                             num_layers=num_layers, bias=True,
                             batch_first=True)

@@ -7,7 +7,8 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
                  in_cnn_channels, sequence_length_conv_lstm,
                  image_width, image_height,
                  num_dynamic_attributes, num_static_attributes,
-                 use_only_precip_feature=False):
+                 use_only_precip_feature=False,
+                 large_image_size=False):
         super(TWO_LSTM_CNN_LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -34,7 +35,8 @@ class TWO_LSTM_CNN_LSTM(torch.nn.Module):
                                  num_channels=self.in_cnn_channels,
                                  dropout_rate=dropout,
                                  image_input_size=(self.image_width, self.image_height),
-                                 num_attributes=num_attributes_CNN_LSTM)
+                                 num_attributes=num_attributes_CNN_LSTM,
+                                 large_image_size=large_image_size)
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
 
     def forward(self, x_non_spatial, x_spatial):

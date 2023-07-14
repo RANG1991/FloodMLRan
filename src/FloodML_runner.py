@@ -546,7 +546,8 @@ class FloodML_Runner:
                 in_cnn_channels=1, dropout=self.dropout_rate,
                 num_static_attributes=len(training_data.list_static_attributes_names),
                 num_dynamic_attributes=len(training_data.list_dynamic_attributes_names),
-                use_only_precip_feature=self.use_only_precip_feature)
+                use_only_precip_feature=self.use_only_precip_feature,
+                large_image_size=self.use_large_size)
         elif self.model_name.lower() == "transformer_hf":
             configuration = TimeSeriesTransformerConfig(prediction_length=1,
                                                         context_length=self.sequence_length,
