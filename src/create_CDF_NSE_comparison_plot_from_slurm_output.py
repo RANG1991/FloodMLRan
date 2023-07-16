@@ -35,10 +35,10 @@ def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
 
 
 def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
-    run_numbers = set([run_number for _, run_number, _, _ in models_basins_nse_dict.keys()])
-    model_names = set([model_name for model_name, _, _, _ in models_basins_nse_dict.keys()])
-    epoch_numbers = set([epoch_num for _, _, epoch_num, _ in models_basins_nse_dict.keys()])
-    params_dicts = set([params_dict for _, _, _, params_dict in models_basins_nse_dict.keys()])
+    run_numbers = list(set([run_number for _, run_number, _, _ in models_basins_nse_dict.keys()]))
+    model_names = list(set([model_name for model_name, _, _, _ in models_basins_nse_dict.keys()]))
+    epoch_numbers = list(set([epoch_num for _, _, epoch_num, _ in models_basins_nse_dict.keys()]))
+    params_dicts = list(set([params_dict for _, _, _, params_dict in models_basins_nse_dict.keys()]))
     dict_max_median_nse_list_for_each_run = {}
     for model_name in model_names:
         for run_number in run_numbers:
@@ -154,10 +154,10 @@ def plot_NSE_CDF_graphs_my_code():
                         file_name in input_file_names]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
         input_file_paths)
-    all_basins_tuples = set([basin_tuple for _, _, basin_tuple, _ in dict_all_runs_from_all_files.keys()])
-    model_names = set([model_name for model_name, _, _, _ in dict_all_runs_from_all_files.keys()])
-    run_numbers = set([run_number for _, run_number, _, _ in dict_all_runs_from_all_files.keys()])
-    params_dicts = set([params_dict for _, _, _, params_dict in dict_all_runs_from_all_files.keys()])
+    all_basins_tuples = list(set([basin_tuple for _, _, basin_tuple, _ in dict_all_runs_from_all_files.keys()]))
+    model_names = list(set([model_name for model_name, _, _, _ in dict_all_runs_from_all_files.keys()]))
+    run_numbers = list(set([run_number for _, run_number, _, _ in dict_all_runs_from_all_files.keys()]))
+    params_dicts = list(set([params_dict for _, _, _, params_dict in dict_all_runs_from_all_files.keys()]))
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"

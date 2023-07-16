@@ -16,6 +16,9 @@ from PIL import Image
 import cv2
 from shapely.geometry import Point
 from geopandas import GeoDataFrame
+import os
+
+os.environ['USE_PYGEOS'] = '0'
 import geopandas as gpd
 from shapely.geometry import box
 from matplotlib import colormaps as cm
@@ -72,12 +75,14 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_feat
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
     shap_values = explainer(X_train)
-    shap.summary_plot(shap_values, plot_type='violin')
+    # shap.summary_plot(shap_values, plot_type='violin')
+    shap.plots.beeswarm(shap_values)
     # shap.plots.bar(shap_values)
     plt.savefig("analysis_images/shap.png")
 
 
 def process_df_results(df_results, with_std=True):
+    df_results = df_results.loc[(df_results['NSE_CNN_LSTM_135'] > 0) | (df_results['NSE_LSTM_135'] > 0)]
     df_results["label"] = df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']
     d2 = np.around(df_results["label"], decimals=5)
     res = wilcoxon(d2, alternative='greater')
@@ -293,7 +298,7 @@ def main():
     plt.rc('font', size=12)
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    analyse_features("17775252_17782018_17828539_17832148.csv", "decision_tree", with_std=False)
+    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest", with_std=False)
 
 
 if __name__ == "__main__":
