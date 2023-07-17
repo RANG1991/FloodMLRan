@@ -1,8 +1,8 @@
 batch_size: 256
 checkpoint_path:
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
-debug: false
+debug: true
 dropout_rate: 0.4
 learning_rates:
   0: 5e-03

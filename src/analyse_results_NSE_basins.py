@@ -27,6 +27,7 @@ from sklearn.metrics import accuracy_score
 import shap
 import pickle
 from scipy.stats import wilcoxon
+from captum.attr import IntegratedGradients
 
 gpd.options.use_pygeos = True
 
@@ -75,8 +76,8 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_feat
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
     shap_values = explainer(X_train)
-    # shap.summary_plot(shap_values, plot_type='violin')
-    shap.plots.beeswarm(shap_values)
+    shap.summary_plot(shap_values, plot_type='violin')
+    # shap.plots.beeswarm(shap_values)
     # shap.plots.bar(shap_values)
     plt.savefig("analysis_images/shap.png")
 
@@ -169,7 +170,9 @@ def create_dataframe_of_std_spatial():
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
             x_spatial = dict_curr_basin["x_data_spatial"]
-            basin_id_to_std[basin_id] = x_spatial[:, x_spatial.sum(axis=0) > 0].std(axis=1).mean().item()
+            sum_days_attr_spatial = x_spatial.sum(axis=1)
+            non_zero_attr_spatial = sum_days_attr_spatial[np.nonzero(sum_days_attr_spatial)]
+            basin_id_to_std[basin_id] = non_zero_attr_spatial.std(axis=1).mean().item()
     df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
     df_std["basin_id"] = df_std["basin_id"].astype(int)
     return df_std
@@ -202,12 +205,12 @@ def create_CAMELS_dataset():
         discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
         dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
         static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
-        train_start_date="01/10/1997",
-        train_end_date="30/09/2002",
+        train_start_date="01/10/1999",
+        train_end_date="30/09/2008",
         validation_start_date="01/10/1988",
-        validation_end_date="30/09/1992",
-        test_start_date="01/10/1992",
-        test_end_date="30/09/1997",
+        validation_end_date="30/09/1993",
+        test_start_date="01/10/1993",
+        test_end_date="30/09/1999",
         stage="train",
         model_name="CNN_LSTM",
         sequence_length_spatial=185,
@@ -224,8 +227,8 @@ def create_CAMELS_dataset():
     return camels_dataset
 
 
-def create_class_activation_maps_explainable(checkpoint_path):
-    device = "cpu"
+def create_integrated_gradients(checkpoint_path):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     model = TWO_LSTM_CNN_LSTM(
         input_dim=32,
         image_height=36, image_width=36,
@@ -233,6 +236,50 @@ def create_class_activation_maps_explainable(checkpoint_path):
         sequence_length_conv_lstm=185,
         in_cnn_channels=1,
         dropout=0.4,
+        num_static_attributes=27,
+        num_dynamic_attributes=5,
+        use_only_precip_feature=False)
+    model = model.to(device=device)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.train()
+    dataset = create_CAMELS_dataset()
+    _, _, xs_non_spatial, xs_spatial, _, _ = dataset[0]
+    ig = IntegratedGradients(model)
+    xs_non_spatial = xs_non_spatial.to(device)
+    xs_spatial = xs_spatial.to(device)
+    xs_non_spatial.requires_grad_()
+    xs_spatial.requires_grad_()
+    feature_names = CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES + CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["spatial_input"]
+    attr, delta = ig.attribute((xs_non_spatial.unsqueeze(0), xs_spatial.unsqueeze(0)), n_steps=256,
+                               return_convergence_delta=True)
+    attr_non_spatial = attr[0].detach().cpu().numpy()
+    attr_spatial = attr[1].detach().cpu().numpy()
+    sum_days_attr_spatial = attr_spatial.sum(axis=1)
+    non_zero_attr_spatial = sum_days_attr_spatial[np.nonzero(sum_days_attr_spatial)]
+    importances = np.concatenate([np.mean(attr_non_spatial, axis=(0, 1)),
+                                  np.mean(non_zero_attr_spatial).reshape(1, )])
+    for i in range(len(feature_names)):
+        print(feature_names[i], ": ", '%.5f' % (importances[i]))
+    x_pos = (np.arange(len(feature_names)))
+    plt.figure(figsize=(25, 20))
+    plt.xticks(rotation=90)
+    plt.bar(x_pos, importances, align='center')
+    plt.xticks(x_pos, feature_names, wrap=True)
+    plt.xlabel("Features")
+    plt.title("Average Feature Importance")
+    plt.savefig("analysis_images/integrated_gradients.png")
+
+
+def create_class_activation_maps_explainable(checkpoint_path):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = TWO_LSTM_CNN_LSTM(
+        input_dim=32,
+        image_height=36, image_width=36,
+        hidden_dim=256,
+        sequence_length_conv_lstm=185,
+        in_cnn_channels=1,
+        dropout=0,
         num_static_attributes=27,
         num_dynamic_attributes=5,
         use_only_precip_feature=False)
@@ -298,6 +345,7 @@ def main():
     plt.rc('font', size=12)
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
+    create_integrated_gradients("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest", with_std=False)
 
 
