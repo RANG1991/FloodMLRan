@@ -170,9 +170,9 @@ def create_dataframe_of_std_spatial():
                   'rb') as f:
             dict_curr_basin = pickle.load(f)
             x_spatial = dict_curr_basin["x_data_spatial"]
-            sum_days_attr_spatial = x_spatial.sum(axis=1)
+            sum_days_attr_spatial = x_spatial.mean(axis=0)
             non_zero_attr_spatial = sum_days_attr_spatial[np.nonzero(sum_days_attr_spatial)]
-            basin_id_to_std[basin_id] = non_zero_attr_spatial.std(axis=1).mean().item()
+            basin_id_to_std[basin_id] = non_zero_attr_spatial.std().item()
     df_std = pd.DataFrame(basin_id_to_std.items(), columns=["basin_id", "std"])
     df_std["basin_id"] = df_std["basin_id"].astype(int)
     return df_std
@@ -346,7 +346,7 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     create_integrated_gradients("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest", with_std=False)
+    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest", with_std=True)
 
 
 if __name__ == "__main__":
