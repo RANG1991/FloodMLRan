@@ -33,7 +33,7 @@ validation_end_date: "30/09/1993"
 test_start_date: "01/10/1993"
 test_end_date: "30/09/1999"
 intermediate_dim_transformer: 512
-num_heads_transformer: 6
+num_heads_transformer: 4
 num_layers_transformer: 8
 num_runs: 1
 use_random_noise_in_spatial_data: false

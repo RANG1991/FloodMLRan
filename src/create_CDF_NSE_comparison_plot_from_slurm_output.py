@@ -218,20 +218,15 @@ def plot_NSE_CDF_graph_frederik_code():
 
 def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plot_color, plot_opacity, line_width):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
-    # evaluate the histogram
-    # values, base = np.histogram(nse_losses_np, bins=100000)
-    # # evaluate the cumulative
-    # cumulative = np.cumsum(values)
-    # cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
-    # # plt.xscale("symlog")
-    # plt.xlim((0, 1))
-    # plt.xlabel("NSE")
-    # plt.ylabel("CDF")
-    # plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width,
-    #          label=f"model name: {model_name}; number of basins: {num_basins};")
-    plt.hist(nse_losses_np, bins=100000, density=True, cumulative=True,
-             label=f"model name: {model_name}; number of basins: {num_basins};",
-             histtype='step', alpha=plot_opacity, color=plot_color, linewidth=line_width)
+    values, base = np.histogram(nse_losses_np, bins=100000)
+    cumulative = np.cumsum(values)
+    cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
+    # plt.xscale("symlog")
+    plt.xlim((0, 1))
+    plt.xlabel("NSE")
+    plt.ylabel("CDF")
+    plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width,
+             label=f"model name: {model_name}; number of basins: {num_basins};")
 
 
 def main():
