@@ -11,7 +11,7 @@ learning_rates:
   30: 5e-04
 limit_size_above_1000: true
 load_checkpoint: true
-model: CNN_LSTM
+model: Transformer_CNN
 mode: validation
 num_basins:
 num_epochs: 20
