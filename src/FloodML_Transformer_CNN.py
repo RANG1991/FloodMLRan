@@ -62,17 +62,12 @@ class Transformer_CNN(nn.Module):
                                  self.input_image_size[1])
         # CNN.plot_as_image(c_in)
         # self.number_of_images_counter += (batch_size * time_steps)
-        # CNN part
         c_out = self.cnn(c_in)
-        # CNN output should be in the size of (input size - attributes_size)
         cnn_out = c_out.reshape(batch_size, time_steps, -1)
-        # getting the "non-image" part of the input (last 4 attributes)
-        # (removing the "image" part)
         r_in = torch.cat([cnn_out, x_non_spatial], dim=2)
         out_fc_1 = self.fc_1(r_in)
         out_pe = self.positional_encoding(out_fc_1)
         out_transformer = self.transformer_encoder(out_pe)[:, 0, :]
         # out_decay = torch.sum(out_transformer * self.exponential_decay, dim=1)
-        # out_fc_2 = self.fc_2(self.dropout(out_transformer))
         out_fc_2 = self.fc_2(self.dropout(out_transformer))
         return out_fc_2
