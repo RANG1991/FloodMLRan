@@ -8,6 +8,7 @@ from pathlib import Path
 import json
 import statistics
 from matplotlib.pyplot import figure
+import seaborn as sns
 
 KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "num_epochs",
@@ -218,13 +219,14 @@ def plot_NSE_CDF_graph_frederik_code():
 
 def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plot_color, plot_opacity, line_width):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
-    values, base = np.histogram(nse_losses_np, bins=100000)
+    values, base = np.histogram(nse_losses_np, bins=1000)
     cumulative = np.cumsum(values)
-    cumulative = (cumulative - np.min(cumulative)) / np.max(cumulative)
+    cumulative = (cumulative - np.min(cumulative)) / (np.max(cumulative) - np.min(cumulative))
     # plt.xscale("symlog")
     plt.xlim((0, 1))
     plt.xlabel("NSE")
     plt.ylabel("CDF")
+    # sns.kdeplot(nse_losses_np, cumulative=True)
     plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width,
              label=f"model name: {model_name}; number of basins: {num_basins};")
 
