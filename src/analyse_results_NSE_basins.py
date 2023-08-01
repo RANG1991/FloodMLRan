@@ -84,13 +84,19 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_feat
 
 def process_df_results(df_results, with_std=True):
     df_results = df_results.loc[(df_results['NSE_CNN_LSTM_135'] > 0) | (df_results['NSE_LSTM_135'] > 0)]
+    res_wilcoxon_test = []
+    df_cols_NSE_LSTM = df_results.filter(regex=r"NSE_LSTM_\d+_(.*?)_135")
+    df_cols_NSE_CNN_LSTM = df_results.filter(regex=r"NSE_CNN_LSTM_\d+_(.*?)_135")
+    for ind in range(len(df_cols_NSE_LSTM)):
+        nse_list_single_basin_LSTM = df_cols_NSE_LSTM.iloc[ind, :]
+        nse_list_single_basin_CNN_LSTM = df_cols_NSE_CNN_LSTM.iloc[ind, :]
+        res_wilcoxon_test.append(wilcoxon(nse_list_single_basin_LSTM, nse_list_single_basin_CNN_LSTM)[1])
+    df_results["wilcoxon_test_res"] = res_wilcoxon_test
     df_results["label"] = df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']
-    df_results = df_results.loc[df_results["label"].abs() >= 0.01]
-    d2 = np.around(df_results["label"], decimals=5)
-    res = wilcoxon(d2, alternative='greater')
-    print(res)
+    df_results = df_results.loc[df_results["wilcoxon_test_res"] <= 0.05]
     # df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.01]
-    df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135'])
+    df_results.to_csv("analysis_images/df_results.csv")
+    df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135', "wilcoxon_test_res"])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
@@ -185,7 +191,6 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, with_std=True)
         df_std = create_dataframe_of_std_spatial()
         df_results = df_results.merge(df_std, how='inner', on="basin_id")
     df_results = process_df_results(df_results, with_std=with_std)
-    df_results.to_csv("analysis_images/df_results.csv")
     analyse_results_by_decision_tree(df_results, scale_features=scale_features)
     print((df_results.corr()["label"]).sort_values(ascending=False))
     create_accumulated_local_effects_and_shap_values(df_results, clf, scale_features=scale_features)
@@ -346,7 +351,7 @@ def main():
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
     # create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     # create_integrated_gradients("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    analyse_features("17775252_17782018_17828539_17832148.csv", "random_forest", with_std=False)
+    analyse_features("17775252_17782018_17828539_17832148_17837642.csv", "random_forest", with_std=False)
 
 
 if __name__ == "__main__":

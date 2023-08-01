@@ -52,6 +52,11 @@ def generate_csv_from_output_file(slurm_output_files, static_attr_file):
         if len(dict_avg_runs_from_all_files[(model_name, params_tuple)]) != 135:
             continue
         basins_dict_for_data_frame[f'NSE_{model_name}_135'] = dict_avg_runs_from_all_files[(model_name, params_tuple)]
+    for (model_name, run_number, basin_tuple, params_dict) in dict_all_runs_from_all_files.keys():
+        if len(dict_all_runs_from_all_files[(model_name, run_number, basin_tuple, params_dict)]) != 135:
+            continue
+        basins_dict_for_data_frame[f'NSE_{model_name}_{run_number}_135'] = dict_all_runs_from_all_files[
+            (model_name, run_number, basin_tuple, params_dict)]
     df_nse = pd.DataFrame(basins_dict_for_data_frame)
     df_static_attrib = pd.read_csv(static_attr_file, dtype={"gauge_id": str})
     df_static_attrib["gauge_id"] = df_static_attrib["gauge_id"].apply(lambda x: x.replace("us_", ""))
