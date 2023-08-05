@@ -93,9 +93,9 @@ def process_df_results(df_results, with_std=True):
         res_wilcoxon_test.append(wilcoxon(nse_list_single_basin_LSTM, nse_list_single_basin_CNN_LSTM)[1])
     df_results["wilcoxon_test_res"] = res_wilcoxon_test
     df_results["label"] = df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']
+    df_results.to_csv("analysis_images/df_results.csv")
     df_results = df_results.loc[df_results["wilcoxon_test_res"] <= 0.05]
     # df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.01]
-    df_results.to_csv("analysis_images/df_results.csv")
     df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135', "wilcoxon_test_res"])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')

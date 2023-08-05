@@ -20,7 +20,7 @@ KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "use_random_noise_spatial",
                          "use_zeros_spatial"]
 
-COLORS_LIST = ["purple", "blue"]
+COLORS_LIST = ["purple", "blue", "red"]
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -150,7 +150,7 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
 
 def plot_NSE_CDF_graphs_my_code():
     input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out",
-                        "slurm-17837642.out"]
+                        "slurm-17837642.out", "slurm-18270685.out"]
     input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
                         file_name in input_file_names]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
@@ -219,7 +219,7 @@ def plot_NSE_CDF_graph_frederik_code():
 
 def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plot_color, plot_opacity, line_width):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
-    values, base = np.histogram(nse_losses_np, bins=1000)
+    values, base = np.histogram(nse_losses_np, bins=10000)
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / (np.max(cumulative) - np.min(cumulative))
     # plt.xscale("symlog")
