@@ -219,7 +219,7 @@ def plot_NSE_CDF_graph_frederik_code():
 
 def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plot_color, plot_opacity, line_width):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
-    values, base = np.histogram(nse_losses_np, bins=10000)
+    values, base = np.histogram(nse_losses_np, bins=100000)
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / (np.max(cumulative) - np.min(cumulative))
     # plt.xscale("symlog")
