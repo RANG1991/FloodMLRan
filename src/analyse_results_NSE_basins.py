@@ -320,8 +320,8 @@ def create_class_activation_maps_explainable(checkpoint_path):
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
         image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (50, 50),
                                       interpolation=cv2.INTER_CUBIC)
-        # image_activation = ((image_activation - image_activation.min())
-        #                     / (image_activation.max() - image_activation.min()))
+        image_activation = ((image_activation - image_activation.min())
+                            / (image_activation.max() - image_activation.min()))
         image_activation = (255 * (cmap_image_activation(image_activation)[:, :, :3])).astype(np.uint8)
         opacity = 0.7
         overlay = (opacity * image_basin + (1 - opacity) * image_activation)
@@ -351,7 +351,7 @@ def main():
     plt.rc('font', size=12)
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
     create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    # create_integrated_gradients("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
+    create_integrated_gradients("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
     analyse_features("17775252_17782018_17828539_17832148_17837642.csv", "random_forest", with_std=True)
 
 
