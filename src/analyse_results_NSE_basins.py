@@ -49,7 +49,8 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
     print(df_results.corr())
-    df_results["label"] = np.where(df_results['NSE_CNN_LSTM_135'] > df_results['NSE_LSTM_135'], 1, 0)
+    df_results["label"] = np.where(df_results[f'NSE_{model_name_for_comparison}_135'] > df_results['NSE_LSTM_135'], 1,
+                                   0)
     df_results_label_is_zero = df_results[df_results["label"] == 0]
     df_results_label_is_one = df_results[df_results["label"] == 1]
     world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
@@ -351,7 +352,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
 
 
 def main():
-    use_Transformer = False
+    use_Transformer = True
     if use_Transformer:
         model_name_for_comparison = "Transformer_CNN"
         checkpoint = "Transformer_CNN_epoch_number_30_size_above_1000"
