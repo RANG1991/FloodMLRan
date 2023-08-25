@@ -44,7 +44,7 @@ def print_locations_on_world_map(df_locations, color, use_map_axis):
     gdf.plot(ax=use_map_axis, marker='o', color=color, markersize=20)
 
 
-def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
+def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_comparison):
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
@@ -59,7 +59,7 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     use_map_axis = usa.plot(figsize=(20, 12))
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
-    plt.savefig(f"analysis_images/plot_lat_lon.png")
+    plt.savefig(f"analysis_images/plot_lat_lon_{model_name_for_comparison}.png")
 
 
 def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison, scale_features=True):
@@ -73,7 +73,7 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name
     ale_clf = ALE(clf.predict, feature_names=df_results.columns[:-1], target_names=["label"])
     exp_clf = ale_clf.explain(X_train)
     plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
-    plt.savefig("analysis_images/ALE.png")
+    plt.savefig(f"analysis_images/ALE_{model_name_for_comparison}.png")
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
     shap_values = explainer(X_train)
@@ -85,21 +85,21 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name
 
 def process_df_results(df_results, model_name_for_comparison, with_std=True):
     df_results = df_results.loc[
-        (df_results[f'NSE_CNN_{model_name_for_comparison}_135'] > 0) | (df_results['NSE_LSTM_135'] > 0)]
+        (df_results[f'NSE_{model_name_for_comparison}_135'] > 0) | (df_results['NSE_LSTM_135'] > 0)]
     res_wilcoxon_test = []
     df_cols_NSE_LSTM = df_results.filter(regex=r"NSE_LSTM_\d+_(.*?)_135")
-    df_cols_NSE_CNN_LSTM = df_results.filter(regex=rf"NSE_CNN_{model_name_for_comparison}_\d+_(.*?)_135")
+    df_cols_NSE_CNN_LSTM = df_results.filter(regex=rf"NSE_{model_name_for_comparison}_\d+_(.*?)_135")
     for ind in range(len(df_cols_NSE_LSTM)):
         nse_list_single_basin_LSTM = df_cols_NSE_LSTM.iloc[ind, :]
         nse_list_single_basin_CNN_LSTM = df_cols_NSE_CNN_LSTM.iloc[ind, :]
         res_wilcoxon_test.append(mannwhitneyu(nse_list_single_basin_LSTM, nse_list_single_basin_CNN_LSTM)[1])
     df_results["mann_whitney_test_res"] = res_wilcoxon_test
-    df_results["label"] = df_results[f'NSE_CNN_{model_name_for_comparison}_135'] - df_results['NSE_LSTM_135']
-    df_results.to_csv("analysis_images/df_results.csv")
+    df_results["label"] = df_results[f'NSE_{model_name_for_comparison}_135'] - df_results['NSE_LSTM_135']
+    df_results.to_csv(f"analysis_images/df_results_{model_name_for_comparison}.csv")
     df_results = df_results.loc[df_results["mann_whitney_test_res"] <= 0.05]
     # df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.01]
     df_results = df_results.drop(
-        columns=[f'NSE_CNN_{model_name_for_comparison}_135', 'NSE_LSTM_135', "mann_whitney_test_res"])
+        columns=[f'NSE_{model_name_for_comparison}_135', 'NSE_LSTM_135', "mann_whitney_test_res"])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
@@ -187,7 +187,7 @@ def create_dataframe_of_std_spatial():
     return df_std
 
 
-def analyse_features(csv_results_file_with_static_attr, model_name_for_comparison, clf_name, with_std=True):
+def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for_comparison, with_std=True):
     clf, scale_features = get_clf_from_clf_name(clf_name)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     if with_std:
@@ -351,19 +351,20 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
 
 
 def main():
-    use_Transformer = True
+    use_Transformer = False
     if use_Transformer:
-        model_name_for_comparison = "Transformer"
-        checkpoint = "CNN_Transformer_epoch_number_30_size_above_1000"
+        model_name_for_comparison = "Transformer_CNN"
+        checkpoint = "Transformer_CNN_epoch_number_30_size_above_1000"
     else:
-        model_name_for_comparison = "LSTM"
+        model_name_for_comparison = "CNN_LSTM"
         checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
     print(f"analysing {model_name_for_comparison}")
     plt.rc('font', size=12)
-    plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
+    plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
+                              model_name_for_comparison)
     # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
     # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-    analyse_features("17775252_17782018_17828539_17832148_17837642.csv",
+    analyse_features("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
                      "random_forest", model_name_for_comparison, with_std=False)
 
 
