@@ -62,7 +62,7 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr):
     plt.savefig(f"analysis_images/plot_lat_lon.png")
 
 
-def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_features=True):
+def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison, scale_features=True):
     X_train = df_results.to_numpy()[:, :-1]
     if scale_features:
         scaler = MinMaxScaler()
@@ -80,24 +80,26 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, scale_feat
     shap.summary_plot(shap_values, plot_type='violin')
     # shap.plots.beeswarm(shap_values)
     # shap.plots.bar(shap_values)
-    plt.savefig("analysis_images/shap.png")
+    plt.savefig(f"analysis_images/shap_{model_name_for_comparison}.png")
 
 
-def process_df_results(df_results, with_std=True):
-    df_results = df_results.loc[(df_results['NSE_CNN_LSTM_135'] > 0) | (df_results['NSE_LSTM_135'] > 0)]
+def process_df_results(df_results, model_name_for_comparison, with_std=True):
+    df_results = df_results.loc[
+        (df_results[f'NSE_CNN_{model_name_for_comparison}_135'] > 0) | (df_results['NSE_LSTM_135'] > 0)]
     res_wilcoxon_test = []
     df_cols_NSE_LSTM = df_results.filter(regex=r"NSE_LSTM_\d+_(.*?)_135")
-    df_cols_NSE_CNN_LSTM = df_results.filter(regex=r"NSE_CNN_LSTM_\d+_(.*?)_135")
+    df_cols_NSE_CNN_LSTM = df_results.filter(regex=rf"NSE_CNN_{model_name_for_comparison}_\d+_(.*?)_135")
     for ind in range(len(df_cols_NSE_LSTM)):
         nse_list_single_basin_LSTM = df_cols_NSE_LSTM.iloc[ind, :]
         nse_list_single_basin_CNN_LSTM = df_cols_NSE_CNN_LSTM.iloc[ind, :]
         res_wilcoxon_test.append(mannwhitneyu(nse_list_single_basin_LSTM, nse_list_single_basin_CNN_LSTM)[1])
     df_results["mann_whitney_test_res"] = res_wilcoxon_test
-    df_results["label"] = df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']
+    df_results["label"] = df_results[f'NSE_CNN_{model_name_for_comparison}_135'] - df_results['NSE_LSTM_135']
     df_results.to_csv("analysis_images/df_results.csv")
     df_results = df_results.loc[df_results["mann_whitney_test_res"] <= 0.05]
     # df_results = df_results[abs(df_results['NSE_CNN_LSTM_135'] - df_results['NSE_LSTM_135']) > 0.01]
-    df_results = df_results.drop(columns=['NSE_CNN_LSTM_135', 'NSE_LSTM_135', "mann_whitney_test_res"])
+    df_results = df_results.drop(
+        columns=[f'NSE_CNN_{model_name_for_comparison}_135', 'NSE_LSTM_135', "mann_whitney_test_res"])
     df_results = df_results.set_index("basin_id")
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
@@ -108,7 +110,7 @@ def process_df_results(df_results, with_std=True):
     return df_results
 
 
-def analyse_results_by_decision_tree(df_results, scale_features=True):
+def analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=True):
     clf = DecisionTreeRegressor(random_state=0, max_depth=7)
     X_train = df_results.to_numpy()[:, :-1]
     if scale_features:
@@ -119,7 +121,7 @@ def analyse_results_by_decision_tree(df_results, scale_features=True):
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     plt.figure(figsize=(25, 20))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1], fontsize=12)
-    plt.savefig("analysis_images/decision_tree.png")
+    plt.savefig(f"analysis_images/decision_tree_{model_name_for_comparison}.png")
 
 
 def get_clf_from_clf_name(clf_name):
@@ -185,21 +187,22 @@ def create_dataframe_of_std_spatial():
     return df_std
 
 
-def analyse_features(csv_results_file_with_static_attr, clf_name, with_std=True):
+def analyse_features(csv_results_file_with_static_attr, model_name_for_comparison, clf_name, with_std=True):
     clf, scale_features = get_clf_from_clf_name(clf_name)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     if with_std:
         df_std = create_dataframe_of_std_spatial()
         df_results = df_results.merge(df_std, how='inner', on="basin_id")
-    df_results = process_df_results(df_results, with_std=with_std)
-    analyse_results_by_decision_tree(df_results, scale_features=scale_features)
+    df_results = process_df_results(df_results, model_name_for_comparison, with_std=with_std)
+    analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=scale_features)
     print((df_results.corr()["label"]).sort_values(ascending=False))
-    create_accumulated_local_effects_and_shap_values(df_results, clf, scale_features=scale_features)
+    create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison,
+                                                     scale_features=scale_features)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_features=scale_features)
     plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
-    plt.savefig(f"analysis_images/feature_importance_{clf_name}.png")
+    plt.savefig(f"analysis_images/feature_importance_{clf_name}_{model_name_for_comparison}.png")
 
 
 def create_CAMELS_dataset():
@@ -233,7 +236,7 @@ def create_CAMELS_dataset():
     return camels_dataset
 
 
-def create_integrated_gradients(checkpoint_path):
+def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = TWO_LSTM_CNN_LSTM(
         input_dim=32,
@@ -274,10 +277,10 @@ def create_integrated_gradients(checkpoint_path):
     plt.xticks(x_pos, feature_names, wrap=True)
     plt.xlabel("Features")
     plt.title("Average Feature Importance")
-    plt.savefig("analysis_images/integrated_gradients.png")
+    plt.savefig(f"analysis_images/integrated_gradients_{model_name_for_comparison}.png")
 
 
-def create_class_activation_maps_explainable(checkpoint_path):
+def create_class_activation_maps_explainable(checkpoint_path, model_name_for_comparison):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = TWO_LSTM_CNN_LSTM(
         input_dim=32,
@@ -344,15 +347,24 @@ def create_class_activation_maps_explainable(checkpoint_path):
     num_white_images_to_fill = len(list_all_images) % num_images_in_row
     white_images_to_fill = np.hstack([white_image_with_margin for _ in range(num_white_images_to_fill * 2)])
     list_rows[-1] = np.hstack([list_rows[-1], white_images_to_fill])
-    cv2.imwrite(f"./heat_maps/heat_map_all_basins.png", np.vstack(list_rows))
+    cv2.imwrite(f"./heat_maps/heat_map_all_basins_{model_name_for_comparison}.png", np.vstack(list_rows))
 
 
 def main():
+    use_Transformer = True
+    if use_Transformer:
+        model_name_for_comparison = "Transformer"
+        checkpoint = "CNN_Transformer_epoch_number_30_size_above_1000"
+    else:
+        model_name_for_comparison = "LSTM"
+        checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
+    print(f"analysing {model_name_for_comparison}")
     plt.rc('font', size=12)
     plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642.csv")
-    create_class_activation_maps_explainable("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    create_integrated_gradients("../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt")
-    analyse_features("17775252_17782018_17828539_17832148_17837642.csv", "random_forest", with_std=True)
+    # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+    # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+    analyse_features("17775252_17782018_17828539_17832148_17837642.csv",
+                     "random_forest", model_name_for_comparison, with_std=False)
 
 
 if __name__ == "__main__":
