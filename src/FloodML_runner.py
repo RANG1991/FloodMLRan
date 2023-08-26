@@ -21,7 +21,7 @@ from FloodML_2_LSTM_Conv_LSTM import TWO_LSTM_CONV_LSTM
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
 from FloodML_Transformer_Seq2Seq import Transformer_Seq2Seq
 from FloodML_Transformer_VIT import Transformer_VIT
-from FloodML_Transformer_CNN import Transformer_CNN
+from FloodML_2_Transformer_CNN_Transformer import TWO_Transformer_CNN_Transformer
 from pathlib import Path
 import random
 import torch
@@ -563,15 +563,18 @@ class FloodML_Runner:
                                                             training_data.list_static_attributes_names))
             model = TimeSeriesTransformerModel(configuration)
         elif self.model_name.lower() == "transformer_cnn":
-            model = Transformer_CNN(image_input_size=(training_data.max_dim, training_data.max_dim),
-                                    num_static_attributes=len(training_data.list_static_attributes_names),
-                                    num_dynamic_attributes=len(training_data.list_dynamic_attributes_names),
-                                    sequence_length=self.sequence_length_spatial,
-                                    intermediate_dim=self.intermediate_dim_transformer,
-                                    dropout=self.dropout_rate,
-                                    num_heads=self.num_heads_transformer,
-                                    num_layers=self.num_layers_transformer,
-                                    num_channels=1)
+            model = TWO_Transformer_CNN_Transformer(image_width=training_data.max_dim,
+                                                    image_height=training_data.max_dim,
+                                                    num_static_attributes=len(
+                                                        training_data.list_static_attributes_names),
+                                                    num_dynamic_attributes=len(
+                                                        training_data.list_dynamic_attributes_names),
+                                                    sequence_length_cnn_transformer=self.sequence_length_spatial,
+                                                    intermediate_dim_transformer=self.intermediate_dim_transformer,
+                                                    dropout=self.dropout_rate,
+                                                    num_heads_transformer=self.num_heads_transformer,
+                                                    num_layers_transformer=self.num_layers_transformer,
+                                                    in_cnn_channels=1)
         elif self.model_name.lower() == "transformer_VIT":
             model = Transformer_VIT(sequence_length=self.sequence_length,
                                     sequence_length_spatial=self.sequence_length_spatial,

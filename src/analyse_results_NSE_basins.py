@@ -352,21 +352,20 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
 
 
 def main():
-    use_Transformer = True
-    if use_Transformer:
-        model_name_for_comparison = "Transformer_CNN"
-        checkpoint = "Transformer_CNN_epoch_number_30_size_above_1000"
-    else:
-        model_name_for_comparison = "CNN_LSTM"
-        checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
-    print(f"analysing {model_name_for_comparison}")
-    plt.rc('font', size=12)
-    plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
-                              model_name_for_comparison)
-    # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-    # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-    analyse_features("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
-                     "random_forest", model_name_for_comparison, with_std=False)
+    model_names = ["Transformer_CNN", "CNN_LSTM"]
+    for model_name_for_comparison in model_names:
+        if model_name_for_comparison == "Transformer_CNN":
+            checkpoint = "Transformer_CNN_epoch_number_30_size_above_1000"
+        else:
+            checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
+        print(f"analysing {model_name_for_comparison}")
+        plt.rc('font', size=12)
+        plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
+                                  model_name_for_comparison)
+        # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+        # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+        analyse_features("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
+                         "random_forest", model_name_for_comparison, with_std=False)
 
 
 if __name__ == "__main__":
