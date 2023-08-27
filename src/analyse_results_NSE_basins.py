@@ -29,6 +29,7 @@ import pickle
 from scipy.stats import wilcoxon
 from captum.attr import IntegratedGradients
 from scipy.stats import mannwhitneyu
+import glob
 
 gpd.options.use_pygeos = True
 
@@ -57,7 +58,7 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_
     usa = world[world.name == "United States of America"]
     polygon = box(-127, -85, 175, 85)
     usa = gpd.clip(usa, polygon)
-    use_map_axis = usa.plot(figsize=(20, 12))
+    use_map_axis = usa.plot()
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
     plt.savefig(f"analysis_images/plot_lat_lon_{model_name_for_comparison}.png")
@@ -112,7 +113,7 @@ def process_df_results(df_results, model_name_for_comparison, with_std=True):
 
 
 def analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=True):
-    clf = DecisionTreeRegressor(random_state=0, max_depth=7)
+    clf = DecisionTreeRegressor(random_state=0, max_depth=5)
     X_train = df_results.to_numpy()[:, :-1]
     if scale_features:
         scaler = MinMaxScaler()
@@ -120,7 +121,7 @@ def analyse_results_by_decision_tree(df_results, model_name_for_comparison, scal
     clf.fit(X_train, df_results["label"])
     score = clf.score(X_train, df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
-    plt.figure(figsize=(25, 20))
+    # plt.figure(figsize=(25, 20))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1], fontsize=12)
     plt.savefig(f"analysis_images/decision_tree_{model_name_for_comparison}.png")
 
@@ -200,7 +201,8 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison,
                                                      scale_features=scale_features)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_features=scale_features)
-    plt.figure(figsize=(25, 20))
+    plt.clf()
+    # plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
     plt.savefig(f"analysis_images/feature_importance_{clf_name}_{model_name_for_comparison}.png")
@@ -272,7 +274,7 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     for i in range(len(feature_names)):
         print(feature_names[i], ": ", '%.5f' % (importances[i]))
     x_pos = (np.arange(len(feature_names)))
-    plt.figure(figsize=(25, 20))
+    # plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar(x_pos, importances, align='center')
     plt.xticks(x_pos, feature_names, wrap=True)
@@ -351,21 +353,48 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
     cv2.imwrite(f"./heat_maps/heat_map_all_basins_{model_name_for_comparison}.png", np.vstack(list_rows))
 
 
+def plot_images_side_by_side(models_names):
+    all_images_files = [file for file in glob.glob(f"./analysis_images/*.png")]
+    all_images_pairs = {}
+    first_model_name_for_comparison = models_names[0]
+    for image_file_name in all_images_files:
+        if first_model_name_for_comparison in image_file_name:
+            image_pair = [(first_model_name_for_comparison, image_file_name)]
+            for model_name_for_comparison in models_names[1:]:
+                image_file_name_with_model_name = image_file_name.replace(first_model_name_for_comparison,
+                                                                          model_name_for_comparison)
+                image_pair.append((model_name_for_comparison, image_file_name_with_model_name))
+            all_images_pairs[image_file_name.replace(f"_{first_model_name_for_comparison}.png", "")] = image_pair
+    for key in all_images_pairs.keys():
+        curr_image_pair = all_images_pairs[key]
+        f, axarr = plt.subplots(1, len(curr_image_pair), figsize=(38, 24))
+        for j in range(len(curr_image_pair)):
+            model_name_for_comparison, image_file_name_with_model_name = curr_image_pair[j]
+            axarr[j].imshow(plt.imread(image_file_name_with_model_name))
+            axarr[j].axis("off")
+            axarr[j].set_title(f"{model_name_for_comparison}", size=30)
+        f.tight_layout()
+        # f.tight_layout(rect=[0.0, 0.0, 0.1, 0.1])
+        f.savefig(f"{key}.png")
+
+
 def main():
     model_names = ["Transformer_CNN", "CNN_LSTM"]
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "Transformer_CNN":
-            checkpoint = "Transformer_CNN_epoch_number_30_size_above_1000"
+            checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000"
         else:
             checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
         print(f"analysing {model_name_for_comparison}")
-        plt.rc('font', size=12)
+        plt.rc('font', size=14)
+        plt.rcParams["figure.figsize"] = (19, 22)
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
                                   model_name_for_comparison)
         # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
         # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
         analyse_features("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
                          "random_forest", model_name_for_comparison, with_std=False)
+    plot_images_side_by_side(model_names)
 
 
 if __name__ == "__main__":
