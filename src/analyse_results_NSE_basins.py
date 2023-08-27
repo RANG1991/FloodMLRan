@@ -388,6 +388,7 @@ def main():
         print(f"analysing {model_name_for_comparison}")
         plt.rc('font', size=14)
         plt.rcParams["figure.figsize"] = (19, 22)
+        plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
                                   model_name_for_comparison)
         # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
