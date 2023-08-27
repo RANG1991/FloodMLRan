@@ -1,9 +1,55 @@
-import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
 import torch
 from FloodML_Transformer_Encoder import PositionalEncoding
 from FloodML_CNN_LSTM import CNN
+from Transformer.layers import multi_head_attention, layer_norm, position_wise_feed_forward
+
+
+class EncoderCrossAttentionLayer(nn.Module):
+
+    def __init__(self, d_model, ffn_hidden, n_head, drop_prob):
+        super(EncoderCrossAttentionLayer, self).__init__()
+        self.self_attention = multi_head_attention.MultiHeadAttention(d_model=d_model, n_head=n_head)
+        self.norm1 = layer_norm.LayerNorm(d_model=d_model)
+        self.dropout1 = nn.Dropout(p=drop_prob)
+
+        self.enc_dec_attention = multi_head_attention.MultiHeadAttention(d_model=d_model, n_head=n_head)
+        self.norm2 = layer_norm.LayerNorm(d_model=d_model)
+        self.dropout2 = nn.Dropout(p=drop_prob)
+
+        self.ffn = position_wise_feed_forward.PositionwiseFeedForward(d_model=d_model, hidden=ffn_hidden,
+                                                                      drop_prob=drop_prob)
+        self.norm3 = layer_norm.LayerNorm(d_model=d_model)
+        self.dropout3 = nn.Dropout(p=drop_prob)
+
+    def forward(self, enc_1, enc_2, s_mask):
+        # 1. compute encoder - decoder attention
+        _x = enc_1
+        x = self.enc_dec_attention(q=enc_1, k=enc_2, v=enc_2, mask=s_mask)
+        # 2. add and norm
+        x = self.dropout2(x)
+        x = self.norm2(x + _x)
+        _x = x
+        x = self.ffn(x)
+        # 3. add and norm
+        x = self.dropout3(x)
+        x = self.norm3(x + _x)
+        return x
+
+
+class EncoderCrossAttention(nn.Module):
+    def __init__(self, d_model, ffn_hidden, n_head, n_layers, drop_prob):
+        super().__init__()
+        self.layers = nn.ModuleList([EncoderCrossAttentionLayer(d_model=d_model,
+                                                                ffn_hidden=ffn_hidden,
+                                                                n_head=n_head,
+                                                                drop_prob=drop_prob)
+                                     for _ in range(n_layers)])
+
+    def forward(self, trg, enc_src, src_mask):
+        for layer in self.layers:
+            trg = layer(trg, enc_src, src_mask)
+        return trg
 
 
 class Transformer_CNN(nn.Module):
@@ -34,8 +80,13 @@ class Transformer_CNN(nn.Module):
                        image_input_size=image_input_size)
         self.fc_1 = nn.Linear(intermediate_dim + input_size, intermediate_dim)
         self.positional_encoding = PositionalEncoding(intermediate_dim, sequence_length)
-        decoder_layer = nn.TransformerDecoderLayer(d_model=intermediate_dim, nhead=num_heads, batch_first=True)
-        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
+        # decoder_layer = nn.TransformerDecoderLayer(d_model=intermediate_dim, nhead=num_heads, batch_first=True)
+        # self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
+        self.cross_attention_encoder = EncoderCrossAttention(n_head=num_heads,
+                                                             n_layers=num_layers,
+                                                             d_model=intermediate_dim,
+                                                             ffn_hidden=intermediate_dim,
+                                                             drop_prob=0.1)
         self.fc_2 = nn.Linear(intermediate_dim, 1)
         # exponential_decay = torch.exp(torch.tensor([-1 * (sequence_length - i) / 25 for i in range(sequence_length)]))
         # exponential_decay = exponential_decay.unsqueeze(0).unsqueeze(-1).repeat(1, 1, intermediate_dim)
@@ -61,7 +112,7 @@ class Transformer_CNN(nn.Module):
         r_in = torch.cat([cnn_out, x_non_spatial], dim=2)
         out_fc_1 = self.fc_1(r_in)
         out_pe = self.positional_encoding(out_fc_1)
-        out_transformer = self.transformer_decoder(out_pe, memory)[:, 0, :]
+        out_transformer = self.cross_attention_encoder(out_pe, memory)[:, 0, :]
         # out_decay = torch.sum(out_transformer * self.exponential_decay, dim=1)
         out_fc_2 = self.fc_2(self.dropout(out_transformer))
         return out_fc_2
