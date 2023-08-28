@@ -9,26 +9,30 @@ class EncoderCrossAttentionLayer(nn.Module):
 
     def __init__(self, d_model, ffn_hidden, n_head, drop_prob):
         super(EncoderCrossAttentionLayer, self).__init__()
+        self.self_attention = multi_head_attention.MultiHeadAttention(d_model=d_model, n_head=n_head)
         self.norm1 = layer_norm.LayerNorm(d_model=d_model)
         self.dropout1 = nn.Dropout(p=drop_prob)
         self.enc_dec_attention = multi_head_attention.MultiHeadAttention(d_model=d_model, n_head=n_head)
-        self.ffn = position_wise_feed_forward.PositionwiseFeedForward(d_model=d_model, hidden=ffn_hidden,
-                                                                      drop_prob=drop_prob)
         self.norm2 = layer_norm.LayerNorm(d_model=d_model)
         self.dropout2 = nn.Dropout(p=drop_prob)
+        self.ffn = position_wise_feed_forward.PositionwiseFeedForward(d_model=d_model, hidden=ffn_hidden,
+                                                                      drop_prob=drop_prob)
+        self.norm3 = layer_norm.LayerNorm(d_model=d_model)
+        self.dropout3 = nn.Dropout(p=drop_prob)
 
     def forward(self, enc_1, enc_2):
-        # 1. compute encoder - decoder attention
         _x = enc_1
-        x = self.enc_dec_attention(q=enc_1, k=enc_2, v=enc_2)
-        # 2. add and norm
+        x = self.self_attention(q=enc_1, k=enc_1, v=enc_1)
         x = self.dropout1(x)
         x = self.norm1(x + _x)
         _x = x
-        x = self.ffn(x)
-        # 3. add and norm
+        x = self.enc_dec_attention(q=x, k=enc_2, v=enc_2)
         x = self.dropout2(x)
         x = self.norm2(x + _x)
+        _x = x
+        x = self.ffn(x)
+        x = self.dropout3(x)
+        x = self.norm3(x + _x)
         return x
 
 
@@ -80,7 +84,7 @@ class Transformer_CNN(nn.Module):
         self.cross_attention_encoder = EncoderCrossAttention(n_head=num_heads,
                                                              n_layers=num_layers,
                                                              d_model=intermediate_dim,
-                                                             ffn_hidden=intermediate_dim,
+                                                             ffn_hidden=2048,
                                                              drop_prob=0.1)
         self.fc_2 = nn.Linear(intermediate_dim, 1)
         # exponential_decay = torch.exp(torch.tensor([-1 * (sequence_length - i) / 25 for i in range(sequence_length)]))
