@@ -35,7 +35,7 @@ test_end_date: "30/09/1999"
 intermediate_dim_transformer: 64
 num_heads_transformer: 4
 num_layers_transformer: 8
-num_runs: 3
+num_runs: 8
 use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 only_precip: false
