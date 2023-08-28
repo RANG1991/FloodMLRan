@@ -75,8 +75,8 @@ class Transformer_CNN(nn.Module):
                        image_input_size=image_input_size)
         self.fc_1 = nn.Linear(intermediate_dim + input_size, intermediate_dim)
         self.positional_encoding = PositionalEncoding(intermediate_dim, sequence_length)
-        decoder_layer = nn.TransformerDecoderLayer(d_model=intermediate_dim, nhead=num_heads, batch_first=True)
-        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
+        # decoder_layer = nn.TransformerDecoderLayer(d_model=intermediate_dim, nhead=num_heads, batch_first=True)
+        # self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
         self.cross_attention_encoder = EncoderCrossAttention(n_head=num_heads,
                                                              n_layers=num_layers,
                                                              d_model=intermediate_dim,
