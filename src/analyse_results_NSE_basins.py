@@ -379,9 +379,9 @@ def plot_images_side_by_side(models_names):
 
 
 def main():
-    model_names = ["Transformer_CNN", "CNN_LSTM"]
+    model_names = ["CNN_Transformer", "CNN_LSTM"]
     for model_name_for_comparison in model_names:
-        if model_name_for_comparison == "Transformer_CNN":
+        if model_name_for_comparison == "CNN_Transformer":
             checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000"
         else:
             checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"

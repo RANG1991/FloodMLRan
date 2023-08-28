@@ -320,7 +320,7 @@ class FloodML_Base_Dataset(Dataset):
                 X_data_spatial[
                 inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
             ).to(torch.float32)
-        elif self.model_name.lower() == "cnn_lstm" or self.model_name.lower() == "transformer_cnn":
+        elif self.model_name.lower() == "cnn_lstm" or self.model_name.lower() == "cnn_transformer":
             X_data, X_data_spatial, y_data = \
                 dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(
@@ -329,7 +329,7 @@ class FloodML_Base_Dataset(Dataset):
                 X_data_spatial[
                 inner_ind + self.sequence_length: inner_ind + self.sequence_length + self.sequence_length_spatial]
             ).to(torch.float32)
-            if self.model_name.lower() == "transformer_cnn":
+            if self.model_name.lower() == "cnn_transformer":
                 X_data_tensor_non_spatial = torch.vstack([self.cls_token, X_data_tensor_non_spatial])
                 X_data_tensor_spatial = torch.vstack([self.cls_token_spatial, X_data_tensor_spatial])
         elif self.model_name.lower() == "transformer_seq2seq":
@@ -350,7 +350,7 @@ class FloodML_Base_Dataset(Dataset):
                 y_data[inner_ind + 1: inner_ind + self.sequence_length + 1]
             ).to(torch.float32).squeeze()
             dates_tensor = torch.tensor(list_dates[inner_ind + 1: inner_ind + self.sequence_length + 1])
-        elif self.model_name.lower() == "cnn_lstm" or self.model_name.lower() == "transformer_cnn":
+        elif self.model_name.lower() == "cnn_lstm" or self.model_name.lower() == "cnn_transformer":
             y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length_spatial + self.sequence_length - 1]
                                          ).to(torch.float32).squeeze()
             dates_tensor = torch.tensor(list_dates[inner_ind + self.sequence_length_spatial + self.sequence_length - 1])
@@ -365,7 +365,7 @@ class FloodML_Base_Dataset(Dataset):
         lookup_table_basins = {}
         length_of_dataset = 0
         for key in dict_station_id_to_data.keys():
-            if self.model_name.lower() in ["cnn_lstm", "transformer_cnn"]:
+            if self.model_name.lower() in ["cnn_lstm", "cnn_transformer"]:
                 for ind in range(
                         len(dict_station_id_to_data[key][
                                 "x_data"]) - self.sequence_length - self.sequence_length_spatial + 1):

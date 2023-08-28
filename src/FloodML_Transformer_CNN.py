@@ -51,7 +51,7 @@ class EncoderCrossAttention(nn.Module):
         return trg
 
 
-class Transformer_CNN(nn.Module):
+class CNN_Transformer(nn.Module):
 
     def __init__(self,
                  embedding_size,
@@ -68,7 +68,7 @@ class Transformer_CNN(nn.Module):
        :param hidden_size: Number of hidden units/LSTM cells
        :param dropout_rate: Dropout rate of the last fully connected layer. Default 0.0
         """
-        super(Transformer_CNN, self).__init__()
+        super(CNN_Transformer, self).__init__()
         self.dropout = dropout
         self.num_channels = num_channels
         input_size = 4

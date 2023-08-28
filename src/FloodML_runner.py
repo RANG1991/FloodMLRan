@@ -562,7 +562,7 @@ class FloodML_Runner:
                                                         num_static_real_features=len(
                                                             training_data.list_static_attributes_names))
             model = TimeSeriesTransformerModel(configuration)
-        elif self.model_name.lower() == "transformer_cnn":
+        elif self.model_name.lower() == "cnn_transformer":
             model = TWO_Transformer_CNN_Transformer(image_width=training_data.max_dim,
                                                     image_height=training_data.max_dim,
                                                     num_static_attributes=len(

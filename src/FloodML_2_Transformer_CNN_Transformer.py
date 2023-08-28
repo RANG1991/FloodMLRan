@@ -1,5 +1,5 @@
 import torch
-from FloodML_Transformer_CNN import Transformer_CNN
+from FloodML_Transformer_CNN import CNN_Transformer
 from torch import nn
 from FloodML_Transformer_Encoder import PositionalEncoding
 
@@ -28,7 +28,7 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
         self.num_layers_transformer = num_layers_transformer
         self.embedding_size = 10
         self.dropout = dropout
-        self.transformer_cnn = Transformer_CNN(image_input_size=(self.image_width, self.image_height),
+        self.cnn_transformer = CNN_Transformer(image_input_size=(self.image_width, self.image_height),
                                                embedding_size=self.embedding_size,
                                                num_dynamic_attributes=self.num_dynamic_attr,
                                                sequence_length=self.sequence_length_cnn_transformer,
@@ -54,5 +54,5 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
         out_fc_1 = self.fc_1(x_non_spatial)
         memory = self.transformer_encoder(
             self.positional_encoding(out_fc_1[:, :-self.sequence_length_cnn_transformer, :]))
-        output = self.transformer_cnn(out_fc_1[:, -self.sequence_length_cnn_transformer:, :], x_spatial, memory)
+        output = self.cnn_transformer(out_fc_1[:, -self.sequence_length_cnn_transformer:, :], x_spatial, memory)
         return output
