@@ -162,7 +162,8 @@ def plot_NSE_CDF_graphs_my_code():
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
-    figure(figsize=(20, 16))
+    figure(figsize=(14, 12))
+    plt.rcParams.update({'font.size': 22})
     for ind, model_name in enumerate(model_names):
         for run_number in run_numbers:
             for basin_tuple in all_basins_tuples:
@@ -192,9 +193,10 @@ def plot_NSE_CDF_graphs_my_code():
                 num_basins=135,
                 plot_color=COLORS_LIST[ind],
                 plot_opacity=1,
-                line_width=2)
-    if plot_title != "":
-        plt.title(plot_title)
+                line_width=2,
+                label=f"mean CDF NSE of model: {model_name}")
+    # if plot_title != "":
+    #     plt.title(plot_title)
     plt.legend(loc='upper left')
     plt.grid()
     plt.savefig(plot_title)
@@ -217,7 +219,8 @@ def plot_NSE_CDF_graph_frederik_code():
     plt.clf()
 
 
-def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plot_color, plot_opacity, line_width):
+def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plot_color, plot_opacity, line_width,
+                        label=""):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     values, base = np.histogram(nse_losses_np, bins=100000)
     cumulative = np.cumsum(values)
@@ -227,8 +230,11 @@ def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plo
     plt.xlabel("NSE")
     plt.ylabel("CDF")
     # sns.kdeplot(nse_losses_np, cumulative=True)
-    plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width,
-             label=f"model name: {model_name}; number of basins: {num_basins};")
+    if label != "":
+        plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width,
+                 label=label)
+    else:
+        plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width)
 
 
 def main():
