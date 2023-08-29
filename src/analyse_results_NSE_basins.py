@@ -42,14 +42,14 @@ def print_locations_on_world_map(df_locations, color, use_map_axis):
     df_lat_lon_basins = pd.DataFrame.from_dict(df_lat_lon_basins)
     geometry = [Point(xy) for xy in zip(df_lat_lon_basins['Longitude'], df_lat_lon_basins['Latitude'])]
     gdf = GeoDataFrame(df_lat_lon_basins, geometry=geometry)
-    gdf.plot(ax=use_map_axis, marker='o', color=color, markersize=20)
+    gdf.plot(ax=use_map_axis, marker='o', color=color, markersize=60)
 
 
 def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_comparison):
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     df_results = df_results.select_dtypes(include=[np.number]).dropna(how='all')
     df_results = df_results.fillna(df_results.mean())
-    print(df_results.corr())
+    # print(df_results.corr())
     df_results["label"] = np.where(df_results[f'NSE_{model_name_for_comparison}_135'] > df_results['NSE_LSTM_135'], 1,
                                    0)
     df_results_label_is_zero = df_results[df_results["label"] == 0]
@@ -58,8 +58,8 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_
     usa = world[world.name == "United States of America"]
     polygon = box(-127, -85, 175, 85)
     usa = gpd.clip(usa, polygon)
-    plt.tight_layout()
-    use_map_axis = usa.plot(figsize=(22, 10))
+    use_map_axis = usa.plot(figsize=(30, 15))
+    use_map_axis.set_axis_off()
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
     plt.savefig(f"analysis_images/plot_lat_lon_{model_name_for_comparison}.png")
@@ -77,7 +77,7 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name
     exp_clf = ale_clf.explain(X_train)
     fig = plt.figure()
     axes = fig.gca()
-    axes.xaxis.get_label().set_fontsize(14)
+    axes.xaxis.get_label().set_fontsize(20)
     plot_ale(exp_clf, n_cols=7, ax=axes, fig_kw={'figwidth': 17, 'figheight': 20})
     plt.savefig(f"analysis_images/ALE_{model_name_for_comparison}.png")
     plt.clf()
@@ -117,7 +117,7 @@ def process_df_results(df_results, model_name_for_comparison, with_std=True):
 
 
 def analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=True):
-    clf = DecisionTreeRegressor(random_state=0, max_depth=5)
+    clf = DecisionTreeRegressor(random_state=0, max_depth=2)
     X_train = df_results.to_numpy()[:, :-1]
     if scale_features:
         scaler = MinMaxScaler()
@@ -126,7 +126,7 @@ def analyse_results_by_decision_tree(df_results, model_name_for_comparison, scal
     score = clf.score(X_train, df_results["label"])
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     # plt.figure(figsize=(25, 20))
-    tree.plot_tree(clf, feature_names=df_results.columns[:-1], fontsize=12)
+    tree.plot_tree(clf, feature_names=df_results.columns[:-1], fontsize=20)
     plt.savefig(f"analysis_images/decision_tree_{model_name_for_comparison}.png")
 
 
