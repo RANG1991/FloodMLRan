@@ -58,7 +58,8 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_
     usa = world[world.name == "United States of America"]
     polygon = box(-127, -85, 175, 85)
     usa = gpd.clip(usa, polygon)
-    use_map_axis = usa.plot()
+    plt.tight_layout()
+    use_map_axis = usa.plot(figsize=(22, 10))
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
     plt.savefig(f"analysis_images/plot_lat_lon_{model_name_for_comparison}.png")
@@ -74,7 +75,10 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     ale_clf = ALE(clf.predict, feature_names=df_results.columns[:-1], target_names=["label"])
     exp_clf = ale_clf.explain(X_train)
-    plot_ale(exp_clf, n_cols=7, fig_kw={'figwidth': 12, 'figheight': 10})
+    fig = plt.figure()
+    axes = fig.gca()
+    axes.xaxis.get_label().set_fontsize(14)
+    plot_ale(exp_clf, n_cols=7, ax=axes, fig_kw={'figwidth': 17, 'figheight': 20})
     plt.savefig(f"analysis_images/ALE_{model_name_for_comparison}.png")
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
@@ -367,7 +371,7 @@ def plot_images_side_by_side(models_names):
             all_images_pairs[image_file_name.replace(f"_{first_model_name_for_comparison}.png", "")] = image_pair
     for key in all_images_pairs.keys():
         curr_image_pair = all_images_pairs[key]
-        f, axarr = plt.subplots(1, len(curr_image_pair), figsize=(38, 24))
+        f, axarr = plt.subplots(len(curr_image_pair), 1, figsize=(24, 38))
         for j in range(len(curr_image_pair)):
             model_name_for_comparison, image_file_name_with_model_name = curr_image_pair[j]
             axarr[j].imshow(plt.imread(image_file_name_with_model_name))
@@ -379,15 +383,15 @@ def plot_images_side_by_side(models_names):
 
 
 def main():
-    model_names = ["CNN_Transformer", "CNN_LSTM"]
+    model_names = ["CNN_LSTM", "Transformer_CNN"]
     for model_name_for_comparison in model_names:
-        if model_name_for_comparison == "CNN_Transformer":
-            checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000"
+        if model_name_for_comparison == "Transformer_CNN":
+            checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_19_size_above_1000"
         else:
             checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
         print(f"analysing {model_name_for_comparison}")
         plt.rc('font', size=14)
-        plt.rcParams["figure.figsize"] = (19, 22)
+        plt.rcParams["figure.figsize"] = (12, 19)
         plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
                                   model_name_for_comparison)
