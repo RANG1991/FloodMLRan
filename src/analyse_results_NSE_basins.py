@@ -383,9 +383,9 @@ def plot_images_side_by_side(models_names):
 
 
 def main():
-    model_names = ["CNN_LSTM", "Transformer_CNN"]
+    model_names = ["CNN_LSTM", "CNN_Transformer"]
     for model_name_for_comparison in model_names:
-        if model_name_for_comparison == "Transformer_CNN":
+        if model_name_for_comparison == "CNN_Transformer":
             checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_19_size_above_1000"
         else:
             checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
@@ -393,11 +393,11 @@ def main():
         plt.rc('font', size=14)
         plt.rcParams["figure.figsize"] = (12, 19)
         plt.rcParams["figure.autolayout"] = True
-        plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
+        plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18817294_18901364.csv",
                                   model_name_for_comparison)
         # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
         # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-        analyse_features("17775252_17782018_17828539_17832148_17837642_18299261_18345948.csv",
+        analyse_features("17775252_17782018_17828539_17832148_17837642_18817294_18901364.csv",
                          "random_forest", model_name_for_comparison, with_std=False)
     plot_images_side_by_side(model_names)
 
