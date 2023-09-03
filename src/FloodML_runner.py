@@ -995,6 +995,8 @@ def main():
         model_name_for_finding_checkpoint = args["model"]
         if model_name_for_finding_checkpoint == "CNN_LSTM":
             model_name_for_finding_checkpoint = "TWO_LSTM_CNN_LSTM"
+        elif model_name_for_finding_checkpoint == "CNN_Transformer":
+            model_name_for_finding_checkpoint = "TWO_Transformer_CNN_Transformer"
         suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"],
                                                                       args["use_large_size"])
         list_of_files = glob.glob(
