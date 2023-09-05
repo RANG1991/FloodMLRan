@@ -9,6 +9,7 @@ import json
 import statistics
 from matplotlib.pyplot import figure
 import seaborn as sns
+import itertools
 
 KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "num_epochs",
@@ -150,7 +151,7 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
 
 def plot_NSE_CDF_graphs_my_code():
     input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out",
-                        "slurm-17837642.out", "slurm-18817294.out", "slurm-18901364.out"]
+                        "slurm-17837642.out", "slurm-18901364.out"]
     input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
                         file_name in input_file_names]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
@@ -162,45 +163,49 @@ def plot_NSE_CDF_graphs_my_code():
     input_files_names_formatted = "_".join(
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
-    figure(figsize=(14, 12))
     plt.rcParams.update({'font.size': 22})
-    for ind, model_name in enumerate(model_names):
-        for run_number in run_numbers:
-            for basin_tuple in all_basins_tuples:
-                for params_dict in params_dicts:
-                    if (model_name, run_number, basin_tuple, params_dict) not in dict_all_runs_from_all_files.keys():
-                        continue
-                    print(f"number of basins of model with name: {model_name} "
-                          f"and run number: {run_number} is: {len(basin_tuple)}")
-                    if len(basin_tuple) != 135:
-                        continue
-                    plot_CDF_NSE_basins(
-                        dict_all_runs_from_all_files[(model_name, run_number, basin_tuple, params_dict)],
-                        params_dict,
-                        model_name=model_name,
-                        num_basins=len(basin_tuple),
-                        plot_color=COLORS_LIST[ind],
-                        plot_opacity=0.8,
-                        line_width=0.5)
-    for ind, model_name in enumerate(model_names):
-        for params_dict in params_dicts:
-            if (model_name, params_dict) not in dict_avg_runs_from_all_files.keys():
-                continue
-            plot_CDF_NSE_basins(
-                dict_avg_runs_from_all_files[(model_name, params_dict)],
-                params_dict,
-                model_name=model_name,
-                num_basins=135,
-                plot_color=COLORS_LIST[ind],
-                plot_opacity=1,
-                line_width=2,
-                label=f"mean CDF NSE of model: {model_name}")
-    # if plot_title != "":
-    #     plt.title(plot_title)
-    plt.legend(loc='upper left')
-    plt.grid()
-    plt.savefig(plot_title)
-    plt.clf()
+    model_names_cross_product_list = itertools.combinations(model_names, 2)
+    for pair_model_names in model_names_cross_product_list:
+        figure(figsize=(14, 12))
+        for ind, model_name in enumerate(pair_model_names):
+            for run_number in run_numbers:
+                for basin_tuple in all_basins_tuples:
+                    for params_dict in params_dicts:
+                        if (
+                                model_name, run_number, basin_tuple,
+                                params_dict) not in dict_all_runs_from_all_files.keys():
+                            continue
+                        print(f"number of basins of model with name: {model_name} "
+                              f"and run number: {run_number} is: {len(basin_tuple)}")
+                        if len(basin_tuple) != 135:
+                            continue
+                        plot_CDF_NSE_basins(
+                            dict_all_runs_from_all_files[(model_name, run_number, basin_tuple, params_dict)],
+                            params_dict,
+                            model_name=model_name,
+                            num_basins=len(basin_tuple),
+                            plot_color=COLORS_LIST[ind],
+                            plot_opacity=0.8,
+                            line_width=0.5)
+        for ind, model_name in enumerate(pair_model_names):
+            for params_dict in params_dicts:
+                if (model_name, params_dict) not in dict_avg_runs_from_all_files.keys():
+                    continue
+                plot_CDF_NSE_basins(
+                    dict_avg_runs_from_all_files[(model_name, params_dict)],
+                    params_dict,
+                    model_name=model_name,
+                    num_basins=135,
+                    plot_color=COLORS_LIST[ind],
+                    plot_opacity=1,
+                    line_width=2,
+                    label=f"mean CDF NSE of model: {model_name}")
+        # if plot_title != "":
+        #     plt.title(plot_title)
+        plt.legend(loc='upper left')
+        plt.grid()
+        plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}")
+        plt.clf()
 
 
 def plot_NSE_CDF_graph_frederik_code():
