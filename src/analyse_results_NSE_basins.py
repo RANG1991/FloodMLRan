@@ -30,6 +30,7 @@ from scipy.stats import wilcoxon
 from captum.attr import IntegratedGradients
 from scipy.stats import mannwhitneyu
 import glob
+from functools import reduce
 
 gpd.options.use_pygeos = True
 
@@ -201,7 +202,8 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
         df_results = df_results.merge(df_std, how='inner', on="basin_id")
     df_results = process_df_results(df_results, model_name_for_comparison, with_std=with_std)
     analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=scale_features)
-    print((df_results.corr()["label"]).sort_values(ascending=False))
+    corr_df = (df_results.corr()["label"]).sort_values(ascending=False)
+    corr_df = corr_df.loc[(np.abs(corr_df) > 0.2)]
     create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison,
                                                      scale_features=scale_features)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_features=scale_features)
@@ -210,6 +212,8 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
     plt.savefig(f"analysis_images/feature_importance_{clf_name}_{model_name_for_comparison}.png")
+    print(corr_df.to_latex(float_format="{:.2f}".format).replace("\\\n", "\\\n\hline\n").replace("_", " "))
+    return corr_df
 
 
 def create_CAMELS_dataset():
@@ -376,7 +380,7 @@ def plot_images_side_by_side(models_names):
             model_name_for_comparison, image_file_name_with_model_name = curr_image_pair[j]
             axarr[j].imshow(plt.imread(image_file_name_with_model_name))
             axarr[j].axis("off")
-            axarr[j].set_title(f"{model_name_for_comparison}", size=30)
+            axarr[j].set_title(f"{model_name_for_comparison.replace('_', '-')}", size=30)
         f.tight_layout()
         # f.tight_layout(rect=[0.0, 0.0, 0.1, 0.1])
         f.savefig(f"{key}.png")
@@ -384,6 +388,7 @@ def plot_images_side_by_side(models_names):
 
 def main():
     model_names = ["CNN_LSTM", "CNN_Transformer"]
+    corr_tables_list = []
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
             checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_19_size_above_1000"
@@ -397,8 +402,9 @@ def main():
                                   model_name_for_comparison)
         # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
         # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-        analyse_features("17775252_17782018_17828539_17832148_17837642_18817294_18901364.csv",
-                         "random_forest", model_name_for_comparison, with_std=False)
+        corr_df = analyse_features("17775252_17782018_17828539_17832148_17837642_18817294_18901364.csv",
+                                   "random_forest", model_name_for_comparison, with_std=False)
+        corr_tables_list.append(corr_df)
     plot_images_side_by_side(model_names)
 
 
