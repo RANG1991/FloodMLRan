@@ -11,6 +11,7 @@ from sklearn.inspection import permutation_importance
 from alibi.explainers import ALE, plot_ale
 from torchcam.methods import SmoothGradCAMpp
 from FloodML_2_LSTM_CNN_LSTM import TWO_LSTM_CNN_LSTM
+from FloodML_2_Transformer_CNN_Transformer import TWO_Transformer_CNN_Transformer
 import torch
 from PIL import Image
 import cv2
@@ -94,6 +95,7 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
     plt.savefig(f"analysis_images/plot_lat_lon_{model_name_for_comparison}.png")
+    # plt.clf()
 
 
 def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison, scale_features=True):
@@ -199,8 +201,8 @@ def get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_fea
     return importance
 
 
-def create_dataframe_of_std_spatial():
-    dataset = create_CAMELS_dataset()
+def create_dataframe_of_std_spatial(model_name):
+    dataset = create_CAMELS_dataset(model_name=model_name)
     lookup_table = dataset.lookup_table
     dataset_length = len(dataset)
     curr_basin_id = -1
@@ -228,7 +230,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     clf, scale_features = get_clf_from_clf_name(clf_name)
     df_results = pd.read_csv(csv_results_file_with_static_attr)
     if with_std:
-        df_std = create_dataframe_of_std_spatial()
+        df_std = create_dataframe_of_std_spatial(model_name=model_name_for_comparison)
         df_results = df_results.merge(df_std, how='inner', on="basin_id")
     df_results = process_df_results(df_results, model_name_for_comparison, with_std=with_std)
     analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=scale_features)
@@ -247,7 +249,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     return corr_df
 
 
-def create_CAMELS_dataset():
+def create_CAMELS_dataset(model_name):
     camels_dataset = CAMELS_dataset.Dataset_CAMELS(
         main_folder=CAMELS_dataset.MAIN_FOLDER,
         dynamic_data_folder=CAMELS_dataset.DYNAMIC_DATA_FOLDER_NON_SPATIAL,
@@ -263,7 +265,7 @@ def create_CAMELS_dataset():
         test_start_date="01/10/1993",
         test_end_date="30/09/1999",
         stage="train",
-        model_name="CNN_LSTM",
+        model_name=model_name,
         sequence_length_spatial=185,
         create_new_files=False,
         all_stations_ids=sorted(open("../data/spatial_basins_list.txt").read().splitlines()),
@@ -280,21 +282,32 @@ def create_CAMELS_dataset():
 
 def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = TWO_LSTM_CNN_LSTM(
-        input_dim=32,
-        image_height=36, image_width=36,
-        hidden_dim=256,
-        sequence_length_conv_lstm=185,
-        in_cnn_channels=1,
-        dropout=0.4,
-        num_static_attributes=27,
-        num_dynamic_attributes=5,
-        use_only_precip_feature=False)
+    if model_name_for_comparison == "CNN_Transformer":
+        model = TWO_Transformer_CNN_Transformer(image_width=36,
+                                                image_height=36,
+                                                num_static_attributes=27,
+                                                num_dynamic_attributes=5,
+                                                sequence_length_cnn_transformer=185,
+                                                intermediate_dim_transformer=64,
+                                                dropout=0.4,
+                                                num_heads_transformer=4,
+                                                num_layers_transformer=8,
+                                                in_cnn_channels=1)
+    else:
+        model = TWO_LSTM_CNN_LSTM(input_dim=32,
+                                  image_height=36, image_width=36,
+                                  hidden_dim=256,
+                                  sequence_length_conv_lstm=185,
+                                  in_cnn_channels=1,
+                                  dropout=0.4,
+                                  num_static_attributes=27,
+                                  num_dynamic_attributes=5,
+                                  use_only_precip_feature=False)
     model = model.to(device=device)
     checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
     model.train()
-    dataset = create_CAMELS_dataset()
+    dataset = create_CAMELS_dataset(model_name=model_name_for_comparison)
     _, _, xs_non_spatial, xs_spatial, _, _ = dataset[0]
     ig = IntegratedGradients(model)
     xs_non_spatial = xs_non_spatial.to(device)
@@ -302,7 +315,7 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     xs_non_spatial.requires_grad_()
     xs_spatial.requires_grad_()
     feature_names = CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES + CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["spatial_input"]
-    attr, delta = ig.attribute((xs_non_spatial.unsqueeze(0), xs_spatial.unsqueeze(0)), n_steps=256,
+    attr, delta = ig.attribute((xs_non_spatial.unsqueeze(0), xs_spatial.unsqueeze(0)), n_steps=100,
                                return_convergence_delta=True)
     attr_non_spatial = attr[0].detach().cpu().numpy()
     attr_spatial = attr[1].detach().cpu().numpy()
@@ -313,33 +326,48 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     for i in range(len(feature_names)):
         print(feature_names[i], ": ", '%.5f' % (importances[i]))
     x_pos = (np.arange(len(feature_names)))
-    # plt.figure(figsize=(25, 20))
+    plt.figure(figsize=(12, 19))
     plt.xticks(rotation=90)
     plt.bar(x_pos, importances, align='center')
-    plt.xticks(x_pos, feature_names, wrap=True)
+    plt.xticks(x_pos, feature_names)
     plt.xlabel("Features")
     plt.title("Average Feature Importance")
-    plt.savefig(f"analysis_images/integrated_gradients_{model_name_for_comparison}.png")
+    plt.savefig(f"./analysis_images/integrated_gradients_{model_name_for_comparison}.png")
 
 
 def create_class_activation_maps_explainable(checkpoint_path, model_name_for_comparison):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = TWO_LSTM_CNN_LSTM(
-        input_dim=32,
-        image_height=36, image_width=36,
-        hidden_dim=256,
-        sequence_length_conv_lstm=185,
-        in_cnn_channels=1,
-        dropout=0,
-        num_static_attributes=27,
-        num_dynamic_attributes=5,
-        use_only_precip_feature=False)
+    if model_name_for_comparison == "CNN_Transformer":
+        model = TWO_Transformer_CNN_Transformer(image_width=36,
+                                                image_height=36,
+                                                num_static_attributes=27,
+                                                num_dynamic_attributes=5,
+                                                sequence_length_cnn_transformer=185,
+                                                intermediate_dim_transformer=64,
+                                                dropout=0.4,
+                                                num_heads_transformer=4,
+                                                num_layers_transformer=8,
+                                                in_cnn_channels=1)
+    else:
+        model = TWO_LSTM_CNN_LSTM(
+            input_dim=32,
+            image_height=36, image_width=36,
+            hidden_dim=256,
+            sequence_length_conv_lstm=185,
+            in_cnn_channels=1,
+            dropout=0,
+            num_static_attributes=27,
+            num_dynamic_attributes=5,
+            use_only_precip_feature=False)
     model = model.to(device=device)
     checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-    cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn.cnn_layers[4], input_shape=(16, 32, 32))
-    dataset = create_CAMELS_dataset()
+    if model_name_for_comparison == "CNN_Transformer":
+        cam_extractor = SmoothGradCAMpp(model.cnn_transformer.cnn.cnn_layers[4], input_shape=(16, 32, 32))
+    else:
+        cam_extractor = SmoothGradCAMpp(model.cnn_lstm.cnn.cnn_layers[4], input_shape=(16, 32, 32))
+    dataset = create_CAMELS_dataset(model_name=model_name_for_comparison)
     lookup_table = dataset.lookup_table
     dataset_length = len(dataset)
     curr_basin_id = -1
@@ -357,16 +385,15 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         activation_map = cam_extractor(0, out.item())
         plt.axis('off')
         plt.tight_layout()
-        image_basin = cv2.imread(f"/sci/labs/efratmorin/ranga/FloodMLRan"
-                                 f"/data/basin_check_precip_images/img_{basin_id}_precip.png")
+        image_basin = cv2.imread(f"../data/basin_check_precip_images/img_{basin_id}_precip.png")
         image_basin = cv2.resize(image_basin, (50, 50), interpolation=cv2.INTER_CUBIC)
         cmap_image_precip = plt.get_cmap("binary")
         cmap_image_activation = plt.get_cmap("jet")
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
         image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (50, 50),
                                       interpolation=cv2.INTER_CUBIC)
-        image_activation = ((image_activation - image_activation.min())
-                            / (image_activation.max() - image_activation.min()))
+        # image_activation = ((image_activation - image_activation.min())
+        #                     / (image_activation.max() - image_activation.min()))
         image_activation = (255 * (cmap_image_activation(image_activation)[:, :, :3])).astype(np.uint8)
         opacity = 0.7
         overlay = (opacity * image_basin + (1 - opacity) * image_activation)
@@ -389,7 +416,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
     num_white_images_to_fill = len(list_all_images) % num_images_in_row
     white_images_to_fill = np.hstack([white_image_with_margin for _ in range(num_white_images_to_fill * 2)])
     list_rows[-1] = np.hstack([list_rows[-1], white_images_to_fill])
-    cv2.imwrite(f"./heat_maps/heat_map_all_basins_{model_name_for_comparison}.png", np.vstack(list_rows))
+    cv2.imwrite(f"./analysis_images/heat_map_all_basins_{model_name_for_comparison}.png", np.vstack(list_rows))
 
 
 def plot_images_side_by_side(models_names):
@@ -422,7 +449,7 @@ def main():
     corr_tables_list = []
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
-            checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_19_size_above_1000"
+            checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000"
         else:
             checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
         print(f"analysing {model_name_for_comparison}")
@@ -431,8 +458,8 @@ def main():
         plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18901364.csv",
                                   model_name_for_comparison)
-        # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-        # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+        create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+        create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
         corr_df = analyse_features("17775252_17782018_17828539_17832148_17837642_18901364.csv",
                                    "random_forest", model_name_for_comparison, with_std=False)
         corr_tables_list.append(corr_df)
