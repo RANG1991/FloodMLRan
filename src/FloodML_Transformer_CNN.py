@@ -111,7 +111,7 @@ class CNN_Transformer(nn.Module):
         r_in = torch.cat([cnn_out, x_non_spatial], dim=2)
         out_fc_1 = self.fc_1(r_in)
         out_pe = self.positional_encoding(out_fc_1)
-        out_transformer = self.cross_attention_encoder(out_pe, memory)[:, 0, :]
+        out_transformer = self.cross_attention_encoder(out_pe, memory)
         # out_decay = torch.sum(out_transformer * self.exponential_decay, dim=1)
-        out_fc_2 = self.fc_2(self.dropout(out_transformer))
+        out_fc_2 = self.fc_2(self.dropout(out_transformer[:, 0, :]))
         return out_fc_2

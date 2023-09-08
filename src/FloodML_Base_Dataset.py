@@ -331,7 +331,7 @@ class FloodML_Base_Dataset(Dataset):
             ).to(torch.float32)
             if self.model_name.lower() == "cnn_transformer":
                 X_data_tensor_non_spatial = torch.vstack([self.cls_token, X_data_tensor_non_spatial])
-                X_data_tensor_spatial = torch.vstack([self.cls_token_spatial, X_data_tensor_spatial])
+                # X_data_tensor_spatial = torch.vstack([self.cls_token_spatial, X_data_tensor_spatial])
         elif self.model_name.lower() == "transformer_seq2seq":
             X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
             X_data_tensor_non_spatial = torch.tensor(

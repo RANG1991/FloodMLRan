@@ -22,7 +22,7 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
         self.in_cnn_channels = in_cnn_channels
         self.num_static_attr = num_static_attributes
         self.num_dynamic_attr = num_dynamic_attributes
-        self.sequence_length_cnn_transformer = sequence_length_cnn_transformer + 1
+        self.sequence_length_cnn_transformer = sequence_length_cnn_transformer
         self.intermediate_dim_transformer = intermediate_dim_transformer
         self.num_heads_transformer = num_heads_transformer
         self.num_layers_transformer = num_layers_transformer
