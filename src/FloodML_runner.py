@@ -119,6 +119,7 @@ class FloodML_Runner:
                  use_zeros_spatial=False,
                  use_super_resolution=False,
                  use_large_size=False,
+                 use_mean_spatial=False,
                  ):
         self.static_attributes_names = static_attributes_names
         self.dynamic_attributes_names = dynamic_attributes_names
@@ -173,6 +174,7 @@ class FloodML_Runner:
         self.use_zeros_spatial = use_zeros_spatial
         self.use_super_resolution = use_super_resolution
         self.use_large_size = use_large_size
+        self.use_mean_spatial = use_mean_spatial
         if dataset_name.lower() == "caravan":
             all_stations_list_sorted = sorted(open("../data/spatial_basins_list.txt").read().splitlines())
         else:
@@ -455,6 +457,7 @@ class FloodML_Runner:
                 use_zeros_spatial=self.use_zeros_spatial,
                 use_super_resolution=self.use_super_resolution,
                 use_large_size=self.use_large_size,
+                use_mean_spatial=self.use_mean_spatial,
             )
             test_data = CAMELS_dataset.Dataset_CAMELS(
                 main_folder=CAMELS_dataset.MAIN_FOLDER,
@@ -490,6 +493,7 @@ class FloodML_Runner:
                 use_zeros_spatial=self.use_zeros_spatial,
                 use_super_resolution=self.use_super_resolution,
                 use_large_size=self.use_large_size,
+                use_mean_spatial=self.use_mean_spatial,
             )
         else:
             raise Exception(f"wrong dataset type: {self.dataset_name}")
@@ -1072,6 +1076,7 @@ def main():
             use_zeros_spatial=args["use_zeros_in_spatial_data"],
             use_super_resolution=args["use_super_resolution"],
             use_large_size=args["use_large_size"],
+            use_mean_spatial=args["use_mean_value_in_spatial_data"]
         )
     elif args["dataset"] == "CARAVAN":
         runner = FloodML_Runner(
@@ -1120,6 +1125,7 @@ def main():
             use_random_noise_spatial=args["use_random_noise_in_spatial_data"],
             use_zeros_spatial=args["use_zeros_in_spatial_data"],
             use_large_size=args["use_large_size"],
+            use_mean_spatial=args["use_mean_value_in_spatial_data"]
         )
     else:
         raise Exception(f"wrong dataset name: {args['dataset']}")

@@ -108,6 +108,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             use_zeros_spatial=False,
             use_super_resolution=False,
             use_large_size=False,
+            use_mean_spatial=False,
     ):
         self.discharge_data_folder = discharge_data_folder
         self.use_only_precip_feature = use_only_precip_feature
@@ -116,6 +117,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
         self.use_zeros_spatial = use_zeros_spatial
         self.use_super_resolution = use_super_resolution
         self.use_large_size = use_large_size
+        self.use_mean_spatial = use_mean_spatial
         if run_with_radar_data:
             dynamic_data_folder_spatial = DYNAMIC_DATA_FOLDER_SPATIAL_RADAR
         if use_only_precip_feature:
@@ -148,7 +150,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
             use_all_static_attr,
             num_basins,
             use_super_resolution,
-            use_large_size)
+            use_large_size,
+        )
 
     def check_is_valid_station_id(self, station_id, create_new_files):
         return (station_id in self.all_stations_ids
@@ -432,12 +435,18 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
                         if self.use_random_noise_spatial:
                             X_data_spatial_list.append(
-                                np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
+                                np.expand_dims(
+                                    np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)) * X_data_non_spatial[
+                                        i].item(), axis=0))
                         elif self.use_zeros_spatial:
                             X_data_spatial_list.append(np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
                         elif self.use_super_resolution:
                             X_data_spatial_list.append(
                                 np.expand_dims(sr.upsample(X_data_spatial[i, :, :].squeeze()), axis=0))
+                        elif self.use_mean_spatial:
+                            X_data_spatial_list.append(
+                                np.expand_dims(np.ones((self.max_dim, self.max_dim)) * X_data_non_spatial[
+                                    i].item(), axis=0))
                         else:
                             X_data_spatial_list.append(np.expand_dims(
                                 np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),

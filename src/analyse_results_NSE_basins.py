@@ -402,7 +402,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
                                                           value=(255, 255, 255))
         list_all_images.append(np.hstack([image_basin_with_margin, image_activation_with_margin]))
-        cv2.imwrite(f"./analysis_images/heat_maps/heat_map_basin_{basin_id}.png",
+        cv2.imwrite(f"./heat_maps/heat_map_basin_{basin_id}.png",
                     np.hstack([image_basin_with_margin, image_activation_with_margin]))
     list_images_row = []
     list_rows = []
