@@ -437,7 +437,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                             X_data_spatial_list.append(
                                 np.expand_dims(
                                     np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)) * X_data_non_spatial[
-                                        i].item(), axis=0))
+                                        i, 0].item(), axis=0))
                         elif self.use_zeros_spatial:
                             X_data_spatial_list.append(np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
                         elif self.use_super_resolution:
@@ -446,7 +446,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         elif self.use_mean_spatial:
                             X_data_spatial_list.append(
                                 np.expand_dims(np.ones((self.max_dim, self.max_dim)) * X_data_non_spatial[
-                                    i].item(), axis=0))
+                                    i, 0].item(), axis=0))
                         else:
                             X_data_spatial_list.append(np.expand_dims(
                                 np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
