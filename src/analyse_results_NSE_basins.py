@@ -402,6 +402,8 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
                                                           value=(255, 255, 255))
         list_all_images.append(np.hstack([image_basin_with_margin, image_activation_with_margin]))
+        cv2.imwrite(f"./analysis_images/heat_maps/heat_map_basin_{basin_id}.png",
+                    np.hstack([image_basin_with_margin, image_activation_with_margin]))
     list_images_row = []
     list_rows = []
     num_images_in_row = 10
@@ -456,12 +458,12 @@ def main():
         plt.rc('font', size=14)
         plt.rcParams["figure.figsize"] = (12, 19)
         plt.rcParams["figure.autolayout"] = True
-        plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18901364.csv",
+        plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
                                   model_name_for_comparison)
         create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
         create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-        corr_df = analyse_features("17775252_17782018_17828539_17832148_17837642_18901364.csv",
-                                   "random_forest", model_name_for_comparison, with_std=False)
+        corr_df = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
+                                   "random_forest", model_name_for_comparison, with_std=True)
         corr_tables_list.append(corr_df)
     plot_images_side_by_side(model_names)
 
