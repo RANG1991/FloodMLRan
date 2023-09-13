@@ -3,7 +3,7 @@
 #SBATCH -n 3
 #SBATCH --time=100:0:0
 #SBATCH --mem=160G
-#SBATCH --gres gpu:a30:3
+#SBATCH --gres gpu:3
 
 # --gres gpu:a100-3-40
 
