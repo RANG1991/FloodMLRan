@@ -200,7 +200,7 @@ def plot_NSE_CDF_graphs_my_code():
                     plot_color=COLORS_LIST[ind],
                     plot_opacity=1,
                     line_width=2,
-                    label=f"mean CDF NSE of model: {model_name}")
+                    label=f"mean CDF NSE of model: {model_name.replace('_', '-')}")
         # if plot_title != "":
         #     plt.title(plot_title)
         plt.legend(loc='upper left')
