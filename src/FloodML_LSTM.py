@@ -2,7 +2,7 @@ import torch
 
 
 class LSTM(torch.nn.Module):
-    def __init__(self, hidden_dim, dropout, num_dynamic_attr, num_static_attr):
+    def __init__(self, hidden_dim, dropout, num_dynamic_attr, num_static_attr, use_only_precip):
         super(LSTM, self).__init__()
         self.input_dim = (num_dynamic_attr + num_static_attr)
         self.embedding_size = 10

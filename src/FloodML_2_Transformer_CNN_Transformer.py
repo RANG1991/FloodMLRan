@@ -23,10 +23,11 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
         self.in_cnn_channels = in_cnn_channels
         self.num_static_attr = num_static_attributes
         self.use_only_precip_feature = use_only_precip_feature
+        self.num_dynamic_attr = num_dynamic_attributes
         if self.use_only_precip_feature:
-            self.num_dynamic_attr = num_dynamic_attributes - 1
+            num_dynamic_attributes_CNN_Transformer = num_dynamic_attributes - 1
         else:
-            self.num_dynamic_attr = num_dynamic_attributes
+            num_dynamic_attributes_CNN_Transformer = num_dynamic_attributes
         self.sequence_length_cnn_transformer = sequence_length_cnn_transformer
         self.intermediate_dim_transformer = intermediate_dim_transformer
         self.num_heads_transformer = num_heads_transformer
@@ -35,7 +36,7 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
         self.dropout = dropout
         self.cnn_transformer = CNN_Transformer(image_input_size=(self.image_width, self.image_height),
                                                embedding_size=self.embedding_size,
-                                               num_dynamic_attributes=self.num_dynamic_attr,
+                                               num_dynamic_attributes=num_dynamic_attributes_CNN_Transformer,
                                                sequence_length=self.sequence_length_cnn_transformer,
                                                intermediate_dim=self.intermediate_dim_transformer,
                                                dropout=self.dropout,
@@ -49,7 +50,7 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
                                                    batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=self.num_layers_transformer)
         self.embedding = torch.nn.Linear(in_features=self.num_static_attr, out_features=self.embedding_size)
-        self.fc_1 = nn.Linear(num_dynamic_attributes + self.embedding_size, self.intermediate_dim_transformer)
+        self.fc_1 = nn.Linear(self.num_dynamic_attr + self.embedding_size, self.intermediate_dim_transformer)
 
     def forward(self, x_non_spatial, x_spatial):
         x_d = x_non_spatial[:, :, :self.num_dynamic_attr]
