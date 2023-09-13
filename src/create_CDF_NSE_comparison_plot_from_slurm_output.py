@@ -164,7 +164,8 @@ def plot_NSE_CDF_graphs_my_code():
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
     plt.rcParams.update({'font.size': 22})
-    model_names_cross_product_list = itertools.combinations(model_names, 2)
+    model_names_cross_product_list = list(itertools.combinations(model_names, 2)) + list(
+        itertools.combinations(model_names, 1)) + list(itertools.combinations(model_names, 3))
     for pair_model_names in model_names_cross_product_list:
         figure(figsize=(14, 12))
         for ind, model_name in enumerate(pair_model_names):
