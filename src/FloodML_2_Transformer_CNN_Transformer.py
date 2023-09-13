@@ -15,13 +15,18 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
                  num_static_attributes,
                  intermediate_dim_transformer,
                  num_heads_transformer,
-                 num_layers_transformer):
+                 num_layers_transformer,
+                 use_only_precip_feature=False):
         super(TWO_Transformer_CNN_Transformer, self).__init__()
         self.image_width = image_width
         self.image_height = image_height
         self.in_cnn_channels = in_cnn_channels
         self.num_static_attr = num_static_attributes
-        self.num_dynamic_attr = num_dynamic_attributes
+        self.use_only_precip_feature = use_only_precip_feature
+        if self.use_only_precip_feature:
+            self.num_dynamic_attr = num_dynamic_attributes - 1
+        else:
+            self.num_dynamic_attr = num_dynamic_attributes
         self.sequence_length_cnn_transformer = sequence_length_cnn_transformer
         self.intermediate_dim_transformer = intermediate_dim_transformer
         self.num_heads_transformer = num_heads_transformer
@@ -54,5 +59,8 @@ class TWO_Transformer_CNN_Transformer(torch.nn.Module):
         out_fc_1 = self.fc_1(x_non_spatial)
         memory = self.transformer_encoder(
             self.positional_encoding(out_fc_1[:, :-self.sequence_length_cnn_transformer, :]))
-        output = self.cnn_transformer(out_fc_1[:, -self.sequence_length_cnn_transformer:, :], x_spatial, memory)
+        if self.use_only_precip_feature:
+            output = self.cnn_transformer(out_fc_1[:, -self.sequence_length_cnn_transformer:, 1:], x_spatial, memory)
+        else:
+            output = self.cnn_transformer(out_fc_1[:, -self.sequence_length_cnn_transformer:, :], x_spatial, memory)
         return output

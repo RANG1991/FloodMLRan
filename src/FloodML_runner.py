@@ -578,7 +578,8 @@ class FloodML_Runner:
                                                     dropout=self.dropout_rate,
                                                     num_heads_transformer=self.num_heads_transformer,
                                                     num_layers_transformer=self.num_layers_transformer,
-                                                    in_cnn_channels=1)
+                                                    in_cnn_channels=1,
+                                                    use_only_precip_feature=self.use_only_precip_feature)
         elif self.model_name.lower() == "transformer_VIT":
             model = Transformer_VIT(sequence_length=self.sequence_length,
                                     sequence_length_spatial=self.sequence_length_spatial,
