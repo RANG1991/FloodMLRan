@@ -19,10 +19,10 @@ num_hidden_units: 256
 num_processes_ddp: 3
 num_workers_data_loader: 1
 optim: Adam
-print_tqdm_to_console: true
+print_tqdm_to_console: false
 profile_code: false
 run_sweeps: false
-save_checkpoint: false
+save_checkpoint: true
 sequence_length: 180
 sequence_length_spatial: 185
 use_all_static_attr: false
