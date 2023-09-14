@@ -21,7 +21,7 @@ KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "use_random_noise_spatial",
                          "use_zeros_spatial"]
 
-COLORS_LIST = ["purple", "blue", "red"]
+COLORS_LIST = ["blue", "red", "purple"]
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
