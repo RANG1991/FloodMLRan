@@ -157,7 +157,7 @@ def plot_NSE_CDF_graphs_my_code():
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
         input_file_paths)
     all_basins_tuples = list(set([basin_tuple for _, _, basin_tuple, _ in dict_all_runs_from_all_files.keys()]))
-    model_names = list(set([model_name for model_name, _, _, _ in dict_all_runs_from_all_files.keys()]))
+    model_names = sorted(list(set([model_name for model_name, _, _, _ in dict_all_runs_from_all_files.keys()])))
     run_numbers = list(set([run_number for _, run_number, _, _ in dict_all_runs_from_all_files.keys()]))
     params_dicts = list(set([params_dict for _, _, _, params_dict in dict_all_runs_from_all_files.keys()]))
     input_files_names_formatted = "_".join(

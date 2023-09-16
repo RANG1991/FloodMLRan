@@ -94,6 +94,7 @@ def plot_lon_lat_on_world_map(csv_results_file_with_static_attr, model_name_for_
     use_map_axis.set_axis_off()
     print_locations_on_world_map(df_results_label_is_zero, "red", use_map_axis)
     print_locations_on_world_map(df_results_label_is_one, "yellow", use_map_axis)
+    plt.title(f"LSTM vs. {model_name_for_comparison.replace('_', '-')}", fontsize=30)
     plt.savefig(f"analysis_images/plot_lat_lon_{model_name_for_comparison}.png")
     # plt.clf()
 
@@ -112,6 +113,7 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name
     axes = fig.gca()
     axes.xaxis.get_label().set_fontsize(20)
     plot_ale(exp_clf, n_cols=7, ax=axes, fig_kw={'figwidth': 17, 'figheight': 20})
+    plt.title(f"ALE of {model_name_for_comparison.replace('_', '-')}", fontsize=30)
     plt.savefig(f"analysis_images/ALE_{model_name_for_comparison}.png")
     plt.clf()
     explainer = shap.Explainer(clf.predict, X_train, feature_names=df_results.columns[:-1])
@@ -119,6 +121,7 @@ def create_accumulated_local_effects_and_shap_values(df_results, clf, model_name
     shap.summary_plot(shap_values, plot_type='violin')
     # shap.plots.beeswarm(shap_values)
     # shap.plots.bar(shap_values)
+    plt.title(f"SHAP values of {model_name_for_comparison.replace('_', '-')}", fontsize=30)
     plt.savefig(f"analysis_images/shap_{model_name_for_comparison}.png")
 
 
@@ -160,6 +163,7 @@ def analyse_results_by_decision_tree(df_results, model_name_for_comparison, scal
     print(f"the accuracy score of cls: {clf.__class__} is: {score}")
     # plt.figure(figsize=(25, 20))
     tree.plot_tree(clf, feature_names=df_results.columns[:-1], fontsize=20)
+    plt.title(f"Decision tree of {model_name_for_comparison.replace('_', '-')}", fontsize=30)
     plt.savefig(f"analysis_images/decision_tree_{model_name_for_comparison}.png")
 
 
@@ -243,6 +247,8 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     # plt.figure(figsize=(25, 20))
     plt.xticks(rotation=90)
     plt.bar([x for x in df_results.columns[:-1]], importance)
+    plt.title(f"{model_name_for_comparison.replace('_', '-')}", fontsize=30)
+    plt.title(f"Feature importance of {model_name_for_comparison.replace('_', '-')}", fontsize=30)
     plt.savefig(f"analysis_images/feature_importance_{clf_name}_{model_name_for_comparison}.png")
     corr_df = corr_df.rename(index=dict_static_attributes)
     print(corr_df.to_latex(float_format="{:.2f}".format).replace("\\\n", "\\\n\hline\n"))
@@ -440,7 +446,7 @@ def plot_images_side_by_side(models_names):
             model_name_for_comparison, image_file_name_with_model_name = curr_image_pair[j]
             axarr[j].imshow(plt.imread(image_file_name_with_model_name))
             axarr[j].axis("off")
-            axarr[j].set_title(f"{model_name_for_comparison.replace('_', '-')}", size=30)
+            # axarr[j].set_title(f"{model_name_for_comparison.replace('_', '-')}", size=30)
         f.tight_layout()
         # f.tight_layout(rect=[0.0, 0.0, 0.1, 0.1])
         f.savefig(f"{key}.png")
