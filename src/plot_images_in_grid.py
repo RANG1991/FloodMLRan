@@ -58,7 +58,7 @@ def main(folder_name, model_name):
         plt.tight_layout()
         plt.subplots_adjust(top=0.95)
         plt.suptitle(f"Hydrographs of model: {model_name}", fontsize=32)
-        f.savefig(f"{folder_name}/Hydrographs_images_{model_name}.png")
+        f.savefig(f"{folder_name}/Hydrographs_images_{model_name.replace('_', '-')}.png")
 
 
 if __name__ == "__main__":

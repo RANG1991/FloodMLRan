@@ -466,10 +466,10 @@ def main():
         plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
                                   model_name_for_comparison)
-        create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-        create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+        # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+        # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
         corr_df = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-                                   "random_forest", model_name_for_comparison, with_std=True)
+                                   "random_forest", model_name_for_comparison, with_std=False)
         corr_tables_list.append(corr_df)
     plot_images_side_by_side(model_names)
 
