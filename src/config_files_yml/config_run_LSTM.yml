@@ -7,8 +7,8 @@ dropout_rate: 0.4
 learning_rates:
   0: 5e-03
   10: 5e-04
-  20: 5e-05
-  30: 1e-05
+  20: 5e-04
+  30: 5e-04
 limit_size_above_1000: true
 load_checkpoint: false
 model: LSTM
@@ -35,11 +35,11 @@ test_end_date: "30/09/1999"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
-num_runs: 8
-use_random_noise_in_spatial_data: true
+num_runs: 1
+use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 use_mean_value_in_spatial_data: false
-only_precip: true
+only_precip: false
 run_with_radar_data: false
 use_super_resolution: false
 use_large_size: false

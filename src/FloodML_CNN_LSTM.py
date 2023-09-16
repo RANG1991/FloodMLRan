@@ -131,7 +131,7 @@ class CNN_LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
-        input_size = 4
+        input_size = 10
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size, large_image_size=large_image_size)
         self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,
@@ -150,17 +150,9 @@ class CNN_LSTM(nn.Module):
         """
         batch_size, time_steps, _ = x_non_spatial.size()
         c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.image_width, self.image_height)
-        # c_in = torch.zeros_like(c_in)
-        # CNN.plot_as_image(c_in)
-        # self.number_of_images_counter += (batch_size * time_steps)
-        # CNN part
         c_out = self.cnn(c_in)
-        # CNN output should be in the size of (input size - attributes_size)
         cnn_out = c_out.reshape(batch_size, time_steps, -1)
-        # getting the "non-image" part of the input (last 4 attributes)
-        # (removing the "image" part)
         r_in = torch.cat([cnn_out, x_non_spatial], dim=2)
-        output, (h_n, c_n) = self.lstm(r_in, (h_n, c_n))
-        # perform prediction only at the end of the input sequence
+        output, (_, _) = self.lstm(r_in, (h_n, c_n))
         pred = self.fc(self.dropout(output))
         return pred[:, -1, :]

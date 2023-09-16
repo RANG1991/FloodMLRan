@@ -313,7 +313,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                 self.x_max_spatial_per_basin[station_id] = X_data_spatial.max()
         min_spatial_basin = self.x_min_spatial_per_basin[station_id]
         max_spatial_basin = self.x_max_spatial_per_basin[station_id]
-        # X_data_spatial = 255 * ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
+        X_data_spatial = ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
         return X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
@@ -435,9 +435,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
                         if self.use_random_noise_spatial:
                             X_data_spatial_list.append(
-                                np.expand_dims(
-                                    np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)) * X_data_non_spatial[
-                                        i, 0].item(), axis=0))
+                                np.expand_dims(np.random.normal(0.0, 1.0, (self.max_dim, self.max_dim)), axis=0))
                         elif self.use_zeros_spatial:
                             X_data_spatial_list.append(np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
                         elif self.use_super_resolution:
