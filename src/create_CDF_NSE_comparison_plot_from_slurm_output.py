@@ -21,7 +21,7 @@ KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "use_random_noise_spatial",
                          "use_zeros_spatial"]
 
-COLORS_LIST = ["blue", "red", "purple"]
+COLORS_LIST = ["blue", "red", "black"]
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -186,7 +186,7 @@ def plot_NSE_CDF_graphs_my_code():
                             model_name=model_name,
                             num_basins=len(basin_tuple),
                             plot_color=COLORS_LIST[ind],
-                            plot_opacity=0.8,
+                            plot_opacity=0.6,
                             line_width=0.5)
         for ind, model_name in enumerate(pair_model_names):
             for params_dict in params_dicts:
@@ -199,7 +199,7 @@ def plot_NSE_CDF_graphs_my_code():
                     num_basins=135,
                     plot_color=COLORS_LIST[ind],
                     plot_opacity=1,
-                    line_width=2,
+                    line_width=3,
                     label=f"mean CDF NSE of model: {model_name.replace('_', '-')}")
         # if plot_title != "":
         #     plt.title(plot_title)
