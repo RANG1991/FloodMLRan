@@ -35,35 +35,44 @@ from functools import reduce
 
 gpd.options.use_pygeos = True
 
-dict_static_attributes = {"p_mean": "Mean daily precipitation",
-                          "pet_mean": "Mean daily potential evapotranspiration",
-                          "aridity": "Ratio of mean PET to mean precipitation",
-                          "p_seasonality": "Seasonality and timing of precipitation",
-                          "frac_snow": "Fraction of snow",
-                          "high_prec_freq": "Frequency of high-precipitation days",
-                          "high_prec_dur": "Average duration of high-precipitation events",
-                          "low_prec_freq": "Frequency of dry days",
-                          "low_prec_dur": "Average duration of dry periods",
-                          "elev_mean": "Catchment mean elevation",
-                          "slope_mean": "Catchment mean slope",
-                          "area_gages2": "Catchment area",
-                          "frac_forest": "Forest fraction",
-                          "lai_max": "Maximum monthly mean of leaf area index",
-                          "lai_diff": "Difference between the max. and min. mean of the leaf area index",
-                          "gvf_max": "Maximum monthly mean of green vegetation fraction",
-                          "gvf_diff": "Difference between the min. and max. "
-                                      "monthly mean of the green vegetation fraction",
-                          "soil_depth_pelletier": "Depth to bedrock (maximum 50 m)",
-                          "soil_depth_statsgo": "Soil depth (maximum 1.5 m)",
-                          "soil_porosity": "Volumetric porosity",
-                          "soil_conductivity": "Saturated hydraulic conductivity",
-                          "max_water_content": "Maximum water content of the soil",
-                          "sand_frac": "Fraction of sand in the soil",
-                          "silt_frac": "Fraction of silt in the soil",
-                          "clay_frac": "Fraction of clay in the soil",
-                          "carbonate_rocks_frac": "Fraction of the Carbonate sedimentary rocks",
-                          "geol_permeability": "Surface permeability (log10)"
-                          }
+dict_dynamic_attributes = {
+    "prcp(mm/day)": "Daily precipitation",
+    "srad(w/m2)": "Daily short-wave radiation",
+    "tmax(c)": "Daily max air temperature",
+    "tmin(c)": "Daily min air temperature",
+    "vp(pa)": "Daily vapor pressure"
+}
+
+dict_static_attributes = {
+    "p_mean": "Mean daily precipitation",
+    "pet_mean": "Mean daily potential evapotranspiration",
+    "aridity": "Ratio of mean PET to mean precipitation",
+    "p_seasonality": "Seasonality and timing of precipitation",
+    "frac_snow": "Fraction of snow",
+    "high_prec_freq": "Frequency of high-precipitation days",
+    "high_prec_dur": "Average duration of high-precipitation events",
+    "low_prec_freq": "Frequency of dry days",
+    "low_prec_dur": "Average duration of dry periods",
+    "elev_mean": "Catchment mean elevation",
+    "slope_mean": "Catchment mean slope",
+    "area_gages2": "Catchment area",
+    "frac_forest": "Forest fraction",
+    "lai_max": "Maximum monthly mean of leaf area index",
+    "lai_diff": "Difference between the max. and min. mean of the leaf area index",
+    "gvf_max": "Maximum monthly mean of green vegetation fraction",
+    "gvf_diff": "Difference between the min. and max. "
+                "monthly mean of the green vegetation fraction",
+    "soil_depth_pelletier": "Depth to bedrock (maximum 50 m)",
+    "soil_depth_statsgo": "Soil depth (maximum 1.5 m)",
+    "soil_porosity": "Volumetric porosity",
+    "soil_conductivity": "Saturated hydraulic conductivity",
+    "max_water_content": "Maximum water content of the soil",
+    "sand_frac": "Fraction of sand in the soil",
+    "silt_frac": "Fraction of silt in the soil",
+    "clay_frac": "Fraction of clay in the soil",
+    "carbonate_rocks_frac": "Fraction of the Carbonate sedimentary rocks",
+    "geol_permeability": "Surface permeability (log10)"
+}
 
 
 def print_locations_on_world_map(df_locations, color, use_map_axis):
@@ -320,7 +329,11 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     xs_spatial = xs_spatial.to(device)
     xs_non_spatial.requires_grad_()
     xs_spatial.requires_grad_()
-    feature_names = CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES + CAMELS_dataset.STATIC_ATTRIBUTES_NAMES + ["spatial_input"]
+    feature_names_static = [dict_static_attributes[feature_name_static] for feature_name_static in
+                            CAMELS_dataset.STATIC_ATTRIBUTES_NAMES]
+    feature_names_dynamic = [dict_dynamic_attributes[feature_name_dynamic] for feature_name_dynamic in
+                             CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES]
+    feature_names = feature_names_static + feature_names_dynamic + ["spatial input"]
     attr, delta = ig.attribute((xs_non_spatial.unsqueeze(0), xs_spatial.unsqueeze(0)), n_steps=100,
                                return_convergence_delta=True)
     attr_non_spatial = attr[0].detach().cpu().numpy()
@@ -329,8 +342,6 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     non_zero_attr_spatial = sum_days_attr_spatial[np.nonzero(sum_days_attr_spatial)]
     importances = np.concatenate([np.mean(attr_non_spatial, axis=(0, 1)),
                                   np.mean(non_zero_attr_spatial).reshape(1, )])
-    for i in range(len(feature_names)):
-        print(feature_names[i], ": ", '%.5f' % (importances[i]))
     x_pos = (np.arange(len(feature_names)))
     plt.figure(figsize=(12, 19))
     plt.xticks(rotation=90)
@@ -466,10 +477,10 @@ def main():
         plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
                                   model_name_for_comparison)
-        # create_class_activation_maps_explainable(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
-        # create_integrated_gradients(f"../checkpoints/{checkpoint}.pt", model_name_for_comparison)
+        create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
+        create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison)
         corr_df = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-                                   "random_forest", model_name_for_comparison, with_std=False)
+                                   "random_forest", model_name_for_comparison, with_std=True)
         corr_tables_list.append(corr_df)
     plot_images_side_by_side(model_names)
 
