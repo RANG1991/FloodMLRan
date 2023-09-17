@@ -131,7 +131,7 @@ class CNN_LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
-        input_size = 10
+        input_size = 4
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
                        image_input_size=image_input_size, large_image_size=large_image_size)
         self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,

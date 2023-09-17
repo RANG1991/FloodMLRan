@@ -442,9 +442,11 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                             X_data_spatial_list.append(
                                 np.expand_dims(sr.upsample(X_data_spatial[i, :, :].squeeze()), axis=0))
                         elif self.use_mean_spatial:
-                            X_data_spatial_list.append(
-                                np.expand_dims(np.ones((self.max_dim, self.max_dim)) * X_data_non_spatial[
-                                    i, 0].item(), axis=0))
+                            X_data_spatial_of_day = np.expand_dims(
+                                np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                                                   interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0)
+                            X_data_spatial_of_day[X_data_spatial_of_day > 0] = X_data_spatial_of_day.mean()
+                            X_data_spatial_list.append(X_data_spatial_of_day)
                         else:
                             X_data_spatial_list.append(np.expand_dims(
                                 np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
