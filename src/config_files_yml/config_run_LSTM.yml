@@ -5,7 +5,7 @@ dataset: CAMELS
 debug: false
 dropout_rate: 0.4
 learning_rates:
-  0: 5e-03
+  0: 5e-04
   10: 5e-04
   20: 5e-04
   30: 5e-04
