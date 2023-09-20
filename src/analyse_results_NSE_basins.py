@@ -282,7 +282,7 @@ def create_CAMELS_dataset(model_name):
         stage="train",
         model_name=model_name,
         sequence_length_spatial=185,
-        create_new_files=False,
+        create_new_files=True,
         all_stations_ids=sorted(open("../data/spatial_basins_list.txt").read().splitlines()),
         sequence_length=180,
         discharge_str=CAMELS_dataset.DISCHARGE_STR,
