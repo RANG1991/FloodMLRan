@@ -271,7 +271,7 @@ def create_CAMELS_dataset(model_name):
         static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
         dynamic_data_folder_spatial=CAMELS_dataset.DYNAMIC_DATA_FOLDER_SPATIAL_CAMELS,
         discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
-        dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES[:1],
+        dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
         static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
         train_start_date="01/10/1999",
         train_end_date="30/09/2008",
@@ -282,7 +282,7 @@ def create_CAMELS_dataset(model_name):
         stage="train",
         model_name=model_name,
         sequence_length_spatial=185,
-        create_new_files=False,
+        create_new_files=True,
         all_stations_ids=sorted(open("../data/spatial_basins_list.txt").read().splitlines()),
         sequence_length=180,
         discharge_str=CAMELS_dataset.DISCHARGE_STR,
@@ -290,7 +290,7 @@ def create_CAMELS_dataset(model_name):
         limit_size_above_1000=True,
         num_basins=None,
         use_only_precip_feature=False,
-        run_with_radar_data=False
+        run_with_radar_data=False,
     )
     return camels_dataset
 
@@ -310,7 +310,8 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison, df_r
                                                 in_cnn_channels=1)
     else:
         model = TWO_LSTM_CNN_LSTM(input_dim=32,
-                                  image_height=36, image_width=36,
+                                  image_height=36,
+                                  image_width=36,
                                   hidden_dim=256,
                                   sequence_length_conv_lstm=185,
                                   in_cnn_channels=1,
@@ -321,7 +322,7 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison, df_r
     model = model.to(device=device)
     checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
-    model.train()
+    # model = model.train()
     dataset = create_CAMELS_dataset(model_name=model_name_for_comparison)
     _, _, xs_non_spatial, xs_spatial, _, _ = dataset[0]
     basin_id, _ = dataset.lookup_table[0]
@@ -334,18 +335,20 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison, df_r
                             dataset.list_static_attributes_names]
     feature_names_dynamic = [dict_dynamic_attributes[feature_name_dynamic] for feature_name_dynamic in
                              dataset.list_dynamic_attributes_names]
-
     feature_names = feature_names_dynamic + feature_names_static + ["spatial input"]
-    baseline_values_non_spatial = torch.cat(
-        [torch.tensor([0.0]), torch.tensor(df_results.loc[:, dataset.list_static_attributes_names].mean())]).to(device)
+    baseline_values_non_spatial = (
+        torch.cat(
+            [torch.tensor([0.0]),
+             torch.tensor(dataset.x_means[1:len(dataset.list_dynamic_attributes_names)]),
+             torch.tensor(df_results.loc[:, dataset.list_static_attributes_names].mean())]
+        ).to(device))
     baseline_values_non_spatial = (torch.ones_like(xs_non_spatial) * baseline_values_non_spatial).to(torch.float32)
     baseline_values_spatial = torch.zeros_like(xs_spatial).to(device).to(torch.float32)
     attr, delta = ig.attribute((xs_non_spatial.unsqueeze(0), xs_spatial.unsqueeze(0)),
-                               n_steps=300,
+                               n_steps=100,
                                method='gausslegendre',
                                return_convergence_delta=True,
-                               baselines=(
-                                   baseline_values_non_spatial.unsqueeze(0), baseline_values_spatial.unsqueeze(0)))
+                               )
     attr_non_spatial = attr[0].detach().cpu().numpy()
     attr_spatial = attr[1].detach().cpu().numpy()
     sum_days_attr_spatial = attr_spatial.sum(axis=1)
@@ -389,7 +392,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
     model = model.to(device=device)
     checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
+    model = model.eval()
     if model_name_for_comparison == "CNN_Transformer":
         cam_extractor = SmoothGradCAMpp(model.cnn_transformer.cnn.cnn_layers[4], input_shape=(16, 32, 32))
     else:
