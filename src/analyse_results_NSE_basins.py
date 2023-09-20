@@ -261,7 +261,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     plt.savefig(f"analysis_images/feature_importance_{clf_name}_{model_name_for_comparison}.png")
     corr_df = corr_df.rename(index=dict_static_attributes)
     print(corr_df.to_latex(float_format="{:.2f}".format).replace("\\\n", "\\\n\hline\n"))
-    return corr_df
+    return corr_df, df_results
 
 
 def create_CAMELS_dataset(model_name):
@@ -271,7 +271,7 @@ def create_CAMELS_dataset(model_name):
         static_data_folder=CAMELS_dataset.STATIC_DATA_FOLDER,
         dynamic_data_folder_spatial=CAMELS_dataset.DYNAMIC_DATA_FOLDER_SPATIAL_CAMELS,
         discharge_data_folder=CAMELS_dataset.DISCHARGE_DATA_FOLDER,
-        dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES,
+        dynamic_attributes_names=CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES[:1],
         static_attributes_names=CAMELS_dataset.STATIC_ATTRIBUTES_NAMES,
         train_start_date="01/10/1999",
         train_end_date="30/09/2008",
@@ -282,7 +282,7 @@ def create_CAMELS_dataset(model_name):
         stage="train",
         model_name=model_name,
         sequence_length_spatial=185,
-        create_new_files=True,
+        create_new_files=False,
         all_stations_ids=sorted(open("../data/spatial_basins_list.txt").read().splitlines()),
         sequence_length=180,
         discharge_str=CAMELS_dataset.DISCHARGE_STR,
@@ -295,7 +295,7 @@ def create_CAMELS_dataset(model_name):
     return camels_dataset
 
 
-def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
+def create_integrated_gradients(checkpoint_path, model_name_for_comparison, df_results):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if model_name_for_comparison == "CNN_Transformer":
         model = TWO_Transformer_CNN_Transformer(image_width=36,
@@ -324,18 +324,28 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison):
     model.train()
     dataset = create_CAMELS_dataset(model_name=model_name_for_comparison)
     _, _, xs_non_spatial, xs_spatial, _, _ = dataset[0]
+    basin_id, _ = dataset.lookup_table[0]
     ig = IntegratedGradients(model)
     xs_non_spatial = xs_non_spatial.to(device)
     xs_spatial = xs_spatial.to(device)
     xs_non_spatial.requires_grad_()
     xs_spatial.requires_grad_()
     feature_names_static = [dict_static_attributes[feature_name_static] for feature_name_static in
-                            CAMELS_dataset.STATIC_ATTRIBUTES_NAMES]
+                            dataset.list_static_attributes_names]
     feature_names_dynamic = [dict_dynamic_attributes[feature_name_dynamic] for feature_name_dynamic in
-                             CAMELS_dataset.DYNAMIC_ATTRIBUTES_NAMES]
-    feature_names = feature_names_static + feature_names_dynamic + ["spatial input"]
-    attr, delta = ig.attribute((xs_non_spatial.unsqueeze(0), xs_spatial.unsqueeze(0)), n_steps=100,
-                               return_convergence_delta=True)
+                             dataset.list_dynamic_attributes_names]
+
+    feature_names = feature_names_dynamic + feature_names_static + ["spatial input"]
+    baseline_values_non_spatial = torch.cat(
+        [torch.tensor([0.0]), torch.tensor(df_results.loc[:, dataset.list_static_attributes_names].mean())]).to(device)
+    baseline_values_non_spatial = (torch.ones_like(xs_non_spatial) * baseline_values_non_spatial).to(torch.float32)
+    baseline_values_spatial = torch.zeros_like(xs_spatial).to(device).to(torch.float32)
+    attr, delta = ig.attribute((xs_non_spatial.unsqueeze(0), xs_spatial.unsqueeze(0)),
+                               n_steps=300,
+                               method='gausslegendre',
+                               return_convergence_delta=True,
+                               baselines=(
+                                   baseline_values_non_spatial.unsqueeze(0), baseline_values_spatial.unsqueeze(0)))
     attr_non_spatial = attr[0].detach().cpu().numpy()
     attr_spatial = attr[1].detach().cpu().numpy()
     sum_days_attr_spatial = attr_spatial.sum(axis=1)
@@ -465,7 +475,6 @@ def plot_images_side_by_side(models_names):
 
 def main():
     model_names = ["CNN_LSTM", "CNN_Transformer"]
-    corr_tables_list = []
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
             checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000"
@@ -477,11 +486,11 @@ def main():
         plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
                                   model_name_for_comparison)
+        corr_df, df_results = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
+                                               "random_forest", model_name_for_comparison, with_std=True)
         create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
-        create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison)
-        corr_df = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-                                   "random_forest", model_name_for_comparison, with_std=True)
-        corr_tables_list.append(corr_df)
+        create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
+
     plot_images_side_by_side(model_names)
 
 
