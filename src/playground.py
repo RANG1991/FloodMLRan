@@ -209,7 +209,8 @@ def create_iowa_map():
 
 
 def main():
-    create_iowa_map()
+    plot_training_and_validation_losses(
+        Path("../slurm_output_files/slurm_files_ensemble_comparison/slurm-19100407.out").resolve())
 
 
 if __name__ == "__main__":
