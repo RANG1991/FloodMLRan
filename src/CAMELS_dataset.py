@@ -435,10 +435,13 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
                         if self.use_random_noise_spatial:
                             X_data_spatial_of_day = X_data_spatial[i, :, :].squeeze()
-                            random_noise_spatial = np.expand_dims(np.random.normal(0.0, 1.0, (
-                                self.max_dim, self.max_dim)) * X_data_spatial_of_day.mean(), axis=0)
+                            random_noise_spatial = (np.random.normal(0.0, 1.0, size=X_data_spatial_of_day.size)
+                                                    * X_data_spatial_of_day.mean())
                             random_noise_spatial[X_data_spatial_of_day == 0] = 0.0
-                            X_data_spatial_list.append(random_noise_spatial)
+                            random_noise_spatial = np.clip(
+                                cv2.resize(random_noise_spatial, (self.max_dim, self.max_dim),
+                                           interpolation=cv2.INTER_NEAREST), a_min=0, a_max=None)
+                            X_data_spatial_list.append(np.expand_dims(random_noise_spatial, axis=0))
                         elif self.use_zeros_spatial:
                             X_data_spatial_list.append(np.expand_dims(np.zeros((self.max_dim, self.max_dim)), axis=0))
                         elif self.use_super_resolution:
