@@ -435,7 +435,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
                         if self.use_random_noise_spatial:
                             X_data_spatial_of_day = X_data_spatial[i, :, :].squeeze()
-                            random_noise_spatial = (np.random.normal(0.0, 1.0, size=X_data_spatial_of_day.size)
+                            random_noise_spatial = (np.random.normal(0.0, 1.0, size=X_data_spatial_of_day.shape)
                                                     * X_data_spatial_of_day.mean())
                             random_noise_spatial[X_data_spatial_of_day == 0] = 0.0
                             random_noise_spatial = np.clip(
