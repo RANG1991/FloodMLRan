@@ -89,6 +89,7 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
     run_number = 0
     epoch_num = 1
     params_tuple = ()
+    dict_params = {}
     with open(logs_filename, "r", encoding="utf-8") as f:
         for row in f:
             match_parameters_dict = re.search(r"running with parameters: \{", row)
@@ -110,13 +111,21 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
                     models_basins_nse_dict[
                         (model_name, f"{new_run_number}_{slurm_process_id}", epoch_num, params_tuple)] = {}
                     print(f"run number: {run_number}")
-            match_model_name_string = re.search("running with model: (.*?)\n", row)
-            if match_model_name_string:
-                new_model_name = match_model_name_string.group(1)
+            # match_model_name_string = re.search("running with model: (.*?)\n", row)
+            new_model_name = dict_params.get("model_name", None)
+            if new_model_name:
+                # new_model_name = match_model_name_string.group(1)
+                if dict_params["use_only_precip_feature"]:
+                    new_model_name = f"{new_model_name};\nusing only daily precip"
+                if dict_params["use_random_noise_spatial"]:
+                    new_model_name = f"{new_model_name};\nwith random noise"
+                if dict_params["use_zeros_spatial"]:
+                    new_model_name = f"{new_model_name};\nwith zeros"
                 if new_model_name != model_name:
                     model_name = new_model_name
-                epoch_num = 1
-                models_basins_nse_dict[(model_name, f"{run_number}_{slurm_process_id}", epoch_num, params_tuple)] = {}
+                    epoch_num = 1
+                    models_basins_nse_dict[
+                        (model_name, f"{run_number}_{slurm_process_id}", epoch_num, params_tuple)] = {}
             match_nse_string = re.search("station with id: (.*?) has nse of: (.*?)\n", row)
             if match_nse_string:
                 basin_id = match_nse_string.group(1)
@@ -152,7 +161,7 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
 def plot_NSE_CDF_graphs_my_code():
     # input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out",
     #                     "slurm-17832148.out", "slurm-17837642.out", "slurm-18941386.out"]
-    input_file_names = ["slurm-19089603.out", "slurm-19100407.out"]
+    input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19114239.out"]
     input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
                         file_name in input_file_names]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
@@ -165,30 +174,32 @@ def plot_NSE_CDF_graphs_my_code():
         [input_file_path.name.replace('slurm-', '').replace('.out', '') for input_file_path in input_file_paths])
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
     plt.rcParams.update({'font.size': 22})
-    model_names_cross_product_list = list(itertools.combinations(model_names, 2)) + list(
-        itertools.combinations(model_names, 1)) + list(itertools.combinations(model_names, 3))
+    model_names_cross_product_list = (
+        # list(itertools.combinations(model_names, 1)) +
+        # list(itertools.combinations(model_names, 2)) +
+        list(itertools.combinations(model_names, 3)))
     for pair_model_names in model_names_cross_product_list:
         figure(figsize=(14, 12))
-        for ind, model_name in enumerate(pair_model_names):
-            for run_number in run_numbers:
-                for basin_tuple in all_basins_tuples:
-                    for params_dict in params_dicts:
-                        if (
-                                model_name, run_number, basin_tuple,
-                                params_dict) not in dict_all_runs_from_all_files.keys():
-                            continue
-                        print(f"number of basins of model with name: {model_name} "
-                              f"and run number: {run_number} is: {len(basin_tuple)}")
-                        if len(basin_tuple) != 135:
-                            continue
-                        plot_CDF_NSE_basins(
-                            dict_all_runs_from_all_files[(model_name, run_number, basin_tuple, params_dict)],
-                            params_dict,
-                            model_name=model_name,
-                            num_basins=len(basin_tuple),
-                            plot_color=COLORS_LIST[ind],
-                            plot_opacity=0.6,
-                            line_width=0.5)
+        # for ind, model_name in enumerate(pair_model_names):
+        #     for run_number in run_numbers:
+        #         for basin_tuple in all_basins_tuples:
+        #             for params_dict in params_dicts:
+        #                 if (
+        #                         model_name, run_number, basin_tuple,
+        #                         params_dict) not in dict_all_runs_from_all_files.keys():
+        #                     continue
+        #                 print(f"number of basins of model with name: {model_name} "
+        #                       f"and run number: {run_number} is: {len(basin_tuple)}")
+        #                 if len(basin_tuple) != 135:
+        #                     continue
+        #                 plot_CDF_NSE_basins(
+        #                     dict_all_runs_from_all_files[(model_name, run_number, basin_tuple, params_dict)],
+        #                     params_dict,
+        #                     model_name=model_name,
+        #                     num_basins=len(basin_tuple),
+        #                     plot_color=COLORS_LIST[ind],
+        #                     plot_opacity=0.6,
+        #                     line_width=0.5)
         for ind, model_name in enumerate(pair_model_names):
             for params_dict in params_dicts:
                 if (model_name, params_dict) not in dict_avg_runs_from_all_files.keys():
@@ -201,12 +212,12 @@ def plot_NSE_CDF_graphs_my_code():
                     plot_color=COLORS_LIST[ind],
                     plot_opacity=1,
                     line_width=3,
-                    label=f"mean CDF NSE of model: {model_name.replace('_', '-')}")
+                    label=f"CDF NSE of model: {model_name.replace('_', '-')}")
         # if plot_title != "":
         #     plt.title(plot_title)
         plt.legend(loc='upper left')
         plt.grid()
-        plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}")
+        plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}".replace('\n', ' '))
         plt.clf()
 
 
