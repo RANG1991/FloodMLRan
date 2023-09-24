@@ -37,7 +37,7 @@ num_heads_transformer: 6
 num_layers_transformer: 8
 num_runs: 1
 use_random_noise_in_spatial_data: false
-use_zeros_in_spatial_data: false
+use_zeros_in_spatial_data: true
 use_mean_value_in_spatial_data: false
 only_precip: true
 run_with_radar_data: false
