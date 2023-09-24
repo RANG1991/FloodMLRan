@@ -215,7 +215,7 @@ def plot_NSE_CDF_graphs_my_code():
                     label=f"CDF NSE of model: {model_name.replace('_', '-')}")
         # if plot_title != "":
         #     plt.title(plot_title)
-        plt.legend(loc='upper left')
+        plt.legend(loc='lower right')
         plt.grid()
         plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}".replace('\n', ' '))
         plt.clf()
