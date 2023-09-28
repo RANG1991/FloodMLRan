@@ -459,12 +459,21 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                                 np.clip(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
                                                    interpolation=cv2.INTER_CUBIC), a_min=0, a_max=None), axis=0))
                     X_data_spatial = np.concatenate(X_data_spatial_list)
-                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).mean(
-                        axis=0)
-                    plt.colorbar(gray_image)
-                    plt.imsave(f"../data/basin_check_precip_images/img_{station_id}"
-                               f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png",
-                               gray_image)
+                    precipitation_spatial_data_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim,
+                                                                              self.max_dim).mean(axis=0)
+
+                    fig = plt.figure(figsize=(16, 16))
+                    ax1 = fig.add_subplot(111)
+                    ax1.axis('off')
+                    contours, _ = cv2.findContours(precipitation_spatial_data_image.copy(),
+                                                   cv2.RETR_EXTERNAL,
+                                                   cv2.CHAIN_APPROX_NONE)
+                    cv2.drawContours(precipitation_spatial_data_image, contours, -1, 255, 1)
+                    precipitation_spatial_data_image = ax1.imshow(precipitation_spatial_data_image)
+                    plt.colorbar(precipitation_spatial_data_image, ax=ax1, shrink=0.75)
+                    plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"
+                                f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png")
+
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
                         del X_data_spatial

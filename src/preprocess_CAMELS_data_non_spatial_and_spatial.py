@@ -120,15 +120,11 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
         },
         attrs={"creation_date": datetime.datetime.now()},
     )
-    idx_mat_to_save = idx_mat.astype(np.uint8)
-    idx_mat_to_save *= 255
-    contours, _ = cv2.findContours(idx_mat_to_save, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    cv2.drawContours(idx_mat_to_save, contours, 0, 255, -1)
-    plt.imsave(output_folder_name + f"/precip24_spatial_boundaries_{station_id}.png", idx_mat_to_save)
     ds["precipitation"] = ds["precipitation"] * idx_mat
     ds = ds.resample(datetime="1D").sum()
-    plt.imsave(output_folder_name + f"/precip24_spatial_image_{station_id}.png", ds["precipitation"][:].sum(axis=0))
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
+    precipitation_spatial_data_sum = ds["precipitation"][:].sum(axis=0).to_numpy()
+    plt.imsave(output_folder_name + f"/precip24_spatial_image_{station_id}.png", precipitation_spatial_data_sum)
 
 
 def create_and_write_precipitation_mean(datetimes, ls, station_id, output_folder_name):
@@ -196,7 +192,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1980, 1987):
+    for year in range(1980, 2009):
         print(f"parsing year: {year} of basin : {station_id}", flush=True)
         fn = f"{CAMELS_precip_data_folder}/nldas_met_update.obs.daily.pr.{year}.nc.gz"
         try:
@@ -353,14 +349,14 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
         print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}", flush=True)
 
 
-def main(use_multiprocessing=True):
+def main(use_multiprocessing=False):
     CAMELS_precip_data_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ncfiles_2010/"
     boundaries_file_name = (PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
     output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_all_data/"
     basins_data = gpd.read_file(boundaries_file_name)
     station_ids_list = basins_data["hru_id"].tolist()
-    # station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
-    # station_ids_list = ["01466500"]
+    station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
+    # station_ids_list = ["01013500"]
     if use_multiprocessing:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_station_id = {
