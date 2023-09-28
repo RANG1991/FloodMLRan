@@ -282,7 +282,7 @@ def create_CAMELS_dataset(model_name):
         stage="train",
         model_name=model_name,
         sequence_length_spatial=185,
-        create_new_files=True,
+        create_new_files=False,
         all_stations_ids=sorted(open("../data/spatial_basins_list.txt").read().splitlines()),
         sequence_length=180,
         discharge_str=CAMELS_dataset.DISCHARGE_STR,
@@ -432,10 +432,14 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
                                                           value=(255, 255, 255))
         list_all_images.append(np.hstack([image_basin_with_margin, image_activation_with_margin]))
-        plt.colorbar(image_basin_with_margin)
-        plt.colorbar(image_activation_with_margin)
-        plt.imsave(f"./heat_maps/heat_map_basin_{basin_id}.png",
-                   np.hstack([image_basin_with_margin, image_activation_with_margin]))
+        fig = plt.figure()
+        ax1 = fig.add_subplot(121)
+        image_basin_with_margin = ax1.imshow(image_basin_with_margin)
+        plt.colorbar(image_basin_with_margin, ax=ax1)
+        ax2 = fig.add_subplot(122)
+        image_activation_with_margin = ax2.imshow(image_activation_with_margin)
+        plt.colorbar(image_activation_with_margin, ax=ax2)
+        plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
     list_images_row = []
     list_rows = []
     num_images_in_row = 10
@@ -479,7 +483,10 @@ def plot_images_side_by_side(models_names):
 
 
 def main():
-    model_names = ["CNN_LSTM", "CNN_Transformer"]
+    model_names = [
+        "CNN_LSTM",
+        # "CNN_Transformer"
+    ]
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
             checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000"
@@ -489,11 +496,11 @@ def main():
         plt.rc('font', size=14)
         plt.rcParams["figure.figsize"] = (12, 19)
         plt.rcParams["figure.autolayout"] = True
-        plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-                                  model_name_for_comparison)
-        corr_df, df_results = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-                                               "random_forest", model_name_for_comparison, with_std=False)
-        # create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
+        # plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
+        #                           model_name_for_comparison)
+        # corr_df, df_results = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
+        #                                        "random_forest", model_name_for_comparison, with_std=False)
+        create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
         # create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
 
     plot_images_side_by_side(model_names)

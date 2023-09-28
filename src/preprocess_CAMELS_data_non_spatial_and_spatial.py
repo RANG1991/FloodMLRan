@@ -10,6 +10,7 @@ import xarray as xr
 import concurrent.futures
 import matplotlib.pyplot as plt
 import cv2
+import traceback
 
 PATH_ROOT = "../../FloodMLRan/data"
 COUNTRY_ABBREVIATION = "us"
@@ -194,13 +195,13 @@ def parse_single_basin_precipitation(
     list_of_total_precipitations_all_years = []
     started_reading_data = False
     for year in range(1980, 1987):
-        print(f"parsing year: {year} of basin : {station_id}")
+        print(f"parsing year: {year} of basin : {station_id}", flush=True)
         fn = f"{CAMELS_precip_data_folder}/nldas_met_update.obs.daily.pr.{year}.nc.gz"
         try:
             with gzip.open(fn) as gz:
                 dataset = netCDF4.Dataset('dummy', mode='r', memory=gz.read())
         except Exception as e:
-            print(e)
+            print(e, flush=True)
             continue
         # ti is an array containing the dates as the number of hours since 1900-01-01 00:00
         # e.g. - [780168, 780169, 780170, ...]
@@ -346,7 +347,8 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
             output_folder_name
         )
     except Exception as e:
-        print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}")
+        traceback.print_exc()
+        print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}", flush=True)
 
 
 def main(use_multiprocessing=True):
@@ -365,7 +367,7 @@ def main(use_multiprocessing=True):
                 station_ids_list}
             for future in concurrent.futures.as_completed(future_to_station_id):
                 station_id = future_to_station_id[future]
-                print(f"finished with station id: {station_id}")
+                print(f"finished with station id: {station_id}", flush=True)
     else:
         for station_id in station_ids_list:
             run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_folder, output_folder_name)
