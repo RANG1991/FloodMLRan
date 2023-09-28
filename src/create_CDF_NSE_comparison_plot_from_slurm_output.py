@@ -21,7 +21,7 @@ KEYS_FROM_PARAMS_DICT = ["batch_size",
                          "use_random_noise_spatial",
                          "use_zeros_spatial"]
 
-COLORS_LIST = ["blue", "red", "black"]
+COLORS_LIST = ["blue", "red", "black", "orange"]
 
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
@@ -116,11 +116,11 @@ def create_dict_basin_id_to_NSE_my_code(logs_filename):
             if new_model_name:
                 # new_model_name = match_model_name_string.group(1)
                 if dict_params["use_only_precip_feature"]:
-                    new_model_name = f"{new_model_name};\nusing only daily precip"
+                    new_model_name = f"{new_model_name}\nwith daily precipitation input only"
                 if dict_params["use_random_noise_spatial"]:
-                    new_model_name = f"{new_model_name};\nwith random noise"
+                    new_model_name = f"{new_model_name}\nwith random noise as spatial input"
                 if dict_params["use_zeros_spatial"]:
-                    new_model_name = f"{new_model_name};\nwith zeros"
+                    new_model_name = f"{new_model_name}\nwith all zeros as spatial input"
                 if new_model_name != model_name:
                     model_name = new_model_name
                     epoch_num = 1
@@ -161,7 +161,7 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
 def plot_NSE_CDF_graphs_my_code():
     # input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out",
     #                     "slurm-17832148.out", "slurm-17837642.out", "slurm-18941386.out"]
-    input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19114239.out"]
+    input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19114239.out", "slurm-19128144.out"]
     input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
                         file_name in input_file_names]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
@@ -177,7 +177,7 @@ def plot_NSE_CDF_graphs_my_code():
     model_names_cross_product_list = (
         # list(itertools.combinations(model_names, 1)) +
         # list(itertools.combinations(model_names, 2)) +
-        list(itertools.combinations(model_names, 3)))
+        list(itertools.combinations(model_names, 4)))
     for pair_model_names in model_names_cross_product_list:
         figure(figsize=(14, 12))
         # for ind, model_name in enumerate(pair_model_names):
@@ -215,9 +215,10 @@ def plot_NSE_CDF_graphs_my_code():
                     label=f"CDF NSE of model: {model_name.replace('_', '-')}")
         # if plot_title != "":
         #     plt.title(plot_title)
-        plt.legend(loc='lower right')
+        plt.legend(loc='upper left')
         plt.grid()
-        plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}".replace('\n', ' '))
+        # plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}".replace('\n', ' '))
+        plt.savefig("NSE_CDF_ablation_study")
         plt.clf()
 
 
@@ -244,7 +245,7 @@ def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plo
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / (np.max(cumulative) - np.min(cumulative))
     # plt.xscale("symlog")
-    plt.xlim((0, 1))
+    plt.xlim((-2, 1))
     plt.xlabel("NSE")
     plt.ylabel("CDF")
     # sns.kdeplot(nse_losses_np, cumulative=True)

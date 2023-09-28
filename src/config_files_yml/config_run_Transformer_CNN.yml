@@ -1,5 +1,5 @@
 batch_size: 64
-checkpoint_path: ../checkpoints/TWO_Transformer_CNN_Transformer_epoch_number_23_size_above_1000.pt
+checkpoint_path: ../TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000.pt
 create_new_files: true
 dataset: CAMELS
 debug: false
@@ -10,7 +10,7 @@ learning_rates:
   20: 1e-05
   30: 1e-05
 limit_size_above_1000: true
-load_checkpoint: true
+load_checkpoint: false
 model: CNN_Transformer
 mode: validation
 num_basins:
