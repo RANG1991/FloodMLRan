@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -n 3
+#SBATCH -n 4
 #SBATCH --time=150:0:0
 #SBATCH --mem=210G
 #SBATCH --gres gpu:a30:3

@@ -436,7 +436,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
         image_basin_with_margin = ax1.imshow(image_basin_with_margin)
-        plt.colorbar(image_basin_with_margin, ax=ax1, shrink=0.75)
+        # plt.colorbar(image_basin_with_margin, ax=ax1, shrink=0.75)
         ax2 = fig.add_subplot(122)
         ax2.axis('off')
         image_activation_with_margin = ax2.imshow(image_activation_with_margin)
