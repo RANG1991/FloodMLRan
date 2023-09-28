@@ -247,7 +247,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
         df_results = df_results.merge(df_std, how='inner', on="basin_id")
     df_results = process_df_results(df_results, model_name_for_comparison, with_std=with_std)
     analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=scale_features)
-    corr_df = (df_results.corr()["label"]).sort_values(ascending=False)
+    corr_df = (df_results.corr(method='pearson')["label"]).sort_values(ascending=False)
     corr_df = corr_df.loc[(np.abs(corr_df) > 0.2)]
     create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison,
                                                      scale_features=scale_features)
@@ -490,9 +490,9 @@ def main():
         plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
                                   model_name_for_comparison)
         corr_df, df_results = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-                                               "random_forest", model_name_for_comparison, with_std=True)
-        create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
-        create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
+                                               "random_forest", model_name_for_comparison, with_std=False)
+        # create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
+        # create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
 
     plot_images_side_by_side(model_names)
 
