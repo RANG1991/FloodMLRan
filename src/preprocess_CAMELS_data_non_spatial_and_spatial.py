@@ -120,7 +120,7 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
         },
         attrs={"creation_date": datetime.datetime.now()},
     )
-    ds["precipitation"] = ds["precipitation"] * idx_mat
+    ds["precipitation"] = np.fliplr(ds["precipitation"] * idx_mat)
     ds = ds.resample(datetime="1D").sum()
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
     precipitation_spatial_data_sum = ds["precipitation"][:].sum(axis=0).to_numpy()
@@ -358,7 +358,7 @@ def main(use_multiprocessing=True):
     station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
     # station_ids_list = ["01013500"]
     if use_multiprocessing:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
             future_to_station_id = {
                 executor.submit(run_processing_for_single_basin, station_id, basins_data,
                                 CAMELS_precip_data_folder, output_folder_name): station_id for station_id in

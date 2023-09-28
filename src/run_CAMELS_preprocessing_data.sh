@@ -2,7 +2,7 @@
 
 # Change number of tasks, amount of memory and time limit according to your needs
 
-#SBATCH -n 3
+#SBATCH -n 11
 #SBATCH --time=50:0:0
 #SBATCH --mem=40G
 
