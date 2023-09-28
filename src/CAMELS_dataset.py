@@ -476,8 +476,8 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     cv2.drawContours(precipitation_spatial_data_image_for_draw, contours, -1, 255, 1)
                     precipitation_spatial_data_image_for_draw = ax1.imshow(precipitation_spatial_data_image_for_draw)
                     plt.colorbar(precipitation_spatial_data_image_for_draw, ax=ax1, shrink=0.75,
-                                 ticks=np.arange(precipitation_spatial_data_image.min(),
-                                                 precipitation_spatial_data_image.max(), 0.01))
+                                 ticks=np.linspace(precipitation_spatial_data_image.min(),
+                                                   precipitation_spatial_data_image.max(), 10))
                     plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"
                                 f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png")
                     plt.close()
