@@ -469,10 +469,11 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                                                    cv2.RETR_EXTERNAL,
                                                    cv2.CHAIN_APPROX_NONE)
                     cv2.drawContours(precipitation_spatial_data_image, contours, -1, 255, 1)
-                    precipitation_spatial_data_image = ax1.imshow(precipitation_spatial_data_image)
+                    # precipitation_spatial_data_image = ax1.imshow(precipitation_spatial_data_image)
                     plt.colorbar(precipitation_spatial_data_image, ax=ax1, shrink=0.75)
                     plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"
                                 f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png")
+                    plt.close()
 
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
                         print(f"spatial data does not aligned with non spatial data in basin: {station_id}")
