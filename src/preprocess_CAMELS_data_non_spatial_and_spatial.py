@@ -120,7 +120,7 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
         },
         attrs={"creation_date": datetime.datetime.now()},
     )
-    ds["precipitation"] = np.fliplr(ds["precipitation"] * idx_mat)
+    ds["precipitation"] = np.flip(ds["precipitation"] * idx_mat, axis=-1)
     ds = ds.resample(datetime="1D").sum()
     ds.to_netcdf(path=output_folder_name + "/precip24_spatial_" + station_id.replace(COUNTRY_ABBREVIATION, "") + ".nc")
     precipitation_spatial_data_sum = ds["precipitation"][:].sum(axis=0).to_numpy()
