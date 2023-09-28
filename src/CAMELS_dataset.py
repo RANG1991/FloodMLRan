@@ -465,7 +465,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     fig = plt.figure(figsize=(16, 16))
                     ax1 = fig.add_subplot(111)
                     ax1.axis('off')
-                    contours, _ = cv2.findContours(precipitation_spatial_data_image.copy(),
+                    contours, _ = cv2.findContours(precipitation_spatial_data_image.copy().astype(np.uint8),
                                                    cv2.RETR_EXTERNAL,
                                                    cv2.CHAIN_APPROX_NONE)
                     cv2.drawContours(precipitation_spatial_data_image, contours, -1, 255, 1)
