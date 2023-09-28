@@ -349,7 +349,7 @@ def run_processing_for_single_basin(station_id, basins_data, CAMELS_precip_data_
         print(f"parsing precipitation of basin with id: {station_id} failed with exception: {e}", flush=True)
 
 
-def main(use_multiprocessing=False):
+def main(use_multiprocessing=True):
     CAMELS_precip_data_folder = "/sci/labs/efratmorin/ranga/FloodMLRan/data/ncfiles_2010/"
     boundaries_file_name = (PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
     output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_all_data/"
