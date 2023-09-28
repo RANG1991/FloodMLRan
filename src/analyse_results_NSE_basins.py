@@ -435,10 +435,10 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         fig = plt.figure()
         ax1 = fig.add_subplot(121)
         image_basin_with_margin = ax1.imshow(image_basin_with_margin)
-        plt.colorbar(image_basin_with_margin, ax=ax1)
+        plt.colorbar(image_basin_with_margin, ax=ax1, shrink=0.75)
         ax2 = fig.add_subplot(122)
         image_activation_with_margin = ax2.imshow(image_activation_with_margin)
-        plt.colorbar(image_activation_with_margin, ax=ax2)
+        plt.colorbar(image_activation_with_margin, ax=ax2, shrink=0.75)
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
     list_images_row = []
     list_rows = []

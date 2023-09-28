@@ -120,9 +120,11 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
         },
         attrs={"creation_date": datetime.datetime.now()},
     )
-    contours, _ = cv2.findContours(idx_mat, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    cv2.drawContours(idx_mat, contours, 0, 255, -1)
-    plt.imsave(output_folder_name + f"/precip24_spatial_boundaries_{station_id}.png", idx_mat)
+    idx_mat_to_save = idx_mat.astype(np.uint8)
+    idx_mat_to_save *= 255
+    contours, _ = cv2.findContours(idx_mat_to_save, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(idx_mat_to_save, contours, 0, 255, -1)
+    plt.imsave(output_folder_name + f"/precip24_spatial_boundaries_{station_id}.png", idx_mat_to_save)
     ds["precipitation"] = ds["precipitation"] * idx_mat
     ds = ds.resample(datetime="1D").sum()
     plt.imsave(output_folder_name + f"/precip24_spatial_image_{station_id}.png", ds["precipitation"][:].sum(axis=0))
