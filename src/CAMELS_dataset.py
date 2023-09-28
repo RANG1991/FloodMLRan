@@ -469,13 +469,15 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     contours, _ = cv2.findContours(precipitation_spatial_data_image.copy().astype(np.uint8),
                                                    cv2.RETR_EXTERNAL,
                                                    cv2.CHAIN_APPROX_NONE)
-                    precipitation_spatial_data_image = ((precipitation_spatial_data_image -
-                                                         precipitation_spatial_data_image.min()) /
-                                                        (precipitation_spatial_data_image.max() -
-                                                         precipitation_spatial_data_image.min())) * 255
-                    cv2.drawContours(precipitation_spatial_data_image, contours, -1, 255, 1)
-                    precipitation_spatial_data_image = ax1.imshow(precipitation_spatial_data_image)
-                    plt.colorbar(precipitation_spatial_data_image, ax=ax1, shrink=0.75)
+                    precipitation_spatial_data_image_for_draw = ((precipitation_spatial_data_image -
+                                                                  precipitation_spatial_data_image.min()) /
+                                                                 (precipitation_spatial_data_image.max() -
+                                                                  precipitation_spatial_data_image.min())) * 255
+                    cv2.drawContours(precipitation_spatial_data_image_for_draw, contours, -1, 255, 1)
+                    precipitation_spatial_data_image_for_draw = ax1.imshow(precipitation_spatial_data_image_for_draw)
+                    plt.colorbar(precipitation_spatial_data_image_for_draw, ax=ax1, shrink=0.75,
+                                 ticks=np.arange(precipitation_spatial_data_image.min(),
+                                                 precipitation_spatial_data_image.max(), 0.01))
                     plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"
                                 f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png")
                     plt.close()
