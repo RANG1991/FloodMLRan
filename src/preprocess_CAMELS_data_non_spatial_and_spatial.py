@@ -9,6 +9,7 @@ from pathlib import Path
 import xarray as xr
 import concurrent.futures
 import matplotlib.pyplot as plt
+import cv2
 
 PATH_ROOT = "../../FloodMLRan/data"
 COUNTRY_ABBREVIATION = "us"
@@ -118,6 +119,9 @@ def create_and_write_precipitation_spatial(datetimes, ls_spatial, station_id, ou
         },
         attrs={"creation_date": datetime.datetime.now()},
     )
+    contours, _ = cv2.findContours(idx_mat, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(idx_mat, contours, 0, 255, -1)
+    plt.imsave(output_folder_name + f"/precip24_spatial_boundaries_{station_id}.png", idx_mat)
     ds["precipitation"] = ds["precipitation"] * idx_mat
     ds = ds.resample(datetime="1D").sum()
     plt.imsave(output_folder_name + f"/precip24_spatial_image_{station_id}.png", ds["precipitation"][:].sum(axis=0))
@@ -189,7 +193,7 @@ def parse_single_basin_precipitation(
     list_of_dates_all_years = []
     list_of_total_precipitations_all_years = []
     started_reading_data = False
-    for year in range(1987, 2009):
+    for year in range(1980, 1987):
         print(f"parsing year: {year} of basin : {station_id}")
         fn = f"{CAMELS_precip_data_folder}/nldas_met_update.obs.daily.pr.{year}.nc.gz"
         try:

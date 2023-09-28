@@ -821,10 +821,10 @@ def calc_validation_basins_nse(preds_obs_dict_per_basin, num_epoch, model_name, 
     ax.set_title(f"Basin {basin_id_to_plot} - NSE: {nse_basin_to_plot:.3f}")
     curr_datetime = datetime.now()
     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
-    plt.savefig(
-        f"../data/results/Hydrograph_of_basin_{basin_id_to_plot}_in_epoch_{num_epoch}_of_model_{model_name}"
-        f"_{curr_datetime_str}.png"
-    )
+    ax.set_xlabel("Day index")
+    ax.set_ylabel("Streamflow discharge (mm/d)")
+    plt.savefig(f"../data/results/Hydrograph_of_basin_{basin_id_to_plot}_in_epoch_{num_epoch}_of_model_{model_name}"
+                f"_{curr_datetime_str}.png")
     plt.close()
     return nse_list_basins, median_nse
 
