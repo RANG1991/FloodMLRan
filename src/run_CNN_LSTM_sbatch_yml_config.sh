@@ -17,4 +17,4 @@ source $virtual_env
 # module load cuda/11.2
 
 export NCCL_P2P_LEVEL=NVL
-python ./FloodML_runner.py --yaml_config_file_name config_files_yml/config_run_CNN_LSTM.yml
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python ./FloodML_runner.py --yaml_config_file_name config_files_yml/config_run_CNN_LSTM.yml
