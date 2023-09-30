@@ -636,14 +636,16 @@ class FloodML_Runner:
             train_dataloader = DataLoader(training_data,
                                           batch_size=self.batch_size // world_size,
                                           sampler=distributed_sampler_train,
-                                          pin_memory=False,
+                                          pin_memory=True,
+                                          persistent_workers=True,
                                           num_workers=self.num_workers_data_loader,
                                           worker_init_fn=seed_worker)
             test_dataloader = DataLoader(test_data,
-                                         batch_size=self.batch_size // (world_size * 8),
+                                         batch_size=self.batch_size // world_size,
                                          sampler=distributed_sampler_test,
-                                         pin_memory=False,
-                                         num_workers=0,
+                                         pin_memory=True,
+                                         persistent_workers=True,
+                                         num_workers=self.num_workers_data_loader,
                                          worker_init_fn=seed_worker)
         else:
             train_dataloader = DataLoader(training_data,
