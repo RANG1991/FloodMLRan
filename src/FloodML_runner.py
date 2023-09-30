@@ -640,7 +640,7 @@ class FloodML_Runner:
                                           num_workers=self.num_workers_data_loader,
                                           worker_init_fn=seed_worker)
             test_dataloader = DataLoader(test_data,
-                                         batch_size=(self.batch_size // world_size) // 4,
+                                         batch_size=self.batch_size // (world_size * 8),
                                          sampler=distributed_sampler_test,
                                          pin_memory=False,
                                          num_workers=self.num_workers_data_loader,
@@ -680,13 +680,19 @@ class FloodML_Runner:
             if (epoch % self.calc_nse_interval) == (self.calc_nse_interval - 1):
                 if world_size > 1:
                     test_dataloader.sampler.set_epoch(epoch)
-                    loss_on_validation_epoch = self.eval_model(model.module, test_dataloader,
-                                                               preds_obs_dicts_ranks_queue, calc_nse_star,
-                                                               device="cuda", epoch=(epoch + 1))
-                else:
-                    loss_on_validation_epoch = self.eval_model(model, test_dataloader, preds_obs_dicts_ranks_queue,
+                    loss_on_validation_epoch = self.eval_model(model.module,
+                                                               test_dataloader,
+                                                               preds_obs_dicts_ranks_queue,
                                                                calc_nse_star,
-                                                               device="cuda", epoch=(epoch + 1))
+                                                               device="cuda",
+                                                               epoch=(epoch + 1))
+                else:
+                    loss_on_validation_epoch = self.eval_model(model,
+                                                               test_dataloader,
+                                                               preds_obs_dicts_ranks_queue,
+                                                               calc_nse_star,
+                                                               device="cuda",
+                                                               epoch=(epoch + 1))
             print("finished evaluating the model", flush=True)
             if world_size > 1:
                 dist.barrier()
