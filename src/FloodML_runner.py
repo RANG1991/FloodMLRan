@@ -307,9 +307,9 @@ class FloodML_Runner:
                         preds_obs_dict_per_basin[station_id] = []
                     preds_obs_dict_per_basin[station_id].append(
                         (pred_expected[ind].clone().item(), pred_actual[ind].item()))
-                    # preds_obs_dicts_ranks_queue.put((station_id, dates[ind],
-                    #                                  (pred_expected[ind].clone().item(),
-                    #                                   pred_actual[ind].clone().item())))
+                    preds_obs_dicts_ranks_queue.put((station_id, dates[ind],
+                                                     (pred_expected[ind].clone().item(),
+                                                      pred_actual[ind].clone().item())))
                 gc.collect()
                 torch.cuda.empty_cache()
         print(f"Loss on the entire validation epoch: {running_loss / (len(loader)):.4f}", flush=True)
