@@ -643,7 +643,7 @@ class FloodML_Runner:
                                          batch_size=self.batch_size // (world_size * 8),
                                          sampler=distributed_sampler_test,
                                          pin_memory=False,
-                                         num_workers=self.num_workers_data_loader,
+                                         num_workers=1,
                                          worker_init_fn=seed_worker)
         else:
             train_dataloader = DataLoader(training_data,
