@@ -1,5 +1,5 @@
 batch_size: 256
-checkpoint_path: ../TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt
+checkpoint_path:
 create_new_files: true
 dataset: CAMELS
 debug: false
@@ -10,7 +10,7 @@ learning_rates:
   20: 5e-04
   30: 5e-04
 limit_size_above_1000: true
-load_checkpoint: false
+load_checkpoint: true
 model: CNN_LSTM
 mode: validation
 num_basins:
