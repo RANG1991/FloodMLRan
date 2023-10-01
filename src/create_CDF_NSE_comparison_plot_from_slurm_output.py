@@ -23,6 +23,8 @@ KEYS_FROM_PARAMS_DICT = ["batch_size",
 
 COLORS_LIST = ["blue", "red", "black", "orange"]
 
+LIST_ALLOWED_NUMBER_OF_BASINS = [135, 134]
+
 
 def create_dict_basin_id_to_NSE_frederik_code(logs_filename):
     dicts_models_dict = {}
@@ -56,7 +58,7 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
                     list_nse = np.array(list_nse)
                     median_nse = statistics.median(list_nse)
                     basins_tuple = tuple(list_basin_ids)
-                    if len(basins_tuple) != 135:
+                    if len(basins_tuple) not in LIST_ALLOWED_NUMBER_OF_BASINS:
                         continue
                     if (model_name, run_number, basins_tuple,
                         params_dict) not in dict_max_median_nse_list_for_each_run.keys():
@@ -75,7 +77,7 @@ def calc_best_nse_per_model_and_num_basins(models_basins_nse_dict):
             dict_of_lists_max_median_nse_list_for_each_run[(model_name_in_list, params_dict_in_list)] = []
             for model_name_in_dict, run_number, basins_tuple, params_dict_in_dict in dict_max_median_nse_list_for_each_run.keys():
                 if model_name_in_dict == model_name_in_list and params_dict_in_dict == params_dict_in_list and len(
-                        basins_tuple) == 135:
+                        basins_tuple) in LIST_ALLOWED_NUMBER_OF_BASINS:
                     dict_of_lists_max_median_nse_list_for_each_run[(model_name_in_list, params_dict_in_list)].append(
                         dict_max_median_nse_list_for_each_run[
                             (model_name_in_list, run_number, basins_tuple, params_dict_in_dict)])
@@ -159,8 +161,8 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
 
 
 def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out",
-                        "slurm-17832148.out", "slurm-17837642.out", "slurm-18941386.out"]
+    input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out",
+                        "slurm-17837642.out", "slurm-18941386.out", "slurm-19158233.out"]
     # input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19114239.out", "slurm-19128144.out"]
     input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
                         file_name in input_file_names]
@@ -208,7 +210,6 @@ def plot_NSE_CDF_graphs_my_code():
                     dict_avg_runs_from_all_files[(model_name, params_dict)],
                     params_dict,
                     model_name=model_name,
-                    num_basins=135,
                     plot_color=COLORS_LIST[ind],
                     plot_opacity=1,
                     line_width=3,
@@ -228,7 +229,8 @@ def plot_NSE_CDF_graph_frederik_code():
     plot_title = f"NSE CDF of process ID - " \
                  f"{input_file_name.replace('slurm-', '').replace('.out', '')} with model - {model_name}"
     d = create_dict_basin_id_to_NSE_frederik_code(input_file_name)
-    plot_CDF_NSE_basins(d, {}, model_name, 1,
+    plot_CDF_NSE_basins(d, {},
+                        model_name,
                         plot_color=COLORS_LIST[0],
                         plot_opacity=1,
                         line_width=2)
@@ -238,7 +240,7 @@ def plot_NSE_CDF_graph_frederik_code():
     plt.clf()
 
 
-def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, num_basins, plot_color, plot_opacity, line_width,
+def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, plot_color, plot_opacity, line_width,
                         label=""):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     values, base = np.histogram(nse_losses_np, bins=100000)

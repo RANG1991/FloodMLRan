@@ -354,7 +354,7 @@ def main(use_multiprocessing=True):
     boundaries_file_name = (PATH_ROOT + f"/CAMELS_US/HCDN_nhru_final_671.shp")
     output_folder_name = PATH_ROOT + "/CAMELS_US/CAMELS_all_data/"
     basins_data = gpd.read_file(boundaries_file_name)
-    station_ids_list = basins_data["hru_id"].tolist()
+    # station_ids_list = basins_data["hru_id"].tolist()
     station_ids_list = sorted(open("../data/stations_size_above_1000.txt").read().splitlines())
     # station_ids_list = ["01013500"]
     if use_multiprocessing:
