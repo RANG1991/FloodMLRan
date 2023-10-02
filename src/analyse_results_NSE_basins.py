@@ -32,6 +32,7 @@ from captum.attr import IntegratedGradients
 from scipy.stats import mannwhitneyu
 import glob
 from functools import reduce
+from FloodML_Base_Dataset import FloodML_Base_Dataset
 
 gpd.options.use_pygeos = True
 
@@ -415,8 +416,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         activation_map = cam_extractor(0, out.item())
         plt.axis('off')
         plt.tight_layout()
-        image_basin = cv2.imread(f"../data/basin_check_precip_images/img_{basin_id}_precip.png")
-        image_basin = cv2.resize(image_basin, (50, 50), interpolation=cv2.INTER_CUBIC)
+        image_basin = cv2.resize(xs_spatial, (50, 50), interpolation=cv2.INTER_CUBIC)
         cmap_image_precip = plt.get_cmap("binary")
         cmap_image_activation = plt.get_cmap("jet")
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
@@ -435,12 +435,10 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         fig = plt.figure(figsize=(32, 16))
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
-        image_basin_with_margin = ax1.imshow(image_basin_with_margin)
-        # plt.colorbar(image_basin_with_margin, ax=ax1, shrink=0.75)
+        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin, ax=ax1)
         ax2 = fig.add_subplot(122)
         ax2.axis('off')
-        image_activation_with_margin = ax2.imshow(image_activation_with_margin)
-        plt.colorbar(image_activation_with_margin, ax=ax2, shrink=0.75)
+        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation, ax=ax2)
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
     list_images_row = []
     list_rows = []
