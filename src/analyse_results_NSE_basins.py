@@ -425,7 +425,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
     for basin_id in basin_id_to_first_ind.keys():
         print(f"in basin: {basin_id}")
         _, _, xs_non_spatial, xs_spatial, _, _ = dataset[basin_id_to_first_ind[basin_id]]
-        xs_spatial = flip_x_spatial(xs_spatial, dataset.max_dim)
+        # xs_spatial = flip_x_spatial(xs_spatial, dataset.max_dim)
         out = model(xs_non_spatial.unsqueeze(0).to(device), xs_spatial.unsqueeze(0).to(device))
         activation_map = cam_extractor(0, out.item())
         plt.axis('off')
@@ -437,10 +437,12 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
         image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (50, 50),
                                       interpolation=cv2.INTER_CUBIC)
-        image_activation = ((image_activation - image_activation.min())
-                            / (image_activation.max() - image_activation.min()))
+        # image_activation = ((image_activation - image_activation.min())
+        #                     / (image_activation.max() - image_activation.min()))
         image_activation = (255 * (cmap_image_activation(image_activation)[:, :, :3])).astype(np.uint8)
-        opacity = 0.7
+        image_activation = cv2.cvtColor(image_activation, cv2.COLOR_BGR2RGB)
+        image_activation = np.float32(image_activation) / 255
+        image_activation /= np.max(image_activation)
         image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
                                                      value=(255, 255, 255))
         image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
@@ -450,11 +452,12 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         fig = plt.figure(figsize=(32, 16))
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
-        image_basin[(0.1 < image_basin) & (image_basin < 1)] = 1
+        # image_basin[(0.1 < image_basin) & (image_basin < 1)] = 1
         FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin, ax=ax1)
         ax2 = fig.add_subplot(122)
         ax2.axis('off')
-        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation, ax=ax2, plot_border=False)
+        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation,
+                                                               ax=ax2, plot_border=False)
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
         plt.close()
     list_images_row = []
