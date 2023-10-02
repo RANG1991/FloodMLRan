@@ -416,7 +416,8 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         activation_map = cam_extractor(0, out.item())
         plt.axis('off')
         plt.tight_layout()
-        image_basin = cv2.resize(xs_spatial, (50, 50), interpolation=cv2.INTER_CUBIC)
+        image_basin = cv2.resize(xs_spatial.cpu().numpy().reshape(-1, dataset.max_dim, dataset.max_dim).mean(axis=0),
+                                 (50, 50), interpolation=cv2.INTER_CUBIC)
         cmap_image_precip = plt.get_cmap("binary")
         cmap_image_activation = plt.get_cmap("jet")
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
@@ -426,19 +427,20 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         #                     / (image_activation.max() - image_activation.min()))
         image_activation = (255 * (cmap_image_activation(image_activation)[:, :, :3])).astype(np.uint8)
         opacity = 0.7
-        overlay = (opacity * image_basin + (1 - opacity) * image_activation)
         image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
                                                      value=(255, 255, 255))
         image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
                                                           value=(255, 255, 255))
-        list_all_images.append(np.hstack([image_basin_with_margin, image_activation_with_margin]))
+        list_all_images.append(
+            np.hstack([cv2.cvtColor(image_basin_with_margin, cv2.COLOR_GRAY2RGB), image_activation_with_margin]))
         fig = plt.figure(figsize=(32, 16))
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
+        image_basin[(0.1 < image_basin) & (image_basin < 1)] = 1
         FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin, ax=ax1)
         ax2 = fig.add_subplot(122)
         ax2.axis('off')
-        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation, ax=ax2)
+        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation, ax=ax2, plot_border=False)
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
     list_images_row = []
     list_rows = []

@@ -444,11 +444,12 @@ class FloodML_Base_Dataset(Dataset):
         raise NotImplementedError
 
     @staticmethod
-    def create_color_bar_for_precip_image(precip_image, ax):
-        contours, _ = cv2.findContours((precip_image.copy()).astype(np.uint8),
-                                       cv2.RETR_EXTERNAL,
-                                       cv2.CHAIN_APPROX_NONE)
-        cv2.drawContours(precip_image, contours, -1, int(precip_image.max()), 1)
+    def create_color_bar_for_precip_image(precip_image, ax, plot_border=True):
+        if plot_border:
+            contours, _ = cv2.findContours(precip_image.copy().astype(np.uint8),
+                                           cv2.RETR_EXTERNAL,
+                                           cv2.CHAIN_APPROX_NONE)
+            cv2.drawContours(precip_image, contours, -1, int(precip_image.max()), 1)
         bounds = np.linspace(precip_image.min(), precip_image.max(), 10)
         norm = matplotlib.colors.BoundaryNorm(bounds, ncolors=256)
         precip_image = ax.imshow(precip_image)
