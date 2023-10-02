@@ -366,6 +366,16 @@ def create_integrated_gradients(checkpoint_path, model_name_for_comparison, df_r
     plt.savefig(f"./analysis_images/integrated_gradients_{model_name_for_comparison}.png")
 
 
+def flip_x_spatial(x_spatial, max_dim):
+    if type(x_spatial) == torch.Tensor:
+        x_spatial = x_spatial.cpu().numpy()
+    x_spatial = x_spatial.reshape(-1, max_dim, max_dim)
+    x_spatial = np.flip(x_spatial, axis=(1, 2))
+    x_spatial = x_spatial.reshape(-1, max_dim * max_dim)
+    x_spatial = torch.tensor(x_spatial.copy())
+    return x_spatial
+
+
 def create_class_activation_maps_explainable(checkpoint_path, model_name_for_comparison):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if model_name_for_comparison == "CNN_Transformer":
@@ -390,10 +400,11 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
             num_static_attributes=27,
             num_dynamic_attributes=5,
             use_only_precip_feature=False)
+    torch.backends.cudnn.enabled = False
     model = model.to(device=device)
     checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
-    model = model.eval()
+    model = model.train()
     if model_name_for_comparison == "CNN_Transformer":
         cam_extractor = SmoothGradCAMpp(model=model, target_layer=model.cnn_transformer.cnn.cnn_layers[4],
                                         input_shape=(16, 32, 32))
@@ -414,6 +425,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
     for basin_id in basin_id_to_first_ind.keys():
         print(f"in basin: {basin_id}")
         _, _, xs_non_spatial, xs_spatial, _, _ = dataset[basin_id_to_first_ind[basin_id]]
+        xs_spatial = flip_x_spatial(xs_spatial, dataset.max_dim)
         out = model(xs_non_spatial.unsqueeze(0).to(device), xs_spatial.unsqueeze(0).to(device))
         activation_map = cam_extractor(0, out.item())
         plt.axis('off')
@@ -425,8 +437,8 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         # image_basin = cmap_image_precip(image_basin[:, :, :3])
         image_activation = cv2.resize(activation_map[0].cpu().numpy().mean(axis=0), (50, 50),
                                       interpolation=cv2.INTER_CUBIC)
-        # image_activation = ((image_activation - image_activation.min())
-        #                     / (image_activation.max() - image_activation.min()))
+        image_activation = ((image_activation - image_activation.min())
+                            / (image_activation.max() - image_activation.min()))
         image_activation = (255 * (cmap_image_activation(image_activation)[:, :, :3])).astype(np.uint8)
         opacity = 0.7
         image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
@@ -444,6 +456,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         ax2.axis('off')
         FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation, ax=ax2, plot_border=False)
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
+        plt.close()
     list_images_row = []
     list_rows = []
     num_images_in_row = 10
@@ -459,6 +472,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
     white_images_to_fill = np.hstack([white_image_with_margin for _ in range(num_white_images_to_fill * 2)])
     list_rows[-1] = np.hstack([list_rows[-1], white_images_to_fill])
     cv2.imwrite(f"./analysis_images/heat_map_all_basins_{model_name_for_comparison}.png", np.vstack(list_rows))
+    torch.backends.cudnn.enabled = True
 
 
 def plot_images_side_by_side(models_names):
