@@ -405,7 +405,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
     model = model.to(device=device)
     checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model_state_dict'])
-    model = model.train()
+    model = model.eval()
     if model_name_for_comparison == "CNN_Transformer":
         cam_extractor = SmoothGradCAMpp(model=model, target_layer=model.cnn_transformer.cnn.cnn_layers[4],
                                         input_shape=(16, 32, 32))

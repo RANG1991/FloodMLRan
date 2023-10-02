@@ -435,8 +435,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         X_data_spatial[np.isnan(X_data_spatial)] = 0
                         if self.use_random_noise_spatial:
                             X_data_spatial_of_day = X_data_spatial[i, :, :].squeeze()
-                            random_noise_spatial = (np.random.normal(0.0, 1.0, size=X_data_spatial_of_day.shape)
-                                                    * X_data_spatial_of_day.mean())
+                            random_noise_spatial = np.random.normal(X_data_spatial_of_day.mean(),
+                                                                    X_data_spatial_of_day.std(),
+                                                                    size=X_data_spatial_of_day.shape)
                             random_noise_spatial[X_data_spatial_of_day == 0] = 0.0
                             random_noise_spatial = np.clip(
                                 cv2.resize(random_noise_spatial, (self.max_dim, self.max_dim),
@@ -466,8 +467,6 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     fig = plt.figure(figsize=(16, 16))
                     ax1 = fig.add_subplot(111)
                     ax1.axis('off')
-                    precipitation_spatial_data_image[
-                        (0.1 < precipitation_spatial_data_image) & (precipitation_spatial_data_image < 1)] = 1
                     FloodML_Base_Dataset.create_color_bar_for_precip_image(
                         precip_image=precipitation_spatial_data_image, ax=ax1)
                     plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"

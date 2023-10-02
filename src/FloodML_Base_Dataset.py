@@ -450,7 +450,7 @@ class FloodML_Base_Dataset(Dataset):
                                            cv2.RETR_EXTERNAL,
                                            cv2.CHAIN_APPROX_NONE)
             cv2.drawContours(precip_image, contours, -1, int(precip_image.max()), 1)
-        bounds = np.linspace(0, precip_image.max(), 10)
+        bounds = np.linspace(0, int(precip_image.max()), 10)
         norm = matplotlib.colors.BoundaryNorm(bounds, ncolors=256)
         precip_image = ax.imshow(precip_image)
         plt.colorbar(precip_image, norm=norm, extend='max', ticks=bounds, ax=ax, shrink=0.75,
