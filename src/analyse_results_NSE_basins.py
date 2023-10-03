@@ -292,7 +292,7 @@ def create_CAMELS_dataset(model_name):
         num_basins=None,
         use_only_precip_feature=False,
         run_with_radar_data=False,
-        use_random_noise_spatial=False,
+        use_random_noise_spatial=True,
     )
     return camels_dataset
 

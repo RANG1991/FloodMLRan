@@ -1,5 +1,5 @@
 batch_size: 256
-checkpoint_path:
+checkpoint_path: ../TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000.pt
 create_new_files: true
 dataset: CAMELS
 debug: false
@@ -12,7 +12,7 @@ learning_rates:
 limit_size_above_1000: true
 load_checkpoint: true
 model: CNN_LSTM
-mode: validation
+mode: test
 num_basins:
 num_epochs: 30
 num_hidden_units: 256
@@ -28,14 +28,14 @@ sequence_length_spatial: 185
 use_all_static_attr: false
 train_start_date: '01/10/1999'
 train_end_date: '30/09/2008'
-validation_start_date: '01/10/1980'
-validation_end_date: '30/09/1989'
-test_start_date: '01/10/1989'
-test_end_date: '30/09/1999'
+validation_start_date: "01/10/1988"
+validation_end_date: "30/09/1993"
+test_start_date: "01/10/1993"
+test_end_date: "30/09/1999"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
-num_runs: 1
+num_runs: 8
 use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 use_mean_value_in_spatial_data: false
