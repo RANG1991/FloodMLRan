@@ -458,7 +458,7 @@ class FloodML_Base_Dataset(Dataset):
         bounds = np.linspace(0.00, int(precip_image.max()), 20)
         norm = matplotlib.colors.BoundaryNorm(bounds, ncolors=256)
         if cmap is not None:
-            precip_image.ax.imshow(precip_image, cmap=cmap)
+            precip_image = ax.imshow(precip_image, cmap=cmap)
         else:
             precip_image = ax.imshow(precip_image)
         cb = plt.colorbar(precip_image, norm=norm, extend='both', ax=ax, shrink=0.75, spacing='proportional')
