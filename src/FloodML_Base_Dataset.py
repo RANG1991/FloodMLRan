@@ -445,7 +445,7 @@ class FloodML_Base_Dataset(Dataset):
 
     @staticmethod
     def create_color_bar_for_precip_image(precip_image, ax, plot_border=True, multiply_by_255=True,
-                                          title=""):
+                                          title="", cmap=None):
         if plot_border:
             if multiply_by_255:
                 precip_image_for_contours = (precip_image.copy() * 255).astype(np.uint8)
@@ -457,8 +457,10 @@ class FloodML_Base_Dataset(Dataset):
             cv2.drawContours(precip_image, contours, -1, int(precip_image.max()), 1)
         bounds = np.linspace(0.00, int(precip_image.max()), 20)
         norm = matplotlib.colors.BoundaryNorm(bounds, ncolors=256)
-        precip_image = ax.imshow(precip_image)
-        cb = plt.colorbar(precip_image, norm=norm, extend='max', ticks=bounds, ax=ax, shrink=0.75,
-                          cmap=plt.cm.get_cmap("jet"))
-        cb.ax.get_yaxis().labelpad = 15
-        cb.ax.set_ylabel(title, rotation=270)
+        if cmap is not None:
+            precip_image.ax.imshow(precip_image, cmap=cmap)
+        else:
+            precip_image = ax.imshow(precip_image)
+        cb = plt.colorbar(precip_image, norm=norm, extend='both', ax=ax, shrink=0.75, spacing='proportional')
+        cb.ax.get_yaxis().labelpad = 30
+        cb.ax.set_ylabel(title, rotation=270, fontsize=20)

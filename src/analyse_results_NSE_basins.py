@@ -463,7 +463,8 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
                                                                ax=ax2,
                                                                plot_border=False,
                                                                title="",
-                                                               multiply_by_255=False)
+                                                               multiply_by_255=False,
+                                                               cmap=plt.cm.get_cmap("jet"))
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
         plt.close()
     list_images_row = []
