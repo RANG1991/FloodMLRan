@@ -292,7 +292,7 @@ def create_CAMELS_dataset(model_name):
         num_basins=None,
         use_only_precip_feature=False,
         run_with_radar_data=False,
-        use_random_noise_spatial=True,
+        use_random_noise_spatial=False,
     )
     return camels_dataset
 
@@ -453,7 +453,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         fig = plt.figure(figsize=(32, 16))
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
-        # image_basin[(0.1 < image_basin) & (image_basin < 1)] = 1
+        image_basin[(0.1 > image_basin)] = 0
         FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin, ax=ax1)
         ax2 = fig.add_subplot(122)
         ax2.axis('off')

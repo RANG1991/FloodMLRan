@@ -446,7 +446,7 @@ class FloodML_Base_Dataset(Dataset):
     @staticmethod
     def create_color_bar_for_precip_image(precip_image, ax, plot_border=True):
         if plot_border:
-            contours, _ = cv2.findContours(precip_image.copy().astype(np.uint8),
+            contours, _ = cv2.findContours((precip_image.copy() * 255).astype(np.uint8),
                                            cv2.RETR_EXTERNAL,
                                            cv2.CHAIN_APPROX_NONE)
             cv2.drawContours(precip_image, contours, -1, int(precip_image.max()), 1)

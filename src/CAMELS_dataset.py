@@ -467,6 +467,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     fig = plt.figure(figsize=(16, 16))
                     ax1 = fig.add_subplot(111)
                     ax1.axis('off')
+                    precipitation_spatial_data_image[(0.1 > precipitation_spatial_data_image)] = 0
+                    # precipitation_spatial_data_image[
+                    #     (0.1 < precipitation_spatial_data_image) & (precipitation_spatial_data_image < 1)] = 1
                     FloodML_Base_Dataset.create_color_bar_for_precip_image(
                         precip_image=precipitation_spatial_data_image, ax=ax1)
                     plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"
