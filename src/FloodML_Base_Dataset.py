@@ -444,14 +444,21 @@ class FloodML_Base_Dataset(Dataset):
         raise NotImplementedError
 
     @staticmethod
-    def create_color_bar_for_precip_image(precip_image, ax, plot_border=True):
+    def create_color_bar_for_precip_image(precip_image, ax, plot_border=True, multiply_by_255=True,
+                                          title=""):
         if plot_border:
-            contours, _ = cv2.findContours((precip_image.copy() * 255).astype(np.uint8),
+            if multiply_by_255:
+                precip_image_for_contours = (precip_image.copy() * 255).astype(np.uint8)
+            else:
+                precip_image_for_contours = precip_image.copy().astype(np.uint8)
+            contours, _ = cv2.findContours(precip_image_for_contours,
                                            cv2.RETR_EXTERNAL,
                                            cv2.CHAIN_APPROX_NONE)
             cv2.drawContours(precip_image, contours, -1, int(precip_image.max()), 1)
-        bounds = np.linspace(0, int(precip_image.max()), 10)
+        bounds = np.linspace(0.00, int(precip_image.max()), 20)
         norm = matplotlib.colors.BoundaryNorm(bounds, ncolors=256)
         precip_image = ax.imshow(precip_image)
-        plt.colorbar(precip_image, norm=norm, extend='max', ticks=bounds, ax=ax, shrink=0.75,
-                     cmap=plt.cm.get_cmap("jet"))
+        cb = plt.colorbar(precip_image, norm=norm, extend='max', ticks=bounds, ax=ax, shrink=0.75,
+                          cmap=plt.cm.get_cmap("jet"))
+        cb.ax.get_yaxis().labelpad = 15
+        cb.ax.set_ylabel(title, rotation=270)

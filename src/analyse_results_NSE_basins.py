@@ -454,11 +454,16 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
         image_basin[(0.1 > image_basin)] = 0
-        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin, ax=ax1)
+        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin,
+                                                               ax=ax1,
+                                                               title="mean daily precipitation")
         ax2 = fig.add_subplot(122)
         ax2.axis('off')
         FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation,
-                                                               ax=ax2, plot_border=False)
+                                                               ax=ax2,
+                                                               plot_border=False,
+                                                               title="",
+                                                               multiply_by_255=False)
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
         plt.close()
     list_images_row = []

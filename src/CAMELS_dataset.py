@@ -471,7 +471,9 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                     # precipitation_spatial_data_image[
                     #     (0.1 < precipitation_spatial_data_image) & (precipitation_spatial_data_image < 1)] = 1
                     FloodML_Base_Dataset.create_color_bar_for_precip_image(
-                        precip_image=precipitation_spatial_data_image, ax=ax1)
+                        precip_image=precipitation_spatial_data_image,
+                        ax=ax1,
+                        title="mean daily precipitation")
                     plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"
                                 f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png")
                     plt.close()
