@@ -10,7 +10,7 @@ learning_rates:
   20: 1e-05
   30: 1e-05
 limit_size_above_1000: true
-load_checkpoint: false
+load_checkpoint: true
 model: CNN_Transformer
 mode: test
 num_basins:
