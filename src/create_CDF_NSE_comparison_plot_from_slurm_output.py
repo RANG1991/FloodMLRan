@@ -292,4 +292,4 @@ if __name__ == "__main__":
     #     for j in range(res.shape[1]):
     #         print("{0:0.2f}".format(res[i, j]), end=" ")
     #     print()
-    main(ablation_study=False)
+    main(ablation_study=True)
