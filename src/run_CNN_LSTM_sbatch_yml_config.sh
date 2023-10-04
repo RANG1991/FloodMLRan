@@ -7,7 +7,6 @@
 
 # --gres gpu:a100-3-40
 
-# Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
 
 # virtual_env location
