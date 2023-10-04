@@ -475,7 +475,7 @@ class Dataset_CAMELS(FloodML_Base_Dataset):
                         ax=ax1,
                         title="mean daily precipitation")
                     plt.savefig(f"../data/basin_check_precip_images/img_{station_id}"
-                                f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else ''}.png")
+                                f"_precip{'_SR' if self.use_super_resolution else '_large' if self.use_large_size else '_gaussian' if self.use_random_noise_spatial else ''}.png")
                     plt.close()
 
                     if X_data_non_spatial.shape[0] != X_data_spatial.shape[0]:
