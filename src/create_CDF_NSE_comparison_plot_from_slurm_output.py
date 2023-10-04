@@ -160,10 +160,12 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
     return dict_all_runs_from_all_files, dict_avg_runs_from_all_files
 
 
-def plot_NSE_CDF_graphs_my_code():
-    input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out",
-                        "slurm-17837642.out", "slurm-18941386.out", "slurm-19158233.out"]
-    # input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19114239.out", "slurm-19128144.out"]
+def plot_NSE_CDF_graphs_my_code(ablation_study=False):
+    if ablation_study:
+        input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19185354.out", "slurm-19128144.out"]
+    else:
+        input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out",
+                            "slurm-17837642.out", "slurm-18941386.out", "slurm-19158233.out"]
     input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
                         file_name in input_file_names]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
@@ -177,9 +179,9 @@ def plot_NSE_CDF_graphs_my_code():
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
     plt.rcParams.update({'font.size': 22})
     model_names_cross_product_list = (
-            list(itertools.combinations(model_names, 1)) +
-            list(itertools.combinations(model_names, 2)) +
-            list(itertools.combinations(model_names, 3)))
+        # list(itertools.combinations(model_names, 1)) +
+        # list(itertools.combinations(model_names, 2)) +
+        list(itertools.combinations(model_names, len(model_names))))
     for pair_model_names in model_names_cross_product_list:
         figure(figsize=(14, 12))
         # for ind, model_name in enumerate(pair_model_names):
@@ -213,13 +215,16 @@ def plot_NSE_CDF_graphs_my_code():
                     plot_color=COLORS_LIST[ind],
                     plot_opacity=1,
                     line_width=3,
-                    label=f"mean CDF NSE of model: {model_name.replace('_', '-')}")
+                    label=f"mean CDF NSE of model: {model_name.replace('_', '-')}",
+                    ablation_study=ablation_study)
         # if plot_title != "":
         #     plt.title(plot_title)
         plt.legend(loc='upper left')
         plt.grid()
-        plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}".replace('\n', ' '))
-        # plt.savefig("NSE_CDF_ablation_study")
+        if ablation_study:
+            plt.savefig("NSE_CDF_ablation_study")
+        else:
+            plt.savefig("NSE_CDF" + f"_{'_'.join(pair_model_names)}".replace('\n', ' '))
         plt.clf()
 
 
@@ -241,13 +246,16 @@ def plot_NSE_CDF_graph_frederik_code():
 
 
 def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, plot_color, plot_opacity, line_width,
-                        label=""):
+                        label="", ablation_study=False):
     # taken from https://stackoverflow.com/questions/15408371/cumulative-distribution-plots-python
     values, base = np.histogram(nse_losses_np, bins=100000)
     cumulative = np.cumsum(values)
     cumulative = (cumulative - np.min(cumulative)) / (np.max(cumulative) - np.min(cumulative))
     # plt.xscale("symlog")
-    plt.xlim((0, 1))
+    if ablation_study:
+        plt.xlim((-1, 1))
+    else:
+        plt.xlim((0, 1))
     plt.xlabel("NSE")
     plt.ylabel("CDF")
     # sns.kdeplot(nse_losses_np, cumulative=True)
@@ -258,8 +266,8 @@ def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, plot_color, plo
         plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width)
 
 
-def main():
-    plot_NSE_CDF_graphs_my_code()
+def main(ablation_study=False):
+    plot_NSE_CDF_graphs_my_code(ablation_study=ablation_study)
 
 
 if __name__ == "__main__":
@@ -284,4 +292,4 @@ if __name__ == "__main__":
     #     for j in range(res.shape[1]):
     #         print("{0:0.2f}".format(res[i, j]), end=" ")
     #     print()
-    main()
+    main(ablation_study=False)
