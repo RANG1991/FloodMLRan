@@ -39,7 +39,7 @@ num_runs: 1
 use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 use_mean_value_in_spatial_data: false
-only_precip: false
+only_precip: true
 run_with_radar_data: false
 use_super_resolution: false
 use_large_size: false
