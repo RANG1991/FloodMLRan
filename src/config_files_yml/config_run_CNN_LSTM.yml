@@ -10,7 +10,7 @@ learning_rates:
   20: 5e-04
   30: 5e-04
 limit_size_above_1000: true
-load_checkpoint: true
+load_checkpoint: false
 model: CNN_LSTM
 mode: test
 num_basins:
