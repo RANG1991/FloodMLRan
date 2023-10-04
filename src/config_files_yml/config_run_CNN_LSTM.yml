@@ -12,7 +12,7 @@ learning_rates:
 limit_size_above_1000: true
 load_checkpoint: false
 model: CNN_LSTM
-mode: test
+mode: validation
 num_basins:
 num_epochs: 30
 num_hidden_units: 256
