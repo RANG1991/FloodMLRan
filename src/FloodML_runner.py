@@ -717,7 +717,8 @@ class FloodML_Runner:
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss_on_training_epoch,
                         "params_dict": self.params_dict,
-                    }, f"../checkpoints/{model_name}_epoch_number_{(epoch + 1)}_{suffix_checkpoint_file_name}.pt")
+                    }, f"../checkpoints/{model_name}_epoch_number_{(epoch + 1)}_{suffix_checkpoint_file_name}"
+                       f"_{self.mode}.pt")
                 if self.profile_code:
                     p.step()
                 if self.run_sweeps:
