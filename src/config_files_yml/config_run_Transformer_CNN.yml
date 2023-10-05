@@ -10,14 +10,14 @@ learning_rates:
   20: 1e-05
   30: 1e-05
 limit_size_above_1000: true
-load_checkpoint: true
+load_checkpoint: false
 model: CNN_Transformer
-mode: validation
+mode: test
 num_basins:
 num_epochs: 30
 num_hidden_units: 256
 num_processes_ddp: 3
-num_workers_data_loader: 1
+num_workers_data_loader: 3
 optim: Adam
 print_tqdm_to_console: false
 profile_code: false
@@ -35,8 +35,8 @@ test_end_date: "30/09/1999"
 intermediate_dim_transformer: 64
 num_heads_transformer: 4
 num_layers_transformer: 8
-num_runs: 1
-use_random_noise_in_spatial_data: true
+num_runs: 8
+use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 use_mean_value_in_spatial_data: false
 only_precip: false
