@@ -1,6 +1,6 @@
 batch_size: 64
 checkpoint_path: ../TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000.pt
-create_new_files: true
+create_new_files: false
 dataset: CAMELS
 debug: false
 dropout_rate: 0.4
@@ -35,7 +35,7 @@ test_end_date: "30/09/1999"
 intermediate_dim_transformer: 64
 num_heads_transformer: 4
 num_layers_transformer: 8
-num_runs: 8
+num_runs: 1
 use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 use_mean_value_in_spatial_data: false
