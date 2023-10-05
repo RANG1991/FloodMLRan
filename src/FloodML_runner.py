@@ -1025,7 +1025,7 @@ def main():
         list_of_files_sorted_by_creation_date = \
             sorted(list_of_files, key=lambda file_name:
             int(Path(file_name).name.replace(f"{model_name_for_finding_checkpoint}_epoch_number_", "")
-                .replace(f"_{suffix_checkpoint_file_name}.pt", "")), reverse=True)[:]
+                .replace(f"_{suffix_checkpoint_file_name}_{args['mode']}.pt", "")), reverse=True)[:]
         params_to_check = {k: args[k] for k in PARAMS_NAMES_TO_CHECK}
         latest_file = None
         min_loss = None
