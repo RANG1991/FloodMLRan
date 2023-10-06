@@ -79,12 +79,17 @@ def generate_csv_from_CAMELS_static_attr_files(static_data_folder):
     df.to_csv("../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 
-def main():
+def main(ablation_study=False):
     generate_csv_from_CAMELS_static_attr_files("../data/CAMELS_US/camels_attributes_v2.0")
-    generate_csv_from_output_file(["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out",
-                                   "slurm-17832148.out", "slurm-17837642.out", "slurm-18941386.out"],
+    if ablation_study:
+        input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19185354.out", "slurm-19128144.out"]
+    else:
+        # input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out",
+        #                     "slurm-17837642.out", "slurm-18941386.out", "slurm-19158233.out"]
+        input_file_names = ["slurm-19178982.out", "slurm-19173334.out", "slurm-19170388.out"]
+    generate_csv_from_output_file(input_file_names,
                                   "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
 
 if __name__ == "__main__":
-    main()
+    main(ablation_study=False)
