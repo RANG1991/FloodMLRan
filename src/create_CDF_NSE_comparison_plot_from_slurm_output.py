@@ -161,7 +161,7 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
 
 
 def plot_NSE_CDF_graphs_all_runs(run_numbers, all_basins_tuples, params_dicts, model_name,
-                                 dict_all_runs_from_all_files):
+                                 dict_all_runs_from_all_files, dict_avg_runs_from_all_files):
     for run_number in run_numbers:
         for basin_tuple in all_basins_tuples:
             for params_dict in params_dicts:
@@ -178,6 +178,14 @@ def plot_NSE_CDF_graphs_all_runs(run_numbers, all_basins_tuples, params_dicts, m
                                     plot_color=COLORS_LIST[0],
                                     plot_opacity=0.6,
                                     line_width=0.5)
+                plot_CDF_NSE_basins(dict_avg_runs_from_all_files[(model_name, params_dict)],
+                                    params_dict,
+                                    model_name=model_name,
+                                    plot_color=COLORS_LIST[0],
+                                    plot_opacity=1,
+                                    line_width=3,
+                                    label=f"mean CDF NSE of model: {model_name.replace('_', '-')}",
+                                    ablation_study=False)
                 plt.savefig("NSE_CDF" + f"_{model_name}".replace('\n', ' '))
                 plt.close()
 
@@ -225,10 +233,11 @@ def plot_NSE_CDF_graphs_my_code(ablation_study=False):
     plot_title = f"NSE CDF of slurm files - {input_files_names_formatted}"
     plt.rcParams.update({'font.size': 22})
     if not ablation_study:
-        for model_name in enumerate(model_names):
+        for model_name in model_names:
             plot_NSE_CDF_graphs_all_runs(run_numbers=run_numbers, all_basins_tuples=all_basins_tuples,
                                          params_dicts=params_dicts, model_name=model_name,
-                                         dict_all_runs_from_all_files=dict_all_runs_from_all_files)
+                                         dict_all_runs_from_all_files=dict_all_runs_from_all_files,
+                                         dict_avg_runs_from_all_files=dict_avg_runs_from_all_files)
     plot_NSE_CDF_graphs_average(params_dicts=params_dicts, model_names=model_names,
                                 dict_avg_runs_from_all_files=dict_avg_runs_from_all_files,
                                 ablation_study=ablation_study)
@@ -273,4 +282,4 @@ def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, plot_color, plo
 
 
 if __name__ == "__main__":
-    plot_NSE_CDF_graphs_my_code(ablation_study=True)
+    plot_NSE_CDF_graphs_my_code(ablation_study=False)
