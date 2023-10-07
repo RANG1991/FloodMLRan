@@ -1,5 +1,5 @@
 batch_size: 256
-checkpoint_path:
+checkpoint_path: ../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_25_size_above_1000_test.pt
 create_new_files: false
 dataset: CAMELS
 debug: false
@@ -22,7 +22,7 @@ optim: Adam
 print_tqdm_to_console: false
 profile_code: false
 run_sweeps: false
-save_checkpoint: true
+save_checkpoint: false
 sequence_length: 180
 sequence_length_spatial: 185
 use_all_static_attr: false
@@ -35,7 +35,7 @@ test_end_date: "30/09/1999"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
-num_runs: 1
+num_runs: 8
 use_random_noise_in_spatial_data: false
 use_zeros_in_spatial_data: false
 use_mean_value_in_spatial_data: false
