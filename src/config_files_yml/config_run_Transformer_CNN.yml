@@ -1,5 +1,5 @@
 batch_size: 64
-checkpoint_path: ../checkpoints/TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000.pt
+checkpoint_path: ../checkpoints/TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000_test.pt
 create_new_files: false
 dataset: CAMELS
 debug: false
