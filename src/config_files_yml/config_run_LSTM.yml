@@ -1,5 +1,5 @@
 batch_size: 256
-checkpoint_path: ../checkpoints/LSTM_epoch_number_30_size_above_1000_test.pt
+checkpoint_path: ../checkpoints/LSTM_epoch_number_25_size_above_1000_test.pt
 create_new_files: false
 dataset: CAMELS
 debug: false
