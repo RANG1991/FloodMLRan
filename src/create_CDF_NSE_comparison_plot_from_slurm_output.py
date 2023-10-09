@@ -218,8 +218,8 @@ def plot_NSE_CDF_graphs_my_code(ablation_study=False):
     if ablation_study:
         input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19185354.out", "slurm-19128144.out"]
     else:
-        input_file_names = ["slurm-19195517.out", "slurm-19195949.out", "slurm-19195809.out"]
-        # input_file_names = ["slurm-19178982.out", "slurm-19173334.out", "slurm-19170388.out"]
+        input_file_names = ["slurm-19196745.out", "slurm-19196063.out", "slurm-19196755.out"]
+        # input_file_names = ["slurm-19195517.out", "slurm-19195949.out", "slurm-19195809.out"]
     input_file_paths = [Path(f"../slurm_output_files/slurm_files_ensemble_comparison/{file_name}").resolve() for
                         file_name in input_file_names]
     dict_all_runs_from_all_files, dict_avg_runs_from_all_files = calc_dicts_from_all_runs_and_all_files(
