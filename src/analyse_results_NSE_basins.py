@@ -249,7 +249,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     df_results = process_df_results(df_results, model_name_for_comparison, with_std=with_std)
     analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=scale_features)
     corr_df = (df_results.corr(method='pearson')["label"]).sort_values(ascending=False)
-    corr_df = corr_df.loc[(np.abs(corr_df) > 0.2)]
+    corr_df = corr_df.loc[(np.abs(corr_df) > 0.15)]
     create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison,
                                                      scale_features=scale_features)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_features=scale_features)
@@ -292,7 +292,7 @@ def create_CAMELS_dataset(model_name):
         num_basins=None,
         use_only_precip_feature=False,
         run_with_radar_data=False,
-        use_random_noise_spatial=True,
+        use_random_noise_spatial=False,
     )
     return camels_dataset
 
@@ -444,12 +444,6 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         image_activation = cv2.cvtColor(image_activation, cv2.COLOR_BGR2RGB)
         image_activation = np.float32(image_activation) / 255
         image_activation /= np.max(image_activation)
-        image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
-                                                     value=(255, 255, 255))
-        image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
-                                                          value=(255, 255, 255))
-        list_all_images.append(
-            np.hstack([cv2.cvtColor(image_basin_with_margin, cv2.COLOR_GRAY2RGB), image_activation_with_margin]))
         fig = plt.figure(figsize=(32, 16))
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
@@ -467,6 +461,12 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
                                                                cmap=plt.cm.get_cmap("jet"))
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
         plt.close()
+        image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
+                                                     value=(255, 255, 255))
+        image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
+                                                          value=(255, 255, 255))
+        list_all_images.append(
+            np.hstack([cv2.cvtColor(image_basin_with_margin, cv2.COLOR_GRAY2RGB), image_activation_with_margin]))
     list_images_row = []
     list_rows = []
     num_images_in_row = 10
@@ -486,7 +486,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
 
 
 def plot_images_side_by_side(models_names):
-    all_images_files = [file for file in glob.glob(f"./analysis_images/*.png")]
+    all_images_files = [file for file in glob.glob(f"./analysis_images/*.png") if "Hydrograph" not in file]
     all_images_pairs = {}
     first_model_name_for_comparison = models_names[0]
     for image_file_name in all_images_files:
@@ -517,19 +517,19 @@ def main():
     ]
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
-            checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000"
+            checkpoint = "checkpoints/TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000_test"
         else:
-            checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000"
+            checkpoint = "checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000_test"
         print(f"analysing {model_name_for_comparison}")
         plt.rc('font', size=14)
         plt.rcParams["figure.figsize"] = (12, 19)
         plt.rcParams["figure.autolayout"] = True
-        # plot_lon_lat_on_world_map("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-        #                           model_name_for_comparison)
-        # corr_df, df_results = analyse_features("17775252_17782018_17828539_17832148_17837642_18941386.csv",
-        #                                        "random_forest", model_name_for_comparison, with_std=False)
+        plot_lon_lat_on_world_map("19196745_19196063_19196755.csv",
+                                  model_name_for_comparison)
+        corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
+                                               "random_forest", model_name_for_comparison, with_std=True)
         create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
-        # create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
+        create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
 
     plot_images_side_by_side(model_names)
 

@@ -86,7 +86,7 @@ def main(ablation_study=False):
     else:
         # input_file_names = ["slurm-17775252.out", "slurm-17782018.out", "slurm-17828539.out", "slurm-17832148.out",
         #                     "slurm-17837642.out", "slurm-18941386.out", "slurm-19158233.out"]
-        input_file_names = ["slurm-19178982.out", "slurm-19173334.out", "slurm-19170388.out"]
+        input_file_names = ["slurm-19196745.out", "slurm-19196063.out", "slurm-19196755.out"]
     generate_csv_from_output_file(input_file_names,
                                   "../data/CAMELS_US/camels_attributes_v2.0/attributes_combined.csv")
 
