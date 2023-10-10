@@ -448,23 +448,23 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         ax1 = fig.add_subplot(121)
         ax1.axis('off')
         image_basin[(0.1 > image_basin)] = 0
-        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin,
-                                                               ax=ax1,
-                                                               title="mean daily precipitation")
+        image_basin = FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin,
+                                                                             ax=ax1,
+                                                                             title="mean daily precipitation")
         ax2 = fig.add_subplot(122)
         ax2.axis('off')
-        FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation,
-                                                               ax=ax2,
-                                                               plot_border=False,
-                                                               title="",
-                                                               multiply_by_255=False,
-                                                               cmap=plt.cm.get_cmap("jet"))
+        image_activation = FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation,
+                                                                                  ax=ax2,
+                                                                                  plot_border=False,
+                                                                                  title="",
+                                                                                  multiply_by_255=False,
+                                                                                  cmap=plt.cm.get_cmap("jet"))
         plt.savefig(f"./heat_maps/heat_map_basin_{basin_id}.png")
         plt.close()
         image_basin_with_margin = cv2.copyMakeBorder(image_basin, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
-                                                     value=(255, 255, 255))
+                                                     value=(1.0, 1.0, 1.0))
         image_activation_with_margin = cv2.copyMakeBorder(image_activation, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
-                                                          value=(255, 255, 255))
+                                                          value=(1.0, 1.0, 1.0))
         list_all_images.append(
             np.hstack([cv2.cvtColor(image_basin_with_margin, cv2.COLOR_GRAY2RGB), image_activation_with_margin]))
     list_images_row = []
@@ -475,13 +475,18 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         if i % num_images_in_row == (num_images_in_row - 1) or (i == len(list_all_images) - 1):
             list_rows.append(np.hstack(list_images_row))
             list_images_row = []
-    white_image = 255 * np.ones((50, 50, 3))
+    white_image = 1.0 * np.ones((50, 50, 3))
     white_image_with_margin = cv2.copyMakeBorder(white_image, 10, 10, 10, 10, cv2.BORDER_CONSTANT,
-                                                 value=(255, 255, 255))
+                                                 value=(1.0, 1.0, 1.0))
     num_white_images_to_fill = len(list_all_images) % num_images_in_row
     white_images_to_fill = np.hstack([white_image_with_margin for _ in range(num_white_images_to_fill * 2)])
     list_rows[-1] = np.hstack([list_rows[-1], white_images_to_fill])
-    cv2.imwrite(f"./analysis_images/heat_map_all_basins_{model_name_for_comparison}.png", np.vstack(list_rows))
+    fig = plt.figure(figsize=(32, 16))
+    ax = fig.add_subplot(111)
+    ax.axis('off')
+    ax.imshow(np.vstack(list_rows))
+    plt.savefig(f"./analysis_images/heat_map_all_basins_{model_name_for_comparison}.png")
+    plt.close()
     torch.backends.cudnn.enabled = True
 
 
@@ -517,17 +522,17 @@ def main():
     ]
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
-            checkpoint = "checkpoints/TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000_test"
+            checkpoint = "TWO_Transformer_CNN_Transformer_epoch_number_30_size_above_1000_validation"
         else:
-            checkpoint = "checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000_test"
+            checkpoint = "TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000_validation"
         print(f"analysing {model_name_for_comparison}")
         plt.rc('font', size=14)
         plt.rcParams["figure.figsize"] = (12, 19)
         plt.rcParams["figure.autolayout"] = True
-        plot_lon_lat_on_world_map("19196745_19196063_19196755.csv",
-                                  model_name_for_comparison)
-        corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
-                                               "random_forest", model_name_for_comparison, with_std=True)
+        # plot_lon_lat_on_world_map("19196745_19196063_19196755.csv",
+        #                           model_name_for_comparison)
+        # corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
+        #                                        "random_forest", model_name_for_comparison, with_std=True)
         create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
         create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
 

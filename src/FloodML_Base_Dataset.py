@@ -464,3 +464,4 @@ class FloodML_Base_Dataset(Dataset):
         cb = plt.colorbar(precip_image, norm=norm, extend='both', ax=ax, shrink=0.75, spacing='proportional')
         cb.ax.get_yaxis().labelpad = 30
         cb.ax.set_ylabel(title, rotation=270, fontsize=20)
+        return precip_image.get_array()
