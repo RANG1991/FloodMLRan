@@ -161,37 +161,40 @@ def calc_dicts_from_all_runs_and_all_files(input_file_paths):
 
 
 def plot_NSE_CDF_graphs_all_runs(run_numbers, all_basins_tuples, params_dicts, model_name,
-                                 dict_all_runs_from_all_files, dict_avg_runs_from_all_files):
-    for run_number in run_numbers:
-        for basin_tuple in all_basins_tuples:
-            for params_dict in params_dicts:
+                                 dict_all_runs_from_all_files, dict_avg_runs_from_all_files, stage="validation"):
+    for params_dict in params_dicts:
+        figure(figsize=(14, 12))
+        plt.grid()
+        for run_number in run_numbers:
+            for basin_tuple in all_basins_tuples:
                 if (model_name, run_number, basin_tuple, params_dict) not in dict_all_runs_from_all_files.keys():
                     continue
                 print(f"number of basins of model with name: {model_name} "
                       f"and run number: {run_number} is: {len(basin_tuple)}")
                 if len(basin_tuple) != 135:
                     continue
-                figure(figsize=(14, 12))
-                plt.grid()
                 plot_CDF_NSE_basins(dict_all_runs_from_all_files[(model_name, run_number, basin_tuple, params_dict)],
                                     params_dict,
                                     model_name=model_name,
                                     plot_color=COLORS_LIST[0],
                                     plot_opacity=0.6,
                                     line_width=0.5)
-                plot_CDF_NSE_basins(dict_avg_runs_from_all_files[(model_name, params_dict)],
-                                    params_dict,
-                                    model_name=model_name,
-                                    plot_color=COLORS_LIST[0],
-                                    plot_opacity=1,
-                                    line_width=3,
-                                    label=f"mean CDF NSE of model: {model_name.replace('_', '-')}",
-                                    ablation_study=False)
-                plt.savefig("NSE_CDF" + f"_{model_name}".replace('\n', ' '))
-                plt.close()
+        if (model_name, params_dict) not in dict_avg_runs_from_all_files.keys():
+            continue
+        plot_CDF_NSE_basins(dict_avg_runs_from_all_files[(model_name, params_dict)],
+                            params_dict,
+                            model_name=model_name,
+                            plot_color=COLORS_LIST[0],
+                            plot_opacity=1,
+                            line_width=3,
+                            label=f"mean CDF NSE of model: {model_name.replace('_', '-')}",
+                            ablation_study=False)
+        plt.savefig("NSE_CDF" + f"_{model_name}_{stage}".replace('\n', ' '))
+        plt.close()
 
 
-def plot_NSE_CDF_graphs_average(params_dicts, model_names, dict_avg_runs_from_all_files, ablation_study=False):
+def plot_NSE_CDF_graphs_average(params_dicts, model_names, dict_avg_runs_from_all_files, ablation_study=False,
+                                stage="validation"):
     figure(figsize=(14, 12))
     for ind, model_name in enumerate(model_names):
         for params_dict in params_dicts:
@@ -210,11 +213,11 @@ def plot_NSE_CDF_graphs_average(params_dicts, model_names, dict_avg_runs_from_al
     if ablation_study:
         plt.savefig("NSE_CDF_ablation_study")
     else:
-        plt.savefig("NSE_CDF" + f"_{'_'.join(model_names)}".replace('\n', ' '))
+        plt.savefig("NSE_CDF" + f"_{'_'.join(model_names)}_{stage}".replace('\n', ' '))
     plt.close()
 
 
-def plot_NSE_CDF_graphs_my_code(ablation_study=False):
+def plot_NSE_CDF_graphs_my_code(ablation_study=False, stage="validation"):
     if ablation_study:
         input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19185354.out", "slurm-19128144.out"]
     else:
@@ -237,10 +240,10 @@ def plot_NSE_CDF_graphs_my_code(ablation_study=False):
             plot_NSE_CDF_graphs_all_runs(run_numbers=run_numbers, all_basins_tuples=all_basins_tuples,
                                          params_dicts=params_dicts, model_name=model_name,
                                          dict_all_runs_from_all_files=dict_all_runs_from_all_files,
-                                         dict_avg_runs_from_all_files=dict_avg_runs_from_all_files)
+                                         dict_avg_runs_from_all_files=dict_avg_runs_from_all_files, stage=stage)
     plot_NSE_CDF_graphs_average(params_dicts=params_dicts, model_names=model_names,
                                 dict_avg_runs_from_all_files=dict_avg_runs_from_all_files,
-                                ablation_study=ablation_study)
+                                ablation_study=ablation_study, stage=stage)
 
 
 def plot_NSE_CDF_graph_frederik_code():
@@ -277,9 +280,10 @@ def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, plot_color, plo
     if label != "":
         plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width,
                  label=label)
+        plt.legend()
     else:
         plt.plot(base[:-1], cumulative, color=plot_color, alpha=plot_opacity, linewidth=line_width)
 
 
 if __name__ == "__main__":
-    plot_NSE_CDF_graphs_my_code(ablation_study=False)
+    plot_NSE_CDF_graphs_my_code(ablation_study=False, stage="test")
