@@ -710,7 +710,11 @@ class FloodML_Runner:
                     curr_datetime_str = curr_datetime.strftime("%d-%m-%Y_%H:%M:%S")
                     suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(self.num_basins,
                                                                                   self.limit_size_above_1000,
-                                                                                  self.use_large_size)
+                                                                                  self.use_large_size,
+                                                                                  use_random_noise_spatial=self.use_random_noise_spatial,
+                                                                                  use_only_precip_feature=self.use_only_precip_feature,
+                                                                                  use_zeros_spatial=self.use_zeros_spatial,
+                                                                                  use_mean_spatial=self.use_mean_spatial)
                     torch.save({
                         'epoch': (epoch + 1),
                         'model_state_dict': model_state_dict,
@@ -960,10 +964,20 @@ def read_arguments_from_yaml():
     return args
 
 
-def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000, use_large_size):
+def get_checkpoint_file_name_suffix(num_basins, limit_size_above_1000, use_large_size,
+                                    use_random_noise_spatial, use_only_precip_feature,
+                                    use_zeros_spatial, use_mean_spatial):
     suffix = ""
     if use_large_size:
         suffix = "_large"
+    if use_random_noise_spatial:
+        suffix += "_random_noise"
+    if use_only_precip_feature:
+        suffix += "_only_precip"
+    if use_zeros_spatial:
+        suffix += "zeros"
+    if use_mean_spatial:
+        suffix += "mean_value"
     if num_basins is not None:
         return f"{str(num_basins)}_basins{suffix}"
     if limit_size_above_1000:
@@ -1014,8 +1028,15 @@ def main():
             model_name_for_finding_checkpoint = "TWO_LSTM_CNN_LSTM"
         elif model_name_for_finding_checkpoint == "CNN_Transformer":
             model_name_for_finding_checkpoint = "TWO_Transformer_CNN_Transformer"
-        suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"], args["limit_size_above_1000"],
-                                                                      args["use_large_size"])
+        suffix_checkpoint_file_name = get_checkpoint_file_name_suffix(args["num_basins"],
+                                                                      args["limit_size_above_1000"],
+                                                                      args["use_large_size"],
+                                                                      use_only_precip_feature=args["only_precip"],
+                                                                      use_mean_spatial=[
+                                                                          "use_mean_value_in_spatial_data"],
+                                                                      use_zeros_spatial=["use_zeros_in_spatial_data"],
+                                                                      use_random_noise_spatial=[
+                                                                          "use_random_noise_in_spatial_data"])
         list_of_files = glob.glob(
             f'../checkpoints/{model_name_for_finding_checkpoint}_epoch_number'
             f'_*_{suffix_checkpoint_file_name}_{args["mode"]}.pt')
@@ -1040,6 +1061,18 @@ def main():
                         latest_file = file_name
         print(f"loading checkpoint from file: {latest_file}")
         args["checkpoint_path"] = latest_file
+
+    args["use_zeros_in_spatial_data"] = False
+    args["use_random_noise_in_spatial_data"] = False
+    args["use_mean_value_in_spatial_data"] = False
+    if args["spatial_data"]:
+        if args["spatial_data"] == "random_noise":
+            args["use_random_noise_in_spatial_data"] = True
+        if args["spatial_data"] == "zeros":
+            args["use_zeros_in_spatial_data"] = True
+        if args["spatial_data"] == "mean_value":
+            args["use_mean_value_in_spatial_data"] = True
+
     params_dict_from_args = {k: args[k] for k in PARAMS_NAMES_TO_CHECK}
     if args["dataset"] == "CAMELS":
         runner = FloodML_Runner(
