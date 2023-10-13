@@ -10,7 +10,7 @@ learning_rates:
   20: 5e-04
   30: 5e-04
 limit_size_above_1000: true
-load_checkpoint: true
+load_checkpoint: false
 model: LSTM
 mode: test
 num_basins:
@@ -35,7 +35,7 @@ test_end_date: "30/09/1999"
 intermediate_dim_transformer: 512
 num_heads_transformer: 6
 num_layers_transformer: 8
-num_runs: 8
+num_runs: 1
 # [ "random_noise", "zeros", "mean_value" ]
 spatial_data:
 only_precip: true
