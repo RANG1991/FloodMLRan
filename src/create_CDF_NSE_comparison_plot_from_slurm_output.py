@@ -219,7 +219,7 @@ def plot_NSE_CDF_graphs_average(params_dicts, model_names, dict_avg_runs_from_al
 
 def plot_NSE_CDF_graphs_my_code(ablation_study=False, stage="validation"):
     if ablation_study:
-        input_file_names = ["slurm-19089603.out", "slurm-19100407.out", "slurm-19185354.out", "slurm-19128144.out"]
+        input_file_names = ["slurm-19197541.out", "slurm-19197595.out", "slurm-19197481.out", "slurm-19128144.out"]
     else:
         input_file_names = ["slurm-19196745.out", "slurm-19196063.out", "slurm-19196755.out"]
         # input_file_names = ["slurm-19195517.out", "slurm-19195949.out", "slurm-19195809.out"]
@@ -286,4 +286,4 @@ def plot_CDF_NSE_basins(nse_losses_np, params_tuple, model_name, plot_color, plo
 
 
 if __name__ == "__main__":
-    plot_NSE_CDF_graphs_my_code(ablation_study=False, stage="test")
+    plot_NSE_CDF_graphs_my_code(ablation_study=True, stage="test")

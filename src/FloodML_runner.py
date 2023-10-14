@@ -1068,10 +1068,12 @@ def main():
     if args["spatial_data"]:
         if args["spatial_data"] == "random_noise":
             args["use_random_noise_in_spatial_data"] = True
-        if args["spatial_data"] == "zeros":
+        elif args["spatial_data"] == "zeros":
             args["use_zeros_in_spatial_data"] = True
-        if args["spatial_data"] == "mean_value":
+        elif args["spatial_data"] == "mean_value":
             args["use_mean_value_in_spatial_data"] = True
+        else:
+            raise Exception(f"Wrong selection of spatial data value in yaml: {args['spatial_data']}")
 
     params_dict_from_args = {k: args[k] for k in PARAMS_NAMES_TO_CHECK}
     if args["dataset"] == "CAMELS":
