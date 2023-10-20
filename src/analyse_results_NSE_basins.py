@@ -249,7 +249,7 @@ def analyse_features(csv_results_file_with_static_attr, clf_name, model_name_for
     df_results = process_df_results(df_results, model_name_for_comparison, with_std=with_std)
     analyse_results_by_decision_tree(df_results, model_name_for_comparison, scale_features=scale_features)
     corr_df = (df_results.corr(method='pearson')["label"]).sort_values(ascending=False)
-    corr_df = corr_df.loc[(np.abs(corr_df) > 0.15)]
+    corr_df = corr_df.loc[(np.abs(corr_df) > 0.2)]
     create_accumulated_local_effects_and_shap_values(df_results, clf, model_name_for_comparison,
                                                      scale_features=scale_features)
     importance = get_feature_importance_from_trained_clf(clf, clf_name, df_results, scale_features=scale_features)
@@ -518,7 +518,7 @@ def plot_images_side_by_side(models_names):
 def main():
     model_names = [
         "CNN_LSTM",
-        # "CNN_Transformer"
+        "CNN_Transformer"
     ]
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
@@ -529,12 +529,12 @@ def main():
         plt.rc('font', size=14)
         plt.rcParams["figure.figsize"] = (12, 19)
         plt.rcParams["figure.autolayout"] = True
-        # plot_lon_lat_on_world_map("19196745_19196063_19196755.csv",
-        #                           model_name_for_comparison)
-        # corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
-        #                                        "random_forest", model_name_for_comparison, with_std=True)
-        create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
-        create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
+        plot_lon_lat_on_world_map("19196745_19196063_19196755.csv",
+                                  model_name_for_comparison)
+        corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
+                                               "random_forest", model_name_for_comparison, with_std=False)
+        # create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
+        # create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
 
     plot_images_side_by_side(model_names)
 
