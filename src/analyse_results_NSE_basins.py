@@ -283,7 +283,7 @@ def create_CAMELS_dataset(model_name):
         stage="train",
         model_name=model_name,
         sequence_length_spatial=185,
-        create_new_files=False,
+        create_new_files=True,
         all_stations_ids=sorted(open("../data/spatial_basins_list.txt").read().splitlines()),
         sequence_length=180,
         discharge_str=CAMELS_dataset.DISCHARGE_STR,
@@ -450,7 +450,7 @@ def create_class_activation_maps_explainable(checkpoint_path, model_name_for_com
         image_basin[(0.1 > image_basin)] = 0
         image_basin = FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_basin,
                                                                              ax=ax1,
-                                                                             title="mean daily precipitation")
+                                                                             title="mean of precipitation over time (mm)")
         ax2 = fig.add_subplot(122)
         ax2.axis('off')
         image_activation = FloodML_Base_Dataset.create_color_bar_for_precip_image(precip_image=image_activation,
@@ -518,7 +518,7 @@ def plot_images_side_by_side(models_names):
 def main():
     model_names = [
         "CNN_LSTM",
-        "CNN_Transformer"
+        # "CNN_Transformer"
     ]
     for model_name_for_comparison in model_names:
         if model_name_for_comparison == "CNN_Transformer":
@@ -531,9 +531,9 @@ def main():
         plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("19196745_19196063_19196755.csv",
                                   model_name_for_comparison)
-        corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
-                                               "random_forest", model_name_for_comparison, with_std=False)
-        # create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
+        # corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
+        #                                        "random_forest", model_name_for_comparison, with_std=False)
+        create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
         # create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
 
     plot_images_side_by_side(model_names)
