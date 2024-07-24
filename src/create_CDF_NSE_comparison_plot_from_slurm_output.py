@@ -206,7 +206,7 @@ def plot_NSE_CDF_graphs_average(params_dicts, model_names, dict_avg_runs_from_al
                                 plot_color=COLORS_LIST[ind],
                                 plot_opacity=1,
                                 line_width=3,
-                                label=f"mean CDF NSE of model: {model_name.replace('_', '-')}",
+                                # label=f"mean CDF NSE of model: {model_name.replace('_', '-')}",
                                 ablation_study=ablation_study)
     plt.legend(loc='upper left')
     plt.grid()

@@ -531,9 +531,9 @@ def main():
         plt.rcParams["figure.autolayout"] = True
         plot_lon_lat_on_world_map("19196745_19196063_19196755.csv",
                                   model_name_for_comparison)
-        # corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
-        #                                        "random_forest", model_name_for_comparison, with_std=False)
-        create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
+        corr_df, df_results = analyse_features("19196745_19196063_19196755.csv",
+                                               "random_forest", model_name_for_comparison, with_std=False)
+        # create_class_activation_maps_explainable(f"../{checkpoint}.pt", model_name_for_comparison)
         # create_integrated_gradients(f"../{checkpoint}.pt", model_name_for_comparison, df_results)
 
     plot_images_side_by_side(model_names)
