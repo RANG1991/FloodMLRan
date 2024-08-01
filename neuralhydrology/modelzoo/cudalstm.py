@@ -65,6 +65,8 @@ class CudaLSTM(BaseModel):
         """
         # possibly pass dynamic and static inputs through embedding layers, then concatenate them
         x_d = self.embedding_net(data)
+        # print(x_d.permute((1, 0, 2))[0])
+
         lstm_output, (h_n, c_n) = self.lstm(input=x_d)
 
         # reshape to [batch_size, seq, n_hiddens]
@@ -74,5 +76,4 @@ class CudaLSTM(BaseModel):
 
         pred = {'lstm_output': lstm_output, 'h_n': h_n, 'c_n': c_n}
         pred.update(self.head(self.dropout(lstm_output)))
-
         return pred

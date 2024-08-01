@@ -1,24 +1,26 @@
 import torch
-from FloodML_Conv_LSTM import FloodML_Conv_LSTM
+from FloodML_Conv_LSTM import CONV_LSTM
 
 
 class TWO_LSTM_CONV_LSTM(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, dropout, in_channels_cnn,
-                 sequence_length_conv_lstm, image_width, image_height):
+                 sequence_length_conv_lstm, image_width, image_height,
+                 use_only_precip_feature=False):
         super(TWO_LSTM_CONV_LSTM, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.image_width = image_width
         self.image_height = image_height
         self.in_cnn_channels = in_channels_cnn
+        self.use_only_precip_feature = use_only_precip_feature
         self.dropout = torch.nn.Dropout(dropout)
         self.lstm = torch.nn.LSTM(
             input_size=self.input_dim,
             hidden_size=self.hidden_dim,
             batch_first=True
         )
-        self.conv_lstm = FloodML_Conv_LSTM(self.in_cnn_channels, sequence_length_conv_lstm, self.image_width,
-                                           self.image_height)
+        self.conv_lstm = CONV_LSTM(self.in_cnn_channels, sequence_length_conv_lstm, self.image_width,
+                                   self.image_height)
         self.sequence_length_conv_lstm = sequence_length_conv_lstm
         self.linear_states = torch.nn.Linear(self.hidden_dim,
                                              self.in_cnn_channels * self.image_width * self.image_height)

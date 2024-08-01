@@ -61,7 +61,7 @@ def create_results_ensemble(run_dirs: List[Path],
     else:
         best_runs = [_get_results_file(run_dir, period, epoch) for run_dir in run_dirs]
 
-    config = Config(run_dirs[0] / 'config.yml')
+    config = Config(run_dirs[0] / 'config_run_LSTM.yml')
     if metrics is not None:
         # override metrics from config
         config.metrics = metrics
@@ -136,9 +136,9 @@ def _create_ensemble(results_files: List[Path], frequencies: List[str], config: 
                                                          resolution=freq)
                 except AllNaNError as err:
                     msg = f'Basin {basin} ' \
-                        + (f'{target_var} ' if len(target_vars) > 1 else '') \
-                        + (f'{freq} ' if len(frequencies) > 1 else '') \
-                        + str(err)
+                          + (f'{target_var} ' if len(target_vars) > 1 else '') \
+                          + (f'{freq} ' if len(frequencies) > 1 else '') \
+                          + str(err)
                     print(msg)
                     ensemble_metrics = {metric: np.nan for metric in metrics}
 
@@ -231,7 +231,7 @@ def _main():
         print(f"Stored metrics of ensemble run to {file_name}")
     except RuntimeError as err:
         # in case no metrics were computed
-        pass                                               
+        pass
 
     file_name = output_dir / f"{args['period']}_ensemble_results.p"
     pickle.dump(ensemble_results, open(file_name, 'wb'))

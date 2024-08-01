@@ -58,7 +58,7 @@ class Config(object):
         """
         return self._cfg
 
-    def dump_config(self, folder: Path, filename: str = 'config.yml'):
+    def dump_config(self, folder: Path, filename: str = 'config_run_LSTM.yml'):
         """Save the run configuration as a .yml file to disk.
 
         Parameters
@@ -66,7 +66,7 @@ class Config(object):
         folder : Path
             Folder in which the configuration will be stored.
         filename : str, optional
-            Name of the file that will be stored. Default: 'config.yml'.
+            Name of the file that will be stored. Default: 'config_run_LSTM.yml'.
 
         Raises
         ------

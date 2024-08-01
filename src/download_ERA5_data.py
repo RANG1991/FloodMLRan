@@ -65,7 +65,7 @@ def download_ERA5_one_year(client, year, month):
 
 def main():
     c = cdsapi.Client()
-    for year in range(1981, 2023):
+    for year in range(2004, 2020):
         for month in ['01', '02', '03', '04',
                       '05', '06', '07', '08',
                       '09', '10', '11', '12']:

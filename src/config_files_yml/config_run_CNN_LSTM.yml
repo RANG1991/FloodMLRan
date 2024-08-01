@@ -1,0 +1,44 @@
+batch_size: 256
+checkpoint_path: ../checkpoints/TWO_LSTM_CNN_LSTM_epoch_number_30_size_above_1000_test.pt
+create_new_files: true
+dataset: CAMELS
+debug: false
+dropout_rate: 0.4
+learning_rates:
+  0: 5e-04
+  10: 5e-04
+  20: 5e-04
+  30: 5e-04
+limit_size_above_1000: true
+load_checkpoint: false
+model: CNN_LSTM
+mode: test
+num_basins:
+num_epochs: 30
+num_hidden_units: 256
+num_processes_ddp: 3
+num_workers_data_loader: 3
+optim: Adam
+print_tqdm_to_console: false
+profile_code: false
+run_sweeps: false
+save_checkpoint: false
+sequence_length: 180
+sequence_length_spatial: 185
+use_all_static_attr: false
+train_start_date: '01/10/1999'
+train_end_date: '30/09/2008'
+validation_start_date: "01/10/1988"
+validation_end_date: "30/09/1993"
+test_start_date: "01/10/1993"
+test_end_date: "30/09/1999"
+intermediate_dim_transformer: 512
+num_heads_transformer: 6
+num_layers_transformer: 8
+num_runs: 1
+# [ "random_noise", "zeros", "mean_value" ]
+spatial_data:
+only_precip: true
+run_with_radar_data: false
+use_super_resolution: false
+use_large_size: false

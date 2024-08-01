@@ -15,39 +15,65 @@ class CNN(nn.Module):
     only generates a single number!!! (single scalar)
     """
 
-    def __init__(self, num_channels, output_size_cnn, image_input_size):
+    def __init__(self, num_channels, output_size_cnn, image_input_size, large_image_size=False):
         super(CNN, self).__init__()
         self.initial_num_channels = num_channels
         self.initial_input_size = image_input_size
-        self.channels_out_conv_1 = self.initial_num_channels * 2
-        self.channels_out_conv_2 = self.initial_num_channels * 4
-        self.filter_size_conv = 3
-        self.stride_size_conv = 1
-        self.filter_size_pool = 2
+        self.channels_out_conv_1 = 16
+        self.channels_out_conv_2 = 32
+        self.channels_out_conv_3 = 64
+        self.channels_out_conv_4 = 128
+        if large_image_size:
+            self.filter_size_conv = 5
+            self.stride_size_conv = 1
+            self.filter_size_pool = 4
+        else:
+            self.filter_size_conv = 2
+            self.stride_size_conv = 1
+            self.filter_size_pool = 2
         self.stride_size_pool = self.filter_size_pool
-        self.conv_layers = nn.ModuleList([
+        self.cnn_layers = nn.ModuleList([
             torch.nn.Conv2d(in_channels=self.initial_num_channels, out_channels=self.channels_out_conv_1,
-                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid",
+                            stride=self.stride_size_conv),
             torch.nn.BatchNorm2d(self.channels_out_conv_1),
             nn.ReLU(),
             torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
-            # torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+            torch.nn.Conv2d(in_channels=self.channels_out_conv_1, out_channels=self.channels_out_conv_2,
+                            kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid",
+                            stride=self.stride_size_conv),
+            torch.nn.BatchNorm2d(self.channels_out_conv_2),
+            nn.ReLU(),
+            torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            # torch.nn.Conv2d(in_channels=self.channels_out_conv_2, out_channels=self.channels_out_conv_3,
             #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
-            # torch.nn.BatchNorm2d(self.channels_out_conv_2),
+            # torch.nn.BatchNorm2d(self.channels_out_conv_3),
             # nn.ReLU(),
-            # torch.nn.MaxPool2d(self.filter_size_pool, stride=self.stride_size_pool)
+            # torch.nn.AvgPool2d(self.filter_size_pool, stride=self.stride_size_pool),
+            # torch.nn.Conv2d(in_channels=self.channels_out_conv_3, out_channels=self.channels_out_conv_4,
+            #                 kernel_size=(self.filter_size_conv, self.filter_size_conv), padding="valid"),
+            # torch.nn.BatchNorm2d(self.channels_out_conv_4),
+            # nn.ReLU()
         ])
-        size_for_fc = self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels)
-        self.size_for_fc = int(size_for_fc)
+        self.size_for_fc = int(self.calc_dims_after_all_conv_op(self.initial_input_size, self.initial_num_channels))
         self.fc = nn.Linear(self.size_for_fc, output_size_cnn)
-        self.dropout = torch.nn.Dropout(0.4)
+        self.relu_for_fc = nn.ReLU()
+        self.dropout = nn.Dropout(p=0.4)
 
     def forward(self, x):
-        for layer in self.conv_layers:
+        for layer in self.cnn_layers:
             x = layer(x)
-        x = x.view(-1, self.size_for_fc)
-        x = self.fc(self.dropout(x))
-        return x
+        x = self.dropout(x)
+        # self.plot_as_image(x)
+        x_after_cnn = x.view(-1, self.size_for_fc)
+        x_after_fc = self.fc(x_after_cnn)
+        return x_after_fc
+
+    @staticmethod
+    def plot_as_image(x):
+        import matplotlib.pyplot as plt
+        x_to_plot = x.permute((0, 2, 3, 1)).sum(axis=0).sum(axis=-1).squeeze().cpu().detach().numpy()
+        plt.imsave("check_x_after_cnn.png", x_to_plot)
 
     @staticmethod
     def calc_dims_after_filter(input_image_shape, filter_size, stride):
@@ -68,7 +94,7 @@ class CNN(nn.Module):
     def calc_dims_after_all_conv_op(self, input_image_shape: [int], num_in_channels):
         image_dims = (input_image_shape[-2], input_image_shape[-1])
         num_out_channels = num_in_channels
-        for op in self.conv_layers:
+        for op in self.cnn_layers:
             if "conv" in str(op).lower():
                 if op.padding == "valid":
                     image_dims = CNN.calc_dims_after_filter(image_dims,
@@ -84,32 +110,36 @@ class CNN(nn.Module):
 
 class CNN_LSTM(nn.Module):
 
-    def __init__(self, lat, lon,
+    def __init__(self,
+                 image_width,
+                 image_height,
                  hidden_size: int,
                  num_channels: int,
                  dropout_rate: float = 0.0,
                  num_layers: int = 1,
                  num_attributes=0,
-                 image_input_size=(int,)):
+                 image_input_size=(int,),
+                 large_image_size=False):
         """
         Initialize model
        :param hidden_size: Number of hidden units/LSTM cells
        :param dropout_rate: Dropout rate of the last fully connected layer. Default 0.0
         """
         super(CNN_LSTM, self).__init__()
-        self.lat = lat
-        self.lon = lon
+        self.image_width = image_width
+        self.image_height = image_height
         self.hidden_size = hidden_size
         self.dropout_rate = dropout_rate
         self.num_channels = num_channels
-        input_size = 32
+        input_size = 4
         self.cnn = CNN(num_channels=num_channels, output_size_cnn=input_size,
-                       image_input_size=image_input_size)
+                       image_input_size=image_input_size, large_image_size=large_image_size)
         self.lstm = nn.LSTM(input_size=input_size + num_attributes, hidden_size=self.hidden_size,
                             num_layers=num_layers, bias=True,
                             batch_first=True)
         self.dropout = nn.Dropout(p=self.dropout_rate)
         self.fc = nn.Linear(in_features=self.hidden_size, out_features=1)
+        self.number_of_images_counter = 0
 
     def forward(self, x_non_spatial, x_spatial, h_n, c_n) -> torch.Tensor:
         """
@@ -119,15 +149,10 @@ class CNN_LSTM(nn.Module):
         return: Tensor containing the network predictions
         """
         batch_size, time_steps, _ = x_non_spatial.size()
-        c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.lat, self.lon)
-        # CNN part
+        c_in = x_spatial.reshape(batch_size * time_steps, self.num_channels, self.image_width, self.image_height)
         c_out = self.cnn(c_in)
-        # CNN output should be in the size of (input size - attributes_size)
         cnn_out = c_out.reshape(batch_size, time_steps, -1)
-        # getting the "non-image" part of the input (last 4 attributes)
-        # (removing the "image" part)
         r_in = torch.cat([cnn_out, x_non_spatial], dim=2)
-        output, (h_n, c_n) = self.lstm(r_in, (h_n, c_n))
-        # perform prediction only at the end of the input sequence
+        output, (_, _) = self.lstm(r_in, (h_n, c_n))
         pred = self.fc(self.dropout(output))
         return pred[:, -1, :]

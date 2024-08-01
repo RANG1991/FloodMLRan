@@ -1,4 +1,4 @@
-import FloodML_train_test
+import FloodML_runner
 import ERA5_dataset
 import torch
 import random
@@ -25,7 +25,6 @@ def test_FloodML():
         test_start_date="01/10/1989",
         test_end_date="30/09/1999",
         stage="train",
-        specific_model_type="CONV",
         all_stations_ids=all_station_ids,
         sequence_length=270,
         discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
@@ -48,7 +47,6 @@ def test_FloodML():
         all_stations_ids=all_station_ids,
         sequence_length=270,
         discharge_str=ERA5_dataset.DISCHARGE_STR_CARAVAN,
-        specific_model_type="CONV",
         use_Caravan_dataset=True,
         y_std=training_data.y_std,
         y_mean=training_data.y_mean,
@@ -80,8 +78,7 @@ def test_FloodML():
                                              num_workers_data_loader=0,
                                              profile_code=False,
                                              sequence_length_spatial=7,
-                                             print_tqdm_to_console=False,
-                                             specific_model_type="CONV")
+                                             print_tqdm_to_console=False)
     # nse_saved_list = []
     # while not nse_queue_single_pass.empty():
     #     nse_saved_list.append(nse_queue_single_pass.get())

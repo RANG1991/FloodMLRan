@@ -5,8 +5,6 @@
 #SBATCH -n 3
 #SBATCH --time=50:0:0
 #SBATCH --mem=40G
-#SBATCH --gres gpu
-#SBATCH -J jupyter
 
 # Uncomment and enter path of code
 cd /sci/labs/efratmorin/ranga/FloodMLRan/src/
@@ -17,4 +15,4 @@ virtual_env=/sci/labs/efratmorin/ranga/PythonEnvFloodML/bin/activate
 source $virtual_env
 # module load cuda/11.2
 
-python ./convert_era_5_to_seperate_basins.py
+python ./preprocess_ERA5_data_non_spatial_and_spatial.py

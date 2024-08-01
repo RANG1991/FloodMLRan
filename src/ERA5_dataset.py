@@ -1,32 +1,24 @@
-from torch.utils.data import Dataset
-from torch.utils.data.dataset import T_co
 import numpy as np
 import pandas as pd
 import torch
 from pathlib import Path
-from glob import glob
 from datetime import datetime
 import matplotlib
 import os
-import math
 from tqdm import tqdm
 import sys
 import psutil
 import gc
-import pickle
-from os.path import isfile, join
 import codecs
 import json
-import cv2
+from FloodML_Base_Dataset import FloodML_Base_Dataset
 
 matplotlib.use("AGG")
 
 import netCDF4 as nc
 import matplotlib.pyplot as plt
-import multiprocessing
-from multiprocessing import Pool
-import csv
 import xarray as xr
+import cv2
 
 ATTRIBUTES_TO_TEXT_DESC = {
     "p_mean": "Mean daily precipitation",
@@ -91,33 +83,25 @@ DYNAMIC_ATTRIBUTES_NAMES_ERA5 = ["precip"]
 
 DISCHARGE_STR_ERA5 = "flow"
 
-DYNAMIC_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
+DYNAMIC_DATA_FOLDER_SPATIAL = "../data/ERA5/ERA_5_all_data"
 
 DISCHARGE_DATA_FOLDER_ERA5 = "../data/ERA5/ERA_5_all_data"
 
 STATIC_DATA_FOLDER = "../data/ERA5/Caravan/attributes"
 
-FOLDER_WITH_BASINS_PICKLES = "../data/ERA5/pickled_basins_data"
-
-JSON_FILE_MEAN_STD_COUNT = f"{FOLDER_WITH_BASINS_PICKLES}/mean_std_count_of_data.json"
-
-X_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_mean_dict.pkl"
-
-X_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/x_std_dict.pkl"
-
-Y_MEAN_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_mean_dict.pkl"
-
-Y_STD_DICT_FILE = f"{FOLDER_WITH_BASINS_PICKLES}/y_std_dict.pkl"
+MAIN_FOLDER = "../data/ERA5/"
 
 RESIZE_WIDTH = 10
 RESIZE_HEIGHT = 10
 
 
-class Dataset_ERA5(Dataset):
+class Dataset_ERA5(FloodML_Base_Dataset):
     def __init__(
             self,
+            main_folder,
             dynamic_data_folder,
             static_data_folder,
+            dynamic_data_folder_spatial,
             dynamic_attributes_names,
             discharge_str,
             train_start_date,
@@ -129,7 +113,7 @@ class Dataset_ERA5(Dataset):
             stage,
             all_stations_ids,
             sequence_length_spatial,
-            specific_model_type="",
+            model_name="",
             static_attributes_names=[],
             sequence_length=270,
             x_means=None,
@@ -138,229 +122,40 @@ class Dataset_ERA5(Dataset):
             y_std=None,
             use_Caravan_dataset=True,
             create_new_files=False,
-            limit_size_above_1000=False
+            limit_size_above_1000=False,
+            use_all_static_attr=False,
+            num_basins=None,
     ):
-        self.suffix_pickle_file = "" if specific_model_type.lower() == "lstm" else "_spatial"
-        self.x_mean_dict = self.read_pickle_if_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}")
-        self.x_std_dict = self.read_pickle_if_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}")
-        self.x_means = x_means if x_means is not None else None
-        self.x_stds = x_stds if x_stds is not None else None
-        self.y_mean_dict = self.read_pickle_if_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}")
-        self.y_std_dict = self.read_pickle_if_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}")
-        self.y_mean = y_mean if y_mean is not None else None
-        self.y_std = y_std if y_std is not None else None
-        self.sequence_length = sequence_length
-        self.dynamic_data_folder = dynamic_data_folder
-        self.static_data_folder = static_data_folder
-        self.list_static_attributes_names = sorted(static_attributes_names)
-        self.list_dynamic_attributes_names = dynamic_attributes_names
-        self.discharge_str = discharge_str
-        self.train_start_date = train_start_date
-        self.train_end_date = train_end_date
-        self.validation_start_date = validation_start_date
-        self.validation_end_date = validation_end_date
-        self.test_start_date = test_start_date
-        self.test_end_date = test_end_date
-        self.stage = stage
-        (self.df_attr,
-         self.list_stations_static,
-         self.countries_abbreviations_stations_dict
-         ) = self.read_static_attributes_all_countries(["au", "br", "ca", "cl", "gb", "lamah", "us"],
-                                                       limit_size_above_1000=limit_size_above_1000)
-        # self.all_station_ids = sorted(list(set(all_stations_ids).intersection(set(self.list_stations_static))))
-        self.all_station_ids = self.list_stations_static
+        self.countries_abbreviations_stations_dict = {}
+        self.countries_abbreviations = ["us"]
         self.use_Caravan_dataset = use_Caravan_dataset
-        self.specific_model_type = specific_model_type
-        self.sequence_length_spatial = sequence_length_spatial
-        max_width, max_height, basin_id_with_maximum_width, basin_id_with_maximum_height = self.get_maximum_width_and_length_of_basin(
-            "../data/ERA5/ERA_5_all_data", self.all_station_ids
-        )
-        if max_height <= 0 or max_width <= 0:
-            raise Exception("max length or max width are not greater than 0")
-        self.max_width = max_width
-        self.max_height = max_height
-        self.max_dim = max(self.max_height, self.max_width)
-        (dict_station_id_to_data,
-         x_means,
-         x_stds,
-         y_mean,
-         y_std,
-         x_spatial_mean,
-         x_spatial_std
-         ) = self.read_all_dynamic_data_files(all_stations_ids=self.all_station_ids,
-                                              specific_model_type=specific_model_type,
-                                              max_width=self.max_width, max_height=self.max_height,
-                                              create_new_files=create_new_files)
-
-        self.save_pickle_if_not_exists(f"{X_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.x_mean_dict, force=True)
-        self.save_pickle_if_not_exists(f"{X_STD_DICT_FILE}{self.suffix_pickle_file}", self.x_std_dict, force=True)
-        self.save_pickle_if_not_exists(f"{Y_MEAN_DICT_FILE}{self.suffix_pickle_file}", self.y_mean_dict, force=True)
-        self.save_pickle_if_not_exists(f"{Y_STD_DICT_FILE}{self.suffix_pickle_file}", self.y_std_dict, force=True)
-
-        self.y_mean = y_mean if stage == "train" else self.y_mean
-        self.y_std = y_std if stage == "train" else self.y_std
-        self.x_means = x_means if stage == "train" else self.x_means
-        self.x_stds = x_stds if stage == "train" else self.x_stds
-
-        x_data_mean_dynamic = self.x_means[:(len(self.list_dynamic_attributes_names))]
-        x_data_std_dynamic = self.x_stds[:(len(self.list_dynamic_attributes_names))]
-
-        x_data_mean_static = self.df_attr[self.list_static_attributes_names].mean().to_numpy()
-        x_data_std_static = self.df_attr[self.list_static_attributes_names].std().to_numpy()
-
-        if create_new_files or len(dict_station_id_to_data) > 0:
-            for key in dict_station_id_to_data.keys():
-                current_x_data = dict_station_id_to_data[key]["x_data"]
-                current_y_data = dict_station_id_to_data[key]["y_data"]
-
-                indices_features_dynamic_non_spatial = range(0, (len(self.list_dynamic_attributes_names)))
-
-                current_x_data[:, indices_features_dynamic_non_spatial] = \
-                    (current_x_data[:, indices_features_dynamic_non_spatial] - x_data_mean_dynamic) / \
-                    (x_data_std_dynamic + (10 ** (-6)))
-
-                indices_features_static = range((len(self.list_dynamic_attributes_names)),
-                                                (len(self.list_dynamic_attributes_names))
-                                                + (len(self.list_static_attributes_names)))
-
-                current_x_data[:, indices_features_static] = \
-                    (current_x_data[:, indices_features_static] - x_data_mean_static) / (
-                            x_data_std_static + (10 ** (-6)))
-
-                current_y_data = (current_y_data - self.y_mean) / (self.y_std + (10 ** (-6)))
-
-                if specific_model_type.lower() == "lstm" or specific_model_type.lower() == "transformer_seq2seq" or \
-                        specific_model_type.lower() == "transformer_lstm":
-                    dict_curr_basin = {"x_data": current_x_data, "y_data": current_y_data}
-                else:
-                    current_x_data_spatial = current_x_data[:, ((len(self.list_dynamic_attributes_names))
-                                                                + (len(self.list_static_attributes_names))):]
-
-                    # current_x_data_spatial = (current_x_data_spatial - min_spatial) / (max_spatial - min_spatial)
-
-                    indices_all_features_non_spatial = range(0,
-                                                             (len(self.list_dynamic_attributes_names))
-                                                             + (len(self.list_static_attributes_names)))
-                    current_x_data_non_spatial = current_x_data[:, indices_all_features_non_spatial]
-                    # current_x_data_spatial = np.concatenate([np.expand_dims(current_x_data_spatial, axis=1),
-                    #                                          np.repeat(
-                    #                                              np.expand_dims(current_x_data_non_spatial[:,
-                    #                                                             1:len(
-                    #                                                                 self.list_dynamic_attributes_names)
-                    #                                                             ],
-                    #                                                             axis=-1),
-                    #                                              self.max_dim * self.max_dim,
-                    #                                              axis=-1)], axis=1)
-                    del current_x_data
-                    dict_curr_basin = {"x_data": current_x_data_non_spatial, "y_data": current_y_data,
-                                       "x_data_spatial": current_x_data_spatial}
-                with open(f"{FOLDER_WITH_BASINS_PICKLES}/{key}_{self.stage}{self.suffix_pickle_file}.pkl",
-                          'wb') as f:
-                    pickle.dump(dict_curr_basin, f)
-        dict_station_id_to_data_from_file = self.load_basins_dicts_from_pickles()
-        self.all_station_ids = list(dict_station_id_to_data_from_file.keys())
-        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data_from_file)
-        del dict_station_id_to_data
-
-    @staticmethod
-    def read_pickle_if_exists(pickle_file_name):
-        dict_obj = {}
-        if os.path.exists(pickle_file_name):
-            with open(pickle_file_name, "rb") as f:
-                dict_obj = pickle.load(f)
-        return dict_obj
-
-    @staticmethod
-    def save_pickle_if_not_exists(pickle_file_name, obj_to_save, force=False):
-        if not os.path.exists(pickle_file_name) or force:
-            with open(pickle_file_name, "wb") as f:
-                pickle.dump(obj_to_save, f)
-
-    @staticmethod
-    def crop_or_pad_precip_spatial(X_data_single_basin, max_width, max_height):
-        max_width_right = int(max_width / 2)
-        max_width_left = math.ceil(max_width / 2)
-        max_height_right = int(max_height / 2)
-        max_height_left = math.ceil(max_height / 2)
-        if X_data_single_basin.shape[1] > max_width:
-            start = X_data_single_basin.shape[1] // 2 - (max_width // 2)
-            X_data_single_basin = X_data_single_basin[:, start:start + max_width, :]
-        else:
-            X_data_single_basin = np.pad(X_data_single_basin,
-                                         ((0, 0),
-                                          (max_width_right - int(X_data_single_basin.shape[1] / 2),
-                                           max_width_left - math.ceil(X_data_single_basin.shape[1] / 2)),
-                                          (0, 0)),
-                                         "constant",
-                                         constant_values=0)
-        if X_data_single_basin.shape[2] > max_height:
-            start = X_data_single_basin.shape[2] // 2 - (max_height // 2)
-            X_data_single_basin = X_data_single_basin[:, start:start + max_height, :]
-        else:
-            X_data_single_basin = np.pad(X_data_single_basin,
-                                         ((0, 0),
-                                          (0, 0),
-                                          (max_height_right - int(X_data_single_basin.shape[2] / 2),
-                                           max_height_left - math.ceil(X_data_single_basin.shape[2] / 2))),
-                                         "constant",
-                                         constant_values=0)
-        return X_data_single_basin
-
-    def __len__(self):
-        return self.dataset_length
-
-    def __getitem__(self, index) -> T_co:
-        basin_id, inner_ind = self.lookup_table[index]
-        with open(f"{FOLDER_WITH_BASINS_PICKLES}/{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl",
-                  'rb') as f:
-            dict_curr_basin = pickle.load(f)
-        X_data_tensor_spatial = torch.tensor([])
-        if self.specific_model_type.lower() == "lstm" or self.specific_model_type.lower() == "transformer_lstm":
-            X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[inner_ind: inner_ind + self.sequence_length]
-            ).to(torch.float32)
-        elif self.specific_model_type.lower() == "conv":
-            X_data, X_data_spatial, y_data = \
-                dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[inner_ind: inner_ind + self.sequence_length - self.sequence_length_spatial]
-            ).to(torch.float32)
-            X_data_tensor_spatial = torch.tensor(
-                X_data_spatial[
-                inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
-            ).to(torch.float32)
-        elif self.specific_model_type.lower() == "cnn":
-            X_data, X_data_spatial, y_data = \
-                dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[inner_ind: inner_ind + self.sequence_length]
-            ).to(torch.float32)
-            X_data_tensor_spatial = torch.tensor(
-                X_data_spatial[
-                inner_ind + self.sequence_length - self.sequence_length_spatial: inner_ind + self.sequence_length]
-            ).to(torch.float32)
-        elif self.specific_model_type.lower() == "transformer_seq2seq":
-            X_data, y_data = dict_curr_basin["x_data"], dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[inner_ind: inner_ind + self.sequence_length]
-            ).to(torch.float32)
-        else:
-            X_data, X_data_spatial, y_data = dict_curr_basin["x_data"], dict_curr_basin["x_data_spatial"], \
-                dict_curr_basin["y_data"]
-            X_data_tensor_non_spatial = torch.tensor(
-                X_data[inner_ind: inner_ind + self.sequence_length]
-            ).to(torch.float32)
-            X_data_tensor_spatial = torch.tensor(X_data_spatial[inner_ind: inner_ind + self.sequence_length]).to(
-                torch.float32)
-        if self.specific_model_type.lower() == "transformer_seq2seq":
-            y_data_tensor = torch.tensor(
-                y_data[inner_ind + 1: inner_ind + self.sequence_length + 1]
-            ).to(torch.float32).squeeze()
-        else:
-            y_data_tensor = torch.tensor(y_data[inner_ind + self.sequence_length - 1]
-                                         ).to(torch.float32).squeeze()
-        return self.y_std_dict[basin_id], basin_id, X_data_tensor_non_spatial, X_data_tensor_spatial, y_data_tensor
+        super().__init__(
+            main_folder,
+            dynamic_data_folder,
+            static_data_folder,
+            dynamic_data_folder_spatial,
+            dynamic_attributes_names,
+            discharge_str,
+            train_start_date,
+            train_end_date,
+            validation_start_date,
+            validation_end_date,
+            test_start_date,
+            test_end_date,
+            stage,
+            all_stations_ids,
+            sequence_length_spatial,
+            model_name,
+            static_attributes_names,
+            sequence_length,
+            x_means,
+            x_stds,
+            y_mean,
+            y_std,
+            create_new_files,
+            limit_size_above_1000,
+            use_all_static_attr,
+            num_basins)
 
     def read_static_attributes_single_country(self, country_abbreviation, countries_abbreviations_stations_dict,
                                               limit_size_above_1000=False):
@@ -381,9 +176,11 @@ class Dataset_ERA5(Dataset):
         df_attr = df_attr.dropna()
         if limit_size_above_1000:
             df_attr = df_attr[df_attr["basin_area"] >= 1000]
-        # self.list_static_attributes_names = df_attr.columns.to_list()
-        # if "gauge_id" in self.list_static_attributes_names:
-        #     self.list_static_attributes_names.remove("gauge_id")
+        if self.use_all_static_attr:
+            self.list_static_attributes_names = df_attr.columns.to_list()
+            for column_name in ["gauge_id", "gauge_lat", "gauge_lon", DISCHARGE_STR_ERA5, DISCHARGE_STR_CARAVAN]:
+                if column_name in self.list_static_attributes_names:
+                    self.list_static_attributes_names.remove(column_name)
         df_attr = df_attr[["gauge_id"] + self.list_static_attributes_names]
         # maxes = df_attr.drop(columns=['gauge_id']).max(axis=1).to_numpy().reshape(-1, 1)
         # mins = df_attr.drop(columns=['gauge_id']).min(axis=1).to_numpy().reshape(-1, 1)
@@ -395,58 +192,85 @@ class Dataset_ERA5(Dataset):
             countries_abbreviations_stations_dict[station_id] = country_abbreviation
         return df_attr, list_station_ids
 
-    def read_static_attributes_all_countries(self, countries_abbreviations, limit_size_above_1000=False):
-        list_stations_static = []
+    def check_is_valid_station_id(self, station_id, create_new_files):
+        if station_id not in self.countries_abbreviations_stations_dict.keys():
+            return False
+        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
+        return (station_id in self.list_stations_static
+                and os.path.exists(Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
+                                   / f"{country_abbreviation}_{station_id}.csv")
+                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc")
+                and (not os.path.exists(
+                    f"{self.folder_with_basins_pickles}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
+                     or any([not os.path.exists(
+                            f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}"),
+                             create_new_files])))
+
+    def read_all_static_attributes(self, limit_size_above_1000=False):
         list_static_df = []
-        countries_abbreviations_stations_dict = {}
-        for country_abbreviation in countries_abbreviations:
-            curr_df, curr_list_stations = self.read_static_attributes_single_country(country_abbreviation,
-                                                                                     countries_abbreviations_stations_dict,
-                                                                                     limit_size_above_1000=limit_size_above_1000)
-            list_stations_static.extend(curr_list_stations)
+        for country_abbreviation in self.countries_abbreviations:
+            curr_df, curr_list_stations = \
+                self.read_static_attributes_single_country(country_abbreviation,
+                                                           self.countries_abbreviations_stations_dict,
+                                                           limit_size_above_1000=limit_size_above_1000)
+            self.list_stations_static.extend(curr_list_stations)
             list_static_df.append(curr_df)
         df_attr = pd.concat(list_static_df)
-        return df_attr, list_stations_static, countries_abbreviations_stations_dict
+        return df_attr, self.list_stations_static
 
-    def read_all_dynamic_data_files(self, all_stations_ids, specific_model_type, max_width, max_height,
-                                    create_new_files):
-        if os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
-            obj_text = codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'r',
-                                   encoding='utf-8').read()
+    def read_all_dynamic_attributes(self):
+        if os.path.exists(
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}") and not create_new_files:
+            obj_text = codecs.open(
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
+                'r',
+                encoding='utf-8').read()
             json_obj = json.loads(obj_text)
             cumm_m_x = np.array(json_obj["cumm_m_x"])
             cumm_s_x = np.array(json_obj["cumm_s_x"])
-            cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
-            cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
+            if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                    or self.model_name.lower() == "cnn_transformer":
+                cumm_m_x_spatial = np.array(json_obj["cumm_m_x_spatial"])
+                cumm_s_x_spatial = np.array(json_obj["cumm_s_x_spatial"])
             cumm_m_y = float(json_obj["cumm_m_y"])
             cumm_s_y = float(json_obj["cumm_s_y"])
             count_of_samples = int(json_obj["count_of_samples"])
         else:
             cumm_m_x = 0
             cumm_s_x = 0
-            cumm_m_x_spatial = -1
-            cumm_s_x_spatial = -1
+            if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                    or self.model_name.lower() == "cnn_transformer":
+                cumm_m_x_spatial = -1
+                cumm_s_x_spatial = -1
             cumm_m_y = 0
             cumm_s_y = 0
             count_of_samples = 0
         dict_station_id_to_data = {}
-        pbar = tqdm(all_stations_ids, file=sys.stdout)
+        pbar = tqdm(self.all_stations_ids, file=sys.stdout)
         pbar.set_description(f"processing basins - {self.stage}")
+        num_exist_stations = 0
+        num_not_in_list_stations = 0
         for station_id in pbar:
-            print('RAM Used (GB):', psutil.virtual_memory()[3] / 1000000000)
-            if self.check_is_valid_station_id(station_id, create_new_files=create_new_files):
-                if (specific_model_type.lower() == "conv" or
-                        specific_model_type.lower() == "cnn"):
+            if self.check_is_valid_station_id(station_id, create_new_files=self.create_new_files):
+                if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                        or self.model_name.lower() == "cnn_transformer":
                     X_data_spatial, _ = self.read_single_station_file_spatial(station_id)
-                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
-                    if len(X_data_spatial) == 0 or len(y_data) == 0 or len(X_data_non_spatial) == 0:
+                    X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)
+                    if any([X_data_spatial.shape[1] == 0, X_data_spatial.shape[2] == 0]) or len(
+                            y_data) == 0 or len(X_data_non_spatial) == 0 or np.count_nonzero(X_data_spatial) == 0:
+                        print("some of the data is empty, deleting and skipping this basin")
                         del X_data_spatial
                         del X_data_non_spatial
                         del y_data
                         continue
-                    max_dim = max(max_width, max_height)
-                    X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, max_dim, max_dim)
-                    gray_image = X_data_spatial.reshape(X_data_spatial.shape[0], self.max_dim, self.max_dim).sum(
+                    X_data_spatial_list = []
+                    for i in range(X_data_spatial.shape[0]):
+                        X_data_spatial_list.append(
+                            np.expand_dims(cv2.resize(X_data_spatial[i, :, :].squeeze(), (self.max_dim, self.max_dim),
+                                                      interpolation=cv2.INTER_CUBIC), axis=0))
+                    X_data_spatial = np.concatenate(X_data_spatial_list)
+                    # X_data_spatial = self.crop_or_pad_precip_spatial(X_data_spatial, self.max_dim, self.max_dim)
+                    gray_image = X_data_spatial.reshape((X_data_spatial.shape[0], self.max_dim, self.max_dim)).sum(
                         axis=0)
                     plt.imsave(f"../data/basin_check_precip_images/img_{station_id}_precip.png",
                                gray_image)
@@ -457,7 +281,7 @@ class Dataset_ERA5(Dataset):
                         del y_data
                         continue
                 else:
-                    X_data_non_spatial, y_data = self.read_single_station_file(station_id)
+                    X_data_non_spatial, y_data, list_dates = self.read_single_station_file(station_id)
                     if len(X_data_non_spatial) == 0 or len(y_data) == 0:
                         del X_data_non_spatial
                         del y_data
@@ -476,8 +300,8 @@ class Dataset_ERA5(Dataset):
                 cumm_m_y = cumm_m_y + ((y_data[:] - cumm_m_y) / count_of_samples).sum(axis=0).item()
                 cumm_s_y = cumm_s_y + ((y_data[:] - cumm_m_y) * (y_data[:] - prev_mean_y)).sum(axis=0).item()
 
-                if (specific_model_type.lower() == "conv" or
-                        specific_model_type.lower() == "cnn"):
+                if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                        or self.model_name.lower() == "cnn_transformer":
                     X_data_spatial = np.array(
                         X_data_spatial.reshape(X_data_non_spatial.shape[0], self.max_dim * self.max_dim),
                         dtype=np.float64)
@@ -492,16 +316,26 @@ class Dataset_ERA5(Dataset):
 
                     X_data_non_spatial = np.concatenate([X_data_non_spatial, X_data_spatial], axis=1)
                     del X_data_spatial
-                dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data}
-
+                dict_station_id_to_data[station_id] = {"x_data": X_data_non_spatial, "y_data": y_data,
+                                                       "list_dates": list_dates}
             else:
-                print(f"station with id: {station_id} has no valid file or the file already exists")
+                if station_id not in self.all_stations_ids:
+                    num_not_in_list_stations += 1
+                else:
+                    num_exist_stations += 1
         gc.collect()
         std_x = np.sqrt(cumm_s_x / (count_of_samples - 1))
         std_y = np.sqrt(cumm_s_y / (count_of_samples - 1)).item()
-        std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
-        with codecs.open(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}", 'w',
-                         encoding='utf-8') as json_file:
+        if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                or self.model_name.lower() == "cnn_transformer":
+            std_x_spatial = np.sqrt(cumm_s_x_spatial / (count_of_samples - 1))
+        else:
+            std_x_spatial = None
+            cumm_m_x_spatial = None
+        with codecs.open(
+                f"{self.folder_with_basins_pickles}/mean_std_count_of_data.json_{self.stage}{self.suffix_pickle_file}",
+                'w',
+                encoding='utf-8') as json_file:
             json_obj = {
                 "cumm_m_x": cumm_m_x.tolist(),
                 "cumm_s_x": cumm_s_x.tolist(),
@@ -509,33 +343,19 @@ class Dataset_ERA5(Dataset):
                 "cumm_s_y": cumm_s_y,
                 "count_of_samples": count_of_samples
             }
-            if specific_model_type.lower() == "conv" or specific_model_type.lower() == "cnn":
+            if self.model_name.lower() == "conv_lstm" or self.model_name.lower() == "cnn_lstm" \
+                    or self.model_name.lower() == "cnn_transformer":
                 json_obj["cumm_m_x_spatial"] = cumm_m_x_spatial.tolist()
                 json_obj["cumm_s_x_spatial"] = cumm_s_x_spatial.tolist()
             json.dump(json_obj, json_file, separators=(',', ':'), sort_keys=True, indent=4)
+        print(f"went over {len(self.all_stations_ids)} stations from which {num_exist_stations} already "
+              f"exists and {num_not_in_list_stations} not in the list")
         return dict_station_id_to_data, cumm_m_x, std_x, cumm_m_y, std_y, cumm_m_x_spatial, std_x_spatial
-
-    def check_is_valid_station_id(self, station_id, create_new_files):
-        if station_id not in self.countries_abbreviations_stations_dict.keys():
-            return False
-        country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
-        return (station_id in self.list_stations_static
-                and os.path.exists(Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
-                                   / f"{country_abbreviation}_{station_id}.csv")
-                and os.path.exists(Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc")
-                and (not os.path.exists(
-                    f"{FOLDER_WITH_BASINS_PICKLES}/{station_id}_{self.stage}{self.suffix_pickle_file}.pkl")
-                     or any([not os.path.exists(f"{JSON_FILE_MEAN_STD_COUNT}_{self.stage}{self.suffix_pickle_file}"),
-                             station_id not in self.x_mean_dict,
-                             station_id not in self.x_std_dict,
-                             station_id not in self.y_mean_dict,
-                             station_id not in self.y_std_dict,
-                             create_new_files])))
 
     def read_single_station_file_spatial(self, station_id):
         country_abbreviation = self.countries_abbreviations_stations_dict[station_id]
         station_data_file_spatial = (
-                Path(DYNAMIC_DATA_FOLDER_ERA5) / f"precip24_spatial_{station_id}.nc"
+                Path(DYNAMIC_DATA_FOLDER_SPATIAL) / f"precip24_spatial_{station_id}.nc"
         )
         station_data_file_discharge = (
                 Path(f"{self.dynamic_data_folder}/{country_abbreviation}")
@@ -558,10 +378,13 @@ class Dataset_ERA5(Dataset):
             .reshape(1, -1)
         )
         if self.stage == "train":
-            if station_id not in self.y_mean_dict.keys():
-                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-            if station_id not in self.y_std_dict.keys():
-                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+            if station_id not in self.x_min_spatial_per_basin.keys():
+                self.x_min_spatial_per_basin[station_id] = X_data_spatial.min()
+            if station_id not in self.x_max_spatial_per_basin.keys():
+                self.x_max_spatial_per_basin[station_id] = X_data_spatial.max()
+        min_spatial_basin = self.x_min_spatial_per_basin[station_id]
+        max_spatial_basin = self.x_max_spatial_per_basin[station_id]
+        X_data_spatial = 255 * ((X_data_spatial - min_spatial_basin) / (max_spatial_basin - min_spatial_basin))
         return X_data_spatial, y_data
 
     def read_and_filter_dynamic_data_spatial(self, dataset_xarray, df_dis_data):
@@ -603,11 +426,11 @@ class Dataset_ERA5(Dataset):
                 / f"{country_abbreviation}_{station_id}.csv"
         )
         df_dynamic_data = pd.read_csv(station_data_file)
-        df_dynamic_data = self.read_and_filter_dynamic_data(df_dynamic_data)
+        df_dynamic_data, list_dates = self.read_and_filter_dynamic_data(df_dynamic_data)
         y_data = df_dynamic_data[self.discharge_str].to_numpy().flatten()
         X_data = df_dynamic_data[self.list_dynamic_attributes_names].to_numpy()
         if X_data.size == 0 or y_data.size == 0:
-            return np.array([]), np.array([])
+            return np.array([]), np.array([]), np.array([])
         X_data = X_data.reshape(-1, len(self.list_dynamic_attributes_names))
         y_data = y_data.reshape(-1, 1)
         static_attrib_station = (
@@ -619,20 +442,20 @@ class Dataset_ERA5(Dataset):
         static_attrib_station_rep = static_attrib_station.repeat(
             X_data.shape[0], axis=0
         )
-        if station_id not in self.x_mean_dict.keys():
-            self.x_mean_dict[station_id] = X_data.mean(axis=0)
-        if station_id not in self.x_std_dict.keys():
-            self.x_std_dict[station_id] = X_data.std(axis=0)
+        if station_id not in self.x_mean_per_basin_dict.keys():
+            self.x_mean_per_basin_dict[station_id] = X_data.mean(axis=0)
+        if station_id not in self.x_std_per_basin_dict.keys():
+            self.x_std_per_basin_dict[station_id] = X_data.std(axis=0)
         X_data = np.concatenate([X_data, static_attrib_station_rep], axis=1)
         station_id_repeated = [station_id] * X_data.shape[0]
         if self.stage == "train":
-            if station_id not in self.y_mean_dict.keys():
-                self.y_mean_dict[station_id] = torch.tensor(y_data.mean(axis=0))
-            if station_id not in self.y_std_dict.keys():
-                self.y_std_dict[station_id] = torch.tensor(y_data.std(axis=0))
+            if station_id not in self.y_mean_per_basin_dict.keys():
+                self.y_mean_per_basin_dict[station_id] = torch.tensor(y_data.mean(axis=0))
+            if station_id not in self.y_std_per_basin_dict.keys():
+                self.y_std_per_basin_dict[station_id] = torch.tensor(y_data.std(axis=0))
         # y_data -= (self.y_mean_dict[station_id].numpy())
         # y_data /= (self.y_std_dict[station_id].numpy())
-        return X_data, y_data
+        return X_data, y_data, list_dates
 
     def read_and_filter_dynamic_data(self, df_dynamic_data):
         df_dynamic_data = df_dynamic_data[
@@ -667,19 +490,8 @@ class Dataset_ERA5(Dataset):
             (df_dynamic_data["date"] >= start_date)
             & (df_dynamic_data["date"] <= end_date)
             ]
-        return df_dynamic_data
-
-    def create_look_table(self, dict_station_id_to_data):
-        lookup_table_basins = {}
-        length_of_dataset = 0
-        for key in dict_station_id_to_data.keys():
-            for ind in range(len(dict_station_id_to_data[key]["x_data"]) - self.sequence_length):
-                lookup_table_basins[length_of_dataset] = (key, ind)
-                length_of_dataset += 1
-        return length_of_dataset, lookup_table_basins
-
-    def calculate_dataset_length(self):
-        return self.dataset_length
+        list_dates = df_dynamic_data["date"].apply(lambda x: np.array([x.year, x.month, x.day])).tolist()
+        return df_dynamic_data, list_dates
 
     def create_boxplot_of_entire_dataset(self):
         all_attributes_names = (
@@ -724,56 +536,3 @@ class Dataset_ERA5(Dataset):
             f"../data/images/data_box_plots_{plot_title}"
             + ".png"
         )
-
-    def get_maximum_width_and_length_of_basin(self, shape_files_folder, basins_ids):
-        WIDTH_LOC_IN_ROW = 2
-        HEIGHT_LOC_IN_ROW = 3
-        max_height = -1
-        max_width = -1
-        basin_id_with_maximum_height = -1
-        basin_id_with_maximum_width = -1
-        file_names = glob(f"{shape_files_folder}/shape_*.csv")
-        for file_name in file_names:
-            basin_id = file_name.replace(f"{shape_files_folder}/shape_", "").strip(".csv")
-            if basin_id in basins_ids and self.check_is_valid_station_id(station_id=basin_id, create_new_files=True):
-                with open(file_name, newline="\n") as csvfile:
-                    shape_file_reader = csv.reader(csvfile, delimiter=",")
-                    shape_file_rows_list = list(shape_file_reader)
-                    width = int(shape_file_rows_list[1][WIDTH_LOC_IN_ROW])
-                    height = int(shape_file_rows_list[1][HEIGHT_LOC_IN_ROW])
-                    if width > max_width:
-                        max_width = width
-                        basin_id_with_maximum_width = basin_id
-                    if height > max_height:
-                        max_height = height
-                        basin_id_with_maximum_height = basin_id
-        print(f"max width is: {max_width}")
-        print(f"max height is: {max_height}")
-        return int(max_width), int(max_height), basin_id_with_maximum_width, basin_id_with_maximum_height
-
-    def load_basins_dicts_from_pickles(self):
-        dict_station_id_to_data = {}
-        for basin_id in self.all_station_ids:
-            file_name = join(f"{FOLDER_WITH_BASINS_PICKLES}", f"{basin_id}_{self.stage}{self.suffix_pickle_file}.pkl")
-            if os.path.exists(file_name):
-                with open(file_name, "rb") as f:
-                    pickled_data = pickle.load(f)
-                    dict_station_id_to_data[basin_id] = pickled_data
-        return dict_station_id_to_data
-
-    def set_sequence_length(self, sequence_length):
-        self.sequence_length = sequence_length
-        dict_station_id_to_data = self.load_basins_dicts_from_pickles()
-        self.dataset_length, self.lookup_table = self.create_look_table(dict_station_id_to_data)
-
-    def get_x_stds(self):
-        return self.x_stds
-
-    def get_x_means(self):
-        return self.x_means
-
-    def get_y_std(self):
-        return self.y_std
-
-    def get_y_mean(self):
-        return self.y_mean
