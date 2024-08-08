@@ -100,7 +100,7 @@
                         Even when considering a single basin, traditional models have difficulty making accurate
                         predictions, and the problem becomes even more acute when considering a region with several
                         basins simultaneously (i.e. regional modeling).
-
+                        <br>
                         The use of deep learning based approaches have recently improved the accuracy of streamflow
                         discharge predictions for a large number of basins with heterogeneous characteristics.
                         However, the models proposed so far did not take into account the spatial complexity of the
@@ -108,21 +108,21 @@
                         variability is known to has a major effect on runoff properties. Taking advantage of these
                         spatial complexities could increase the accuracy of the predictions and make the models more
                         robust.
-
+                        <br>
                         In this work, we present an approach for regional streamflow discharge prediction using 2
                         models, CNN-LSTM and CNN-Transformer models.
-
+                        <br>
                         We trained and evaluated these models using spatial precipitation data along with other dynamic
                         and static attributes of 135 basins in the US from the CAMELS data set, and demonstrated their
                         potential to provide even more accurate predictions.
-
+                        <br>
                         We used as a baseline the current state-of-the-art LSTM model for regional streamflow discharge
                         prediction, which takes into account only mean areal precipitation, in contrast to the 2 spatial
                         models.
-
+                        <br>
                         An analysis of the influence of the dynamic and static attributes on the prediction is also
                         presented, as well as an analysis of the spatial data used as an input to the CNN-LSTM model.
-
+                        <br>
                         We found that there is no significant advantage of the 2 models on the current state-of-the-art
                         LSTM model. However, both of the models were found to be sensitive to both dynamic and static
                         attributes related to precipitation spatial variability.
@@ -170,34 +170,34 @@
                 <h2 class="subtitle has-text-centered">
                     Comparison of mean CDFs for all the models - test.
                 </h2>
-            </div>
-            <div class="item">
-                <!-- Your image here -->
-                <img src="static/images/NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_validation.png" alt="MY ALT TEXT"/>
-                <h2 class="subtitle has-text-centered">
-                    Comparison of mean CDFs for all the models - validation.
-                </h2>
-            </div>
-            <div class="item">
-                <!-- Your image here -->
-                <img src="static/images/NSE_CDF_ablation_study.png" alt="MY ALT TEXT"/>
-                <h2 class="subtitle has-text-centered">
-                    NSE CDF graphs of the 4 experiments with different inputs - ablation study.
-                </h2>
-            </div>
-            <div class="item">
-                <!-- Your image here -->
-                <img src="static/images/Slide3.PNG" alt="MY ALT TEXT"/>
-                <h2 class="subtitle has-text-centered">
-                    The pipeline of the CNN-LSTM model.
-                </h2>
-            </div>
-            <div class="item">
-                <!-- Your image here -->
-                <img src="static/images/Slide6.PNG" alt="MY ALT TEXT"/>
-                <h2 class="subtitle has-text-centered">
-                    The pipeline of the CNN-Transformer model.
-                </h2>
+                <div class="item">
+                    <!-- Your image here -->
+                    <img src="static/images/NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_validation.png" alt="MY ALT TEXT"/>
+                    <h2 class="subtitle has-text-centered">
+                        Comparison of mean CDFs for all the models - validation.
+                    </h2>
+                </div>
+                <div class="item">
+                    <!-- Your image here -->
+                    <img src="static/images/NSE_CDF_ablation_study.png" alt="MY ALT TEXT"/>
+                    <h2 class="subtitle has-text-centered">
+                        NSE CDF graphs of the 4 experiments with different inputs - ablation study.
+                    </h2>
+                </div>
+                <div class="item">
+                    <!-- Your image here -->
+                    <img src="static/images/Slide3.PNG" alt="MY ALT TEXT"/>
+                    <h2 class="subtitle has-text-centered">
+                        The pipeline of the CNN-LSTM model.
+                    </h2>
+                </div>
+                <div class="item">
+                    <!-- Your image here -->
+                    <img src="static/images/Slide6.PNG" alt="MY ALT TEXT"/>
+                    <h2 class="subtitle has-text-centered">
+                        The pipeline of the CNN-Transformer model.
+                    </h2>
+                </div>
             </div>
         </div>
     </div>
