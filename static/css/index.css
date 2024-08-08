@@ -112,8 +112,6 @@ body {
 
 .results-carousel {
     overflow: hidden;
-    align-items: center;
-    align-content: center;
 }
 
 .results-carousel .item {
@@ -125,8 +123,7 @@ body {
     overflow: hidden;
     padding: 20px;
     font-size: 10px;
-    align-items: center;
-    align-content: center;
+    text-align: center;
 }
 
 .results-carousel video {
