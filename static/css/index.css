@@ -116,15 +116,16 @@ body {
 
 .results-carousel .item {
     margin: 5px;
-    width: 100%;
-    max-width: 800px;
+    overflow: hidden;
+    padding: 20px;
+    font-size: 0;
+}
+
+.results-carousel .img {
     height: 100%;
     max-height: 800px;
-    overflow: hidden;
-    /*padding: 20px;*/
-    font-size: 10px;
-    text-align: center;
-    justify-content: center;
+    width: 100%;
+    max-width: 800px;
 }
 
 .results-carousel video {
