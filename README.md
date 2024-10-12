@@ -44,36 +44,36 @@
 </div>
 
 </br>
-<p align="center">
+<div align="center">
   <em>Commulative density functions for our 2 models (CNN LSTM and CNN Trasnformer) and the baseline model (LSTM) for the test period.
   Graphs that are closer to the lower right corner perform better.</em>
   <img src="https://github.com/RANG1991/FloodMLRan/blob/main/static/images/NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_test.png" 
   alt="NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_test" 
   style="width:700px;height:500px;">
-</p>
+</div>
 
 </br>
-<p align="center">
+<div align="center">
   <em>Commulative density functions for our 2 models (CNN LSTM and CNN Trasnformer) and the baseline model (LSTM) for the validation period.
   Graphs that are closer to the lower right corner perform better.</em>
   <img src="https://github.com/RANG1991/FloodMLRan/blob/main/static/images/NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_validation.png" 
-  alt="NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_test" 
+  alt="NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_validation" 
   style="width:700px;height:500px;">
-</p>
+</div>
 
 </br>
-<p align="center">
-  <em>The pipeline of out first model (CNN-LSTM). We used 2 LSTMs, where the first one leverages only the non-spatial inputs, and the second one leverages also the precipitation maps.</em>
+<div align="center">
+  <em>The pipeline of our first model (CNN-LSTM). We used 2 LSTMs, where the first one leverages only the non-spatial inputs, and the second one leverages also the precipitation maps.</em>
   <img src="https://github.com/RANG1991/FloodMLRan/blob/main/static/images/Slide3.PNG" 
-  alt="NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_test" 
+  alt="Pipeline_CNN_LSTM" 
   style="width:800px;height:500px;">
-</p>
+</div>
 
 </br>
-<p align="center">
-  <em> The pipeline of out second model (CNN-Transformer). We used 2 Transformer encoders, where the first one leverages only the non-spatial inputs, and the second one leverages also the precipitation maps. 
-    The second encoder uses cross attention ro encorporate the output of the first encoder with the output of the CNN.</em>
+<div align="center">
+  <p><em>The pipeline of our second model (CNN-Transformer). We used 2 Transformer encoders, where the first one leverages only the non-spatial inputs, and the second one leverages also the precipitation maps. 
+    The second encoder uses cross attention ro encorporate the output of the first encoder with the output of the CNN.</em></p>
   <img src="https://github.com/RANG1991/FloodMLRan/blob/main/static/images/Slide6.PNG" 
-  alt="NSE_CDF_CNN_LSTM_CNN_Transformer_LSTM_test" 
+  alt="Pipeline_CNN_Transformer" 
   style="width:800px;height:500px;">
-</p>
+</div>
