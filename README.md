@@ -72,7 +72,7 @@
 </br>
 <div align="center">
   <p><em>The pipeline of our second model (CNN-Transformer). We used 2 Transformer encoders, where the first one leverages only the non-spatial inputs, and the second one leverages also the precipitation maps. 
-    The second encoder uses cross attention ro encorporate the output of the first encoder with the output of the CNN.</em></p>
+    The second encoder uses cross attention to encorporate the output of the first encoder with the output of the CNN.</em></p>
   <img src="https://github.com/RANG1991/FloodMLRan/blob/main/static/images/Slide6.PNG" 
   alt="Pipeline_CNN_Transformer" 
   style="width:800px;height:500px;">
